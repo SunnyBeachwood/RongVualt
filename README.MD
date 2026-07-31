@@ -116,6 +116,6 @@ RongVault 采用 **GNU General Public License v3.0 或更高版本（GPL-3.0-or-
 相应源代码，包括构建脚本、已修改的上游代码和构建该版本所需的第三方源码；不得施加与
 GPL 冲突的额外限制。第三方组件可能具有各自的许可证，分发前应逐项复核其许可条件。
 
-本项目 GPLv3 的完整条款见 [LICENSE](LICENSE)（同样提供于 [COPYING](COPYING)）。
+本项目 GPLv3 的完整条款见 [LICENSE](LICENSE)。
 第三方组件的版权和许可证以其各自文件中的声明为准；发布包含 EDS Lite 来源代码的版本时，
 也应随源代码一并保留 EDS Lite 的 GPLv2 许可证文本。
