@@ -10,6 +10,7 @@ def releaseProperties = [
         'EDS_RELEASE_KEY_PASSWORD'
 ]
 def hasReleaseSigning = releaseProperties.every { providers.gradleProperty(it).isPresent() }
+def sourceUrl = providers.gradleProperty('RONGVAULT_SOURCE_URL').orElse('').get()
 
 android {
     namespace 'com.sovworks.eds.android'
@@ -19,15 +20,16 @@ android {
     defaultConfig {
         // The Java package remains stable during the staged migration. The
         // installable identity is new and can be overridden for private builds.
-        applicationId providers.gradleProperty('EDS_APPLICATION_ID').orElse('org.eds.veracrypt').get()
-        minSdk 29
+        applicationId providers.gradleProperty('EDS_APPLICATION_ID').orElse('app.rongvault').get()
+        minSdk 35
         targetSdk 37
-        versionCode 1
-        versionName '0.1.0-dev'
+        versionCode 2
+        versionName '1.0.1'
+        buildConfigField 'String', 'RONGVAULT_SOURCE_URL', '"' + sourceUrl.replace('"', '\\"') + '"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            abiFilters 'arm64-v8a'
         }
     }
 
@@ -48,7 +50,7 @@ android {
             dimension 'edition'
             externalNativeBuild {
                 cmake {
-                    targets 'vc_core', 'edsxts', 'edsctr', 'edsaes', 'edsserpent', 'edstwofish', 'edswhirlpool', 'fdraio', 'localxts', 'edscfb', 'edscbc'
+                    targets 'vc_core', 'syscall'
                 }
             }
         }
@@ -59,6 +61,20 @@ android {
             externalNativeBuild {
                 cmake {
                     cFlags '-DDEBUG'
+                }
+            }
+        }
+        // Reproducible on-device performance build: release-style native
+        // optimization with a debug signing identity. It is intentionally not
+        // a publishable release artifact and does not relax release signing.
+        benchmark {
+            initWith release
+            debuggable true
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+            externalNativeBuild {
+                cmake {
+                    arguments '-DVC_CORE_BENCHMARK=ON'
                 }
             }
         }
@@ -76,6 +92,20 @@ android {
         viewBinding true
     }
 
+    // Lite ships the new SAF product surface only. Imported EDS Java UI,
+    // resources, formats and JNI wrappers stay in the worktree as reference
+    // sources and are not compiled or packaged for this variant.
+    sourceSets {
+        main {
+            java.setSrcDirs([])
+            res.setSrcDirs(['src/veracrypt/res'])
+        }
+        lite {
+            java.setSrcDirs([])
+            res.setSrcDirs([])
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path file('CMakeLists.txt')
@@ -85,37 +115,45 @@ android {
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
     }
-    kotlinOptions {
-        jvmTarget = '17'
-    }
-
     packaging {
         resources {
-            excludes += ['META-INF/LICENSE.txt', 'META-INF/LICENSE', 'META-INF/NOTICE.txt', 'META-INF/NOTICE']
+            excludes += [
+                    'META-INF/LICENSE.txt', 'META-INF/LICENSE', 'META-INF/NOTICE.txt',
+                    'META-INF/NOTICE', 'META-INF/DEPENDENCIES'
+            ]
         }
     }
 }
 
 dependencies {
-    implementation 'com.drewnoakes:metadata-extractor:2.19.0'
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    implementation project(':materialfiles')
     implementation 'androidx.annotation:annotation:1.9.1'
     implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.biometric:biometric:1.1.0'
     implementation 'androidx.core:core:1.17.0'
     implementation 'androidx.documentfile:documentfile:1.0.1'
-    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
     implementation 'androidx.exifinterface:exifinterface:1.3.7'
     implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
-    implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.21'
-    implementation 'com.trello.rxlifecycle2:rxlifecycle:2.2.2'
-    implementation 'com.trello.rxlifecycle2:rxlifecycle-android:2.2.2'
-    implementation 'com.trello.rxlifecycle2:rxlifecycle-components:2.2.2'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.9.4'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.9.4'
+    implementation 'androidx.recyclerview:recyclerview:1.4.0'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'io.noties.markwon:core:4.6.2'
+    implementation 'io.noties.markwon:ext-tables:4.6.2'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+    // Material Files exposes its java8.nio Path bridge in the Activity API.
+    implementation 'net.sourceforge.streamsupport:android-retrostreams:1.7.4'
+    implementation 'me.zhanghai.android.retrofile:library:1.1.1'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.jetbrains.kotlin:kotlin-test:2.3.21'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test:core:1.6.1'
+    androidTestImplementation 'androidx.test:runner:1.6.2'
+    androidTestImplementation 'junit:junit:4.13.2'
 }
 
 // Release artifacts must never be produced with a fallback, debug, or
@@ -126,6 +164,26 @@ tasks.configureEach {
             if (!hasReleaseSigning) {
                 throw new GradleException('Release signing is required. Supply all EDS_RELEASE_* Gradle properties outside source control.')
             }
+            if (!(sourceUrl ==~ /^https:\/\/.+/)) {
+                throw new GradleException('Release source availability is required. Supply an HTTPS RONGVAULT_SOURCE_URL Gradle property.')
+            }
         }
     }
 }
+
+// Product-facing resources must never leak the embedded file manager's brand.
+// Legal Markdown is intentionally excluded because it attributes Material Files.
+tasks.register('verifyRongVaultBranding') {
+    doLast {
+        def forbidden = ['质感文件', 'Material Files']
+        def offenders = fileTree('src/veracrypt/res') {
+            exclude 'raw/**', 'raw-*/**'
+        }.findAll { file ->
+            file.isFile() && forbidden.any { marker -> file.getText('UTF-8').contains(marker) }
+        }
+        if (!offenders.isEmpty()) {
+            throw new GradleException("RongVault branding leak in: ${offenders*.path.join(', ')}")
+        }
+    }
+}
+tasks.named('check').configure { dependsOn(tasks.named('verifyRongVaultBranding')) }

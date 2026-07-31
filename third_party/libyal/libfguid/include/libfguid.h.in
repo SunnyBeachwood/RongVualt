@@ -1,0 +1,296 @@
+/*
+ * Library to support the GUID/UUID format
+ *
+ * Copyright (C) 2010-2026, Joachim Metz <joachim.metz@gmail.com>
+ *
+ * Refer to AUTHORS for acknowledgements.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#if !defined( _LIBFGUID_H )
+#define _LIBFGUID_H
+
+#include <libfguid/definitions.h>
+#include <libfguid/error.h>
+#include <libfguid/extern.h>
+#include <libfguid/features.h>
+#include <libfguid/types.h>
+
+#include <stdio.h>
+
+#if defined( __cplusplus )
+extern "C" {
+#endif
+
+/* -------------------------------------------------------------------------
+ * Support functions
+ * ------------------------------------------------------------------------- */
+
+/* Returns the library version
+ */
+LIBFGUID_EXTERN \
+const char *libfguid_get_version(
+             void );
+
+/* -------------------------------------------------------------------------
+ * Error functions
+ * ------------------------------------------------------------------------- */
+
+/* Frees an error
+ */
+LIBFGUID_EXTERN \
+void libfguid_error_free(
+      libfguid_error_t **error );
+
+/* Prints a descriptive string of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_error_fprint(
+     libfguid_error_t *error,
+     FILE *stream );
+
+/* Prints a descriptive string of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_error_sprint(
+     libfguid_error_t *error,
+     char *string,
+     size_t size );
+
+/* Prints a backtrace of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_error_backtrace_fprint(
+     libfguid_error_t *error,
+     FILE *stream );
+
+/* Prints a backtrace of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_error_backtrace_sprint(
+     libfguid_error_t *error,
+     char *string,
+     size_t size );
+
+/* -------------------------------------------------------------------------
+ * Identifier functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates an identifier
+ * Make sure the value identifier is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_initialize(
+     libfguid_identifier_t **identifier,
+     libfguid_error_t **error );
+
+/* Frees an identifier
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_free(
+     libfguid_identifier_t **identifier,
+     libfguid_error_t **error );
+
+/* Copies the identifier from a byte stream
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_from_byte_stream(
+     libfguid_identifier_t *identifier,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfguid_error_t **error );
+
+/* Copies the identifier to a byte stream
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_to_byte_stream(
+     libfguid_identifier_t *identifier,
+     uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfguid_error_t **error );
+
+/* Retrieves the size of an UTF-8 encoded string of the identifier
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_get_string_size(
+     libfguid_identifier_t *identifier,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier from an UTF-8 encoded string
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_from_utf8_string(
+     libfguid_identifier_t *identifier,
+     const uint8_t *utf8_string,
+     size_t utf8_string_length,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier from an UTF-8 encoded string
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_from_utf8_string_with_index(
+     libfguid_identifier_t *identifier,
+     const uint8_t *utf8_string,
+     size_t utf8_string_length,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier to an UTF-8 encoded string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_to_utf8_string(
+     libfguid_identifier_t *identifier,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier to an UTF-8 encoded string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_to_utf8_string_with_index(
+     libfguid_identifier_t *identifier,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier from an UTF-16 encoded string
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_from_utf16_string(
+     libfguid_identifier_t *identifier,
+     const uint16_t *utf16_string,
+     size_t utf16_string_length,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier from an UTF-16 encoded string
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_from_utf16_string_with_index(
+     libfguid_identifier_t *identifier,
+     const uint16_t *utf16_string,
+     size_t utf16_string_length,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier to an UTF-16 encoded string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_to_utf16_string(
+     libfguid_identifier_t *identifier,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier to an UTF-16 encoded string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_to_utf16_string_with_index(
+     libfguid_identifier_t *identifier,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier from an UTF-32 encoded string
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_from_utf32_string(
+     libfguid_identifier_t *identifier,
+     const uint32_t *utf32_string,
+     size_t utf32_string_length,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier from an UTF-32 encoded string
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_from_utf32_string_with_index(
+     libfguid_identifier_t *identifier,
+     const uint32_t *utf32_string,
+     size_t utf32_string_length,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier to an UTF-32 encoded string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_to_utf32_string(
+     libfguid_identifier_t *identifier,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+/* Copies the identifier to an UTF-32 encoded string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFGUID_EXTERN \
+int libfguid_identifier_copy_to_utf32_string_with_index(
+     libfguid_identifier_t *identifier,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfguid_error_t **error );
+
+#if defined( __cplusplus )
+}
+#endif
+
+#endif /* !defined( _LIBFGUID_H ) */
+

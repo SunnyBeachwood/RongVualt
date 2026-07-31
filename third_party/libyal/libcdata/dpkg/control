@@ -1,0 +1,32 @@
+Source: libcdata
+Priority: extra
+Maintainer: Joachim Metz <joachim.metz@gmail.com>
+Build-Depends: debhelper (>= 13), dh-autoreconf, pkg-config
+Standards-Version: 4.1.4
+Section: libs
+Homepage: https://github.com/libyal/libcdata
+Vcs-Git: https://github.com/libyal/libcdata.git
+
+Package: libcdata
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: libcdata1
+Replaces: libcdata1
+Suggests: libcdata-dbg
+Description: Library to support cross-platform C generic data functions
+ libcdata is a library to support cross-platform C generic data functions.
+
+Package: libcdata-dbg
+Architecture: any
+Section: debug
+Depends: libcdata (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libcdata
+ Debugging symbols for libcdata.
+
+Package: libcdata-dev
+Section: libdevel
+Architecture: any
+Depends: libcdata (= ${binary:Version}), ${misc:Depends}
+Description: Header files and libraries for developing applications for libcdata
+ Header files and libraries for developing applications for libcdata.
+

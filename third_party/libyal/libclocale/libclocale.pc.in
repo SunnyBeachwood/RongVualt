@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libclocale
+Description: Library to support cross-platform C locale functions
+Version: @VERSION@
+Libs: -L${libdir} -lclocale
+Libs.private: @ax_libcerror_pc_libs_private@
+Cflags: -I${includedir}
+

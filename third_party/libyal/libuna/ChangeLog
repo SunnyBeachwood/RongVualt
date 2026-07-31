@@ -1,0 +1,141 @@
+TODO
+* add unicode case fold support
+* pre compiler macro to detect ASCII vs non-ASCII system?
+* make sure whitespace is stripped when copying to byte stream:
+  - base32
+* add baseX functions with index:
+  - base16
+  - base32
+  - base64
+* check TODO's
+  - base64 definitions
+
+* implement with index functions
+* base16
+  - add separate function to convert a byte like base64 sixtet
+* base32
+  - add support of base32 variations, e.g. zbase32?
+
+* libuna
+  - add source == destination check to functions?
+  - speed test between index based and pointer based iteration
+  - change libuna_codepage_ macros into inline functions ?
+  - copy from/to functions should set/return amount of bytes successfully processed?
+    most of the time not needed because the size of the string was already
+    determined
+
+  - implement support for UTF-1 ?
+  - implement support for UTF-ebcdic ?
+  - implement support for bocu-1 ?
+  - implement support for scsu ?
+  - implement support for usc-1, ucs-2, usc-4 ?
+
+* add support for OEM codepages:
+  - 437 (US)
+  - 720 (Arabic)
+  - 737 (Greek)
+  - 775 (Baltic)
+  - 850 (Multilingual Latin I)
+  - 852 (Latin II)
+  - 855 (Cyrillic)
+  - 857 (Turkish)
+  - 858 (Multilingual Latin I + Euro)
+  - 862 (Hebrew)
+  - 866 (Russian)
+* add support for other codepages:
+  - 50220 iso-2022-jp Japanese (JIS)
+  - 50221 csISO2022JP Japanese (JIS-Allow 1 byte Kana)
+  - 51932 euc-jp Japanese (EUC)
+  - 51949 euc-kr Korean (EUC)
+  - 52936 hz-gb-2312 Chinese Simplified (HZ)
+
+Test:
+* create automated tests and test files
+  - create test_unabase.sh
+  - complete test_unaexport.sh
+* unicode 2 codepage tests
+  - test values not in codepage
+* codepage 2 unicode tests
+  - test values not in codepage
+* tests: copy from
+  - invalid number of characters in line ?
+  - base32 (+/-)
+* tests: copy to
+  - invalid number of characters in line ?
+  - base32
+
+Tools:
+* unabase:
+  - convert between base64 binary base16?
+  - have hexdump as input/output
+  - add msvscpp project file
+  - add codegear project file
+* unaexport
+  - implement export_handle
+  - what happens when exporting UTF16LE as UTF16BE to UTF16LE with the BOM
+  - implement signal handling
+  - add conversion summary (converting from x to y with codepage z) +/-
+  - update man page
+  - allow for different input and output codepage?
+  - implement basic globbing support for Windows?
+  - determine total source file size for process status
+  - add option to set buffer size?
+  - check if input file is output file?
+* unainfo
+  - create a tool to determine the encoding type using the byte order mark
+    perhaps some other tricks
+    might be useful for automated conversion
+  - write man page
+  - update unaexport manpage 
+    .Sh SEE ALSO
+    .Xr unainfo 1
+  - update spec.in file
+  - update msvscpp, codegear project files
+* gettext support
+
+Deployment:
+
+Note:
+* iso codepage formatting conversion %s/^0x\(..\)\t0x\(....\)\t#\t/\1 = U+\2 : 
+* CodeGear uses OEM codepage e.g. 850
+* streams, except for a (byte stream) ASCII string, are not considered
+  terminated by an end-of-string character
+
+20080830
+* see `git log' for more recent change log
+* Worked on initial version
+* Worked on stand alone library
+* Renamed ascii to sbc (single byte character)
+* Worked on codepages
+
+20080829
+* Worked on initial version
+* Worked on support for converting SBC stream into UTF
+* Change code into stand alone ibrary
+
+20080828
+* Worked on initial version
+* Worked on support for converting SBC stream into UTF
+
+20080827
+* Worked on initial version
+* Worked on support for converting SBC stream into UTF
+
+20080826
+* Worked on initial version
+* Worked on Unicode conversion routines
+
+20080825
+* Worked on initial version
+* Worked on Unicode conversion routines
+* Added maximum allowed UTF 0x110000 in strict mode
+* Worked on support for converting SBC stream into UTF
+
+20080824
+* Worked on initial version
+* Worked on Unicode conversion routines
+
+20080823
+* Worked on initial version
+* Worked on Unicode conversion routines
+

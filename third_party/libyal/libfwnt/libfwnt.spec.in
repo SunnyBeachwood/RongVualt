@@ -1,0 +1,85 @@
+Name: libfwnt
+Version: @VERSION@
+Release: 1
+Summary: Library to support common Windows NT specific formats
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libfwnt
+@libfwnt_spec_requires@ @ax_libcdata_spec_requires@ @ax_libcerror_spec_requires@ @ax_libcnotify_spec_requires@ @ax_libcthreads_spec_requires@
+BuildRequires: gcc @ax_libcdata_spec_build_requires@ @ax_libcerror_spec_build_requires@ @ax_libcnotify_spec_build_requires@ @ax_libcthreads_spec_build_requires@
+
+%description -n libfwnt
+Library to support common Windows NT specific formats
+
+%package -n libfwnt-static
+Summary: Library to support common Windows NT specific formats
+Group: Development/Libraries
+Requires: libfwnt = %{version}-%{release}
+
+%description -n libfwnt-static
+Static library version of libfwnt.
+
+%package -n libfwnt-devel
+Summary: Header files and libraries for developing applications for libfwnt
+Group: Development/Libraries
+Requires: libfwnt = %{version}-%{release}
+
+%description -n libfwnt-devel
+Header files and libraries for developing applications for libfwnt.
+
+%package -n libfwnt-python3
+Summary: Python 3 bindings for libfwnt
+Group: System Environment/Libraries
+Requires: libfwnt = %{version}-%{release} python3
+BuildRequires: python3-devel python3-setuptools
+
+%description -n libfwnt-python3
+Python 3 bindings for libfwnt
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir} --enable-python
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libfwnt
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libfwnt-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libfwnt-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libfwnt.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%files -n libfwnt-python3
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/python3*/site-packages/*.a
+%{_libdir}/python3*/site-packages/*.so
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

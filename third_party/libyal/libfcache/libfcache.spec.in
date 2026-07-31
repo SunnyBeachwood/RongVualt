@@ -1,0 +1,70 @@
+Name: libfcache
+Version: @VERSION@
+Release: 1
+Summary: Library to provide generic file data cache functions
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libfcache
+@libfcache_spec_requires@ @ax_libcdata_spec_requires@ @ax_libcerror_spec_requires@ @ax_libcthreads_spec_requires@
+BuildRequires: gcc @ax_libcdata_spec_build_requires@ @ax_libcerror_spec_build_requires@ @ax_libcthreads_spec_build_requires@
+
+%description -n libfcache
+Library to provide generic file data cache functions
+
+%package -n libfcache-static
+Summary: Library to provide generic file data cache functions
+Group: Development/Libraries
+Requires: libfcache = %{version}-%{release}
+
+%description -n libfcache-static
+Static library version of libfcache.
+
+%package -n libfcache-devel
+Summary: Header files and libraries for developing applications for libfcache
+Group: Development/Libraries
+Requires: libfcache = %{version}-%{release}
+
+%description -n libfcache-devel
+Header files and libraries for developing applications for libfcache.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libfcache
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libfcache-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libfcache-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libfcache.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

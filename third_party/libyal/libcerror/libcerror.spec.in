@@ -1,0 +1,69 @@
+Name: libcerror
+Version: @VERSION@
+Release: 1
+Summary: Library to support cross-platform C error functions
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libcerror
+BuildRequires: gcc
+
+%description -n libcerror
+Library to support cross-platform C error functions
+
+%package -n libcerror-static
+Summary: Library to support cross-platform C error functions
+Group: Development/Libraries
+Requires: libcerror = %{version}-%{release}
+
+%description -n libcerror-static
+Static library version of libcerror.
+
+%package -n libcerror-devel
+Summary: Header files and libraries for developing applications for libcerror
+Group: Development/Libraries
+Requires: libcerror = %{version}-%{release}
+
+%description -n libcerror-devel
+Header files and libraries for developing applications for libcerror.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libcerror
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libcerror-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libcerror-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libcerror.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

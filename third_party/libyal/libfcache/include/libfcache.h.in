@@ -1,0 +1,303 @@
+/*
+ * Library to provide generic file data cache functions
+ *
+ * Copyright (C) 2010-2026, Joachim Metz <joachim.metz@gmail.com>
+ *
+ * Refer to AUTHORS for acknowledgements.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#if !defined( _LIBFCACHE_H )
+#define _LIBFCACHE_H
+
+#include <libfcache/definitions.h>
+#include <libfcache/error.h>
+#include <libfcache/extern.h>
+#include <libfcache/features.h>
+#include <libfcache/types.h>
+
+#include <stdio.h>
+
+#if defined( __cplusplus )
+extern "C" {
+#endif
+
+/* -------------------------------------------------------------------------
+ * Support functions
+ * ------------------------------------------------------------------------- */
+
+/* Returns the library version
+ */
+LIBFCACHE_EXTERN \
+const char *libfcache_get_version(
+             void );
+
+/* -------------------------------------------------------------------------
+ * Error functions
+ * ------------------------------------------------------------------------- */
+
+/* Frees an error
+ */
+LIBFCACHE_EXTERN \
+void libfcache_error_free(
+      libfcache_error_t **error );
+
+/* Prints a descriptive string of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_error_fprint(
+     libfcache_error_t *error,
+     FILE *stream );
+
+/* Prints a descriptive string of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_error_sprint(
+     libfcache_error_t *error,
+     char *string,
+     size_t size );
+
+/* Prints a backtrace of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_error_backtrace_fprint(
+     libfcache_error_t *error,
+     FILE *stream );
+
+/* Prints a backtrace of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_error_backtrace_sprint(
+     libfcache_error_t *error,
+     char *string,
+     size_t size );
+
+/* -------------------------------------------------------------------------
+ * Cache functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a cache
+ * Make sure the value cache is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_initialize(
+     libfcache_cache_t **cache,
+     int maximum_cache_entries,
+     libfcache_error_t **error );
+
+/* Frees a cache
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_free(
+     libfcache_cache_t **cache,
+     libfcache_error_t **error );
+
+/* Empties the cache
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_empty(
+     libfcache_cache_t *cache,
+     libfcache_error_t **error );
+
+/* Clones (duplicates) the cache, not the cache values
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_clone(
+     libfcache_cache_t **destination_cache,
+     libfcache_cache_t *source_cache,
+     libfcache_error_t **error );
+
+/* Resizes the cache
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_DEPRECATED \
+LIBFCACHE_EXTERN \
+int libfcache_cache_resize(
+     libfcache_cache_t *cache,
+     int maximum_cache_entries,
+     libfcache_error_t **error );
+
+/* Retrieves the number of entries of the cache
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_get_number_of_entries(
+     libfcache_cache_t *cache,
+     int *number_of_entries,
+     libfcache_error_t **error );
+
+/* Retrieves the number of cache values
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_get_number_of_cache_values(
+     libfcache_cache_t *cache,
+     int *number_of_values,
+     libfcache_error_t **error );
+
+LIBFCACHE_EXTERN \
+int libfcache_cache_clear_value_by_index(
+     libfcache_cache_t *cache,
+     int cache_entry_index,
+     libfcache_error_t **error );
+
+/* Retrieves the cache value that matches the identifier
+ * Returns 1 if successful, 0 if no such value or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_get_value_by_identifier(
+     libfcache_cache_t *cache,
+     int file_index,
+     off64_t offset,
+     int64_t timestamp,
+     libfcache_cache_value_t **cache_value,
+     libfcache_error_t **error );
+
+/* Retrieves the cache value for the specific index
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_get_value_by_index(
+     libfcache_cache_t *cache,
+     int cache_entry_index,
+     libfcache_cache_value_t **cache_value,
+     libfcache_error_t **error );
+
+/* Sets the cache value for the identifer
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_set_value_by_identifier(
+     libfcache_cache_t *cache,
+     int file_index,
+     off64_t offset,
+     int64_t timestamp,
+     intptr_t *value,
+     int (*value_free_function)(
+            intptr_t **value,
+            libfcache_error_t **error ),
+     uint8_t flags,
+     libfcache_error_t **error );
+
+/* Sets the cache value for the specific index
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_set_value_by_index(
+     libfcache_cache_t *cache,
+     int cache_entry_index,
+     int file_index,
+     off64_t offset,
+     int64_t timestamp,
+     intptr_t *value,
+     int (*value_free_function)(
+            intptr_t **value,
+            libfcache_error_t **error ),
+     uint8_t flags,
+     libfcache_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Cache value functions
+ * ------------------------------------------------------------------------- */
+
+/* Frees a cache value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_value_free(
+     libfcache_cache_value_t **cache_value,
+     libfcache_error_t **error );
+
+/* Clears the cache value
+ * This function does not free the value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_value_clear(
+     libfcache_cache_value_t *cache_value,
+     libfcache_error_t **error );
+
+/* Retrieves the cache value identifier
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_value_get_identifier(
+     libfcache_cache_value_t *cache_value,
+     int *file_index,
+     off64_t *offset,
+     int64_t *timestamp,
+     libfcache_error_t **error );
+
+/* Sets the cache value identifier
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_value_set_identifier(
+     libfcache_cache_value_t *cache_value,
+     int file_index,
+     off64_t offset,
+     int64_t timestamp,
+     libfcache_error_t **error );
+
+/* Retrieves the cache value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_value_get_value(
+     libfcache_cache_value_t *cache_value,
+     intptr_t **value,
+     libfcache_error_t **error );
+
+/* Sets the cache value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_cache_value_set_value(
+     libfcache_cache_value_t *cache_value,
+     intptr_t *value,
+     int (*value_free_function)(
+            intptr_t **value,
+            libfcache_error_t **error ),
+     uint8_t flags,
+     libfcache_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Date time functions
+ * ------------------------------------------------------------------------- */
+
+/* Retrieves the cache value timestamp
+ * Returns 1 if successful or -1 on error
+ */
+LIBFCACHE_EXTERN \
+int libfcache_date_time_get_timestamp(
+     int64_t *timestamp,
+     libfcache_error_t **error );
+
+#if defined( __cplusplus )
+}
+#endif
+
+#endif /* !defined( _LIBFCACHE_H ) */
+

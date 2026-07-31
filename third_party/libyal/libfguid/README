@@ -1,0 +1,12 @@
+libfguid is a library for the GUID/UUID format.
+
+Project information:
+
+* Status: alpha
+* Licence: LGPL-3.0-or-later
+
+For more information see:
+
+* Project documentation: https://github.com/libyal/libfguid/wiki/Home
+* How to build from source: https://github.com/libyal/libfguid/wiki/Building
+

@@ -1,0 +1,24 @@
+TODO
+* language
+  - complete language support
+  - move language support into library
+  - language identifier from string function
+  - add language2string functions
+* codepage
+  - add codepage2string functions
+  - merge python wrapper code (+/-)
+* Missing caseless wide string compare in Cygwin
+  when WINAPI is enabled
+* update include header
+  - codepages
+  - LCIDs
+* API
+  - add libclocale_initialize
+* add support for OEM codepages
+* update man pages
+* create tool to print locale info for troubleshooting
+
+20120507
+* see `git log' for more recent change log
+* Worked on stand-alone version
+

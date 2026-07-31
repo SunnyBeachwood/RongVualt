@@ -1,0 +1,70 @@
+Name: libfdata
+Version: @VERSION@
+Release: 1
+Summary: Library to provide generic file data functions
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libfdata
+@libfdata_spec_requires@ @ax_libcdata_spec_requires@ @ax_libcerror_spec_requires@ @ax_libcnotify_spec_requires@ @ax_libcthreads_spec_requires@ @ax_libfcache_spec_requires@
+BuildRequires: gcc @ax_libcdata_spec_build_requires@ @ax_libcerror_spec_build_requires@ @ax_libcnotify_spec_build_requires@ @ax_libcthreads_spec_build_requires@ @ax_libfcache_spec_build_requires@
+
+%description -n libfdata
+Library to provide generic file data functions
+
+%package -n libfdata-static
+Summary: Library to provide generic file data functions
+Group: Development/Libraries
+Requires: libfdata = %{version}-%{release}
+
+%description -n libfdata-static
+Static library version of libfdata.
+
+%package -n libfdata-devel
+Summary: Header files and libraries for developing applications for libfdata
+Group: Development/Libraries
+Requires: libfdata = %{version}-%{release}
+
+%description -n libfdata-devel
+Header files and libraries for developing applications for libfdata.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libfdata
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libfdata-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libfdata-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libfdata.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

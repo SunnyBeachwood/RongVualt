@@ -1,0 +1,1094 @@
+/*
+ * Library to support file format date and time values
+ *
+ * Copyright (C) 2009-2026, Joachim Metz <joachim.metz@gmail.com>
+ *
+ * Refer to AUTHORS for acknowledgements.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#if !defined( _LIBFDATETIME_H )
+#define _LIBFDATETIME_H
+
+#include <libfdatetime/definitions.h>
+#include <libfdatetime/error.h>
+#include <libfdatetime/extern.h>
+#include <libfdatetime/features.h>
+#include <libfdatetime/types.h>
+
+#include <stdio.h>
+
+#if defined( __cplusplus )
+extern "C" {
+#endif
+
+/* -------------------------------------------------------------------------
+ * Support functions
+ * ------------------------------------------------------------------------- */
+
+/* Returns the library version
+ */
+LIBFDATETIME_EXTERN \
+const char *libfdatetime_get_version(
+             void );
+
+/* -------------------------------------------------------------------------
+ * Error functions
+ * ------------------------------------------------------------------------- */
+
+/* Frees an error
+ */
+LIBFDATETIME_EXTERN \
+void libfdatetime_error_free(
+      libfdatetime_error_t **error );
+
+/* Prints a descriptive string of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_error_fprint(
+     libfdatetime_error_t *error,
+     FILE *stream );
+
+/* Prints a descriptive string of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_error_sprint(
+     libfdatetime_error_t *error,
+     char *string,
+     size_t size );
+
+/* Prints a backtrace of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_error_backtrace_fprint(
+     libfdatetime_error_t *error,
+     FILE *stream );
+
+/* Prints a backtrace of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_error_backtrace_sprint(
+     libfdatetime_error_t *error,
+     char *string,
+     size_t size );
+
+/* -------------------------------------------------------------------------
+ * FAT date and time functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a FAT date and time
+ * Make sure the value fat_date_time is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_initialize(
+     libfdatetime_fat_date_time_t **fat_date_time,
+     libfdatetime_error_t **error );
+
+/* Frees a FAT date and time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_free(
+     libfdatetime_fat_date_time_t **fat_date_time,
+     libfdatetime_error_t **error );
+
+/* Converts a byte stream into a FAT date and time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_from_byte_stream(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfdatetime_error_t **error );
+
+/* Converts a 32-bit value into a FAT date and time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_from_32bit(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint32_t value_32bit,
+     libfdatetime_error_t **error );
+
+/* Converts a FAT date and time into a 32-bit value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_to_32bit(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint32_t *value_32bit,
+     libfdatetime_error_t **error );
+
+/* Deterimes the size of the string for the fat date time
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_get_string_size(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FAT date and time into an UTF-8 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_to_utf8_string(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FAT date and time into an UTF-8 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_to_utf8_string_with_index(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FAT date and time into an UTF-16 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_to_utf16_string(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FAT date and time into an UTF-16 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_to_utf16_string_with_index(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FAT date and time into an UTF-16 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_to_utf32_string(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FAT date and time into an UTF-16 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_fat_date_time_copy_to_utf32_string_with_index(
+     libfdatetime_fat_date_time_t *fat_date_time,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * FILETIME functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a FILETIME
+ * Make sure the value filetime is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_initialize(
+     libfdatetime_filetime_t **filetime,
+     libfdatetime_error_t **error );
+
+/* Frees a FILETIME
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_free(
+     libfdatetime_filetime_t **filetime,
+     libfdatetime_error_t **error );
+
+/* Adds the additional FILETIME to the FILETIME
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_add(
+     libfdatetime_filetime_t *filetime,
+     libfdatetime_filetime_t *additional_filetime,
+     libfdatetime_error_t **error );
+
+/* Converts a byte stream into a FILETIME
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_from_byte_stream(
+     libfdatetime_filetime_t *filetime,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfdatetime_error_t **error );
+
+/* Converts a 64-bit value into a FILETIME
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_from_64bit(
+     libfdatetime_filetime_t *filetime,
+     uint64_t value_64bit,
+     libfdatetime_error_t **error );
+
+/* Converts a FILETIME into a 64-bit value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_to_64bit(
+     libfdatetime_filetime_t *filetime,
+     uint64_t *value_64bit,
+     libfdatetime_error_t **error );
+
+/* Deterimes the size of the string for the FILETIME
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_get_string_size(
+     libfdatetime_filetime_t *filetime,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FILETIME into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_to_utf8_string(
+     libfdatetime_filetime_t *filetime,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FILETIME into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_to_utf8_string_with_index(
+     libfdatetime_filetime_t *filetime,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FILETIME into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_to_utf16_string(
+     libfdatetime_filetime_t *filetime,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FILETIME into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_to_utf16_string_with_index(
+     libfdatetime_filetime_t *filetime,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FILETIME into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_to_utf32_string(
+     libfdatetime_filetime_t *filetime,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the FILETIME into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_filetime_copy_to_utf32_string_with_index(
+     libfdatetime_filetime_t *filetime,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Floatingtime functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a floatingtime
+ * Make sure the value floatingtime is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_initialize(
+     libfdatetime_floatingtime_t **floatingtime,
+     libfdatetime_error_t **error );
+
+/* Frees a floatingtime
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_free(
+     libfdatetime_floatingtime_t **floatingtime,
+     libfdatetime_error_t **error );
+
+/* Converts a byte stream into a floatingtime
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_from_byte_stream(
+     libfdatetime_floatingtime_t *floatingtime,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfdatetime_error_t **error );
+
+/* Converts a 64-bit value into a floatingtime
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_from_64bit(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint64_t value_64bit,
+     libfdatetime_error_t **error );
+
+/* Converts a floatingtime into a 64-bit value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_to_64bit(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint64_t *value_64bit,
+     libfdatetime_error_t **error );
+
+/* Deterimes the size of the string for the floatingtime
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_get_string_size(
+     libfdatetime_floatingtime_t *floatingtime,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the floatingtime into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_to_utf8_string(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the floatingtime into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_to_utf8_string_with_index(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the floatingtime into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_to_utf16_string(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the floatingtime into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_to_utf16_string_with_index(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the floatingtime into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_to_utf32_string(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the floatingtime into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_floatingtime_copy_to_utf32_string_with_index(
+     libfdatetime_floatingtime_t *floatingtime,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * HFS time functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a HFS time
+ * Make sure the value hfs_time is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_initialize(
+     libfdatetime_hfs_time_t **hfs_time,
+     libfdatetime_error_t **error );
+
+/* Frees a HFS time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_free(
+     libfdatetime_hfs_time_t **hfs_time,
+     libfdatetime_error_t **error );
+
+/* Converts a byte stream into a HFS time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_from_byte_stream(
+     libfdatetime_hfs_time_t *hfs_time,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfdatetime_error_t **error );
+
+/* Converts a 32-bit value into a HFS time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_from_32bit(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint32_t value_32bit,
+     libfdatetime_error_t **error );
+
+/* Converts a HFS time into a 32-bit value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_to_32bit(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint32_t *value_32bit,
+     libfdatetime_error_t **error );
+
+/* Deterimes the size of the string for the HFS time
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_get_string_size(
+     libfdatetime_hfs_time_t *hfs_time,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the HFS time into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_to_utf8_string(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the HFS time into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_to_utf8_string_with_index(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the HFS time into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_to_utf16_string(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the HFS time into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_to_utf16_string_with_index(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the HFS time into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_to_utf32_string(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the HFS time into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_hfs_time_copy_to_utf32_string_with_index(
+     libfdatetime_hfs_time_t *hfs_time,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * NSF timedate functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a NSF timedate
+ * Make sure the value nsf_timedate is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_initialize(
+     libfdatetime_nsf_timedate_t **nsf_timedate,
+     libfdatetime_error_t **error );
+
+/* Frees a NSF timedate
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_free(
+     libfdatetime_nsf_timedate_t **nsf_timedate,
+     libfdatetime_error_t **error );
+
+/* Converts a byte stream into a NSF timedate
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_from_byte_stream(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfdatetime_error_t **error );
+
+/* Converts a 64-bit value into a NSF timedate
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_from_64bit(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint64_t value_64bit,
+     libfdatetime_error_t **error );
+
+/* Converts a NSF timedate into a 64-bit value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_to_64bit(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint64_t *value_64bit,
+     libfdatetime_error_t **error );
+
+/* Deterimes the size of the string for the NSF timedate
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_get_string_size(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the NSF timedate into an UTF-8 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_to_utf8_string(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the NSF timedate into an UTF-8 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_to_utf8_string_with_index(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the NSF timedate into an UTF-16 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_to_utf16_string(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the NSF timedate into an UTF-16 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_to_utf16_string_with_index(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the NSF timedate into an UTF-32 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_to_utf32_string(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the NSF timedate into an UTF-32 string
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_nsf_timedate_copy_to_utf32_string_with_index(
+     libfdatetime_nsf_timedate_t *nsf_timedate,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * POSIX time functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a POSIX time
+ * Make sure the value posix_time is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_initialize(
+     libfdatetime_posix_time_t **posix_time,
+     libfdatetime_error_t **error );
+
+/* Frees a POSIX time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_free(
+     libfdatetime_posix_time_t **posix_time,
+     libfdatetime_error_t **error );
+
+/* Converts a byte stream into a POSIX time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_from_byte_stream(
+     libfdatetime_posix_time_t *posix_time,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     uint8_t value_type,
+     libfdatetime_error_t **error );
+
+/* Converts a 32-bit value into a POSIX time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_from_32bit(
+     libfdatetime_posix_time_t *posix_time,
+     uint32_t value_32bit,
+     uint8_t value_type,
+     libfdatetime_error_t **error );
+
+/* Converts a POSIX time into a 32-bit value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_32bit(
+     libfdatetime_posix_time_t *posix_time,
+     uint32_t *value_32bit,
+     uint8_t *value_type,
+     libfdatetime_error_t **error );
+
+/* Converts a 64-bit value into a POSIX time
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_from_64bit(
+     libfdatetime_posix_time_t *posix_time,
+     uint64_t value_64bit,
+     uint8_t value_type,
+     libfdatetime_error_t **error );
+
+/* Converts a POSIX time into a 64-bit value
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_64bit(
+     libfdatetime_posix_time_t *posix_time,
+     uint64_t *value_64bit,
+     uint8_t *value_type,
+     libfdatetime_error_t **error );
+
+/* Deterimes the size of the string for the POSIX time
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_get_string_size(
+     libfdatetime_posix_time_t *posix_time,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the POSIX time into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_utf8_string(
+     libfdatetime_posix_time_t *posix_time,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the POSIX time into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_utf8_string_with_index(
+     libfdatetime_posix_time_t *posix_time,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the POSIX time into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_utf16_string(
+     libfdatetime_posix_time_t *posix_time,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the POSIX time into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_utf16_string_with_index(
+     libfdatetime_posix_time_t *posix_time,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the POSIX time into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_utf32_string(
+     libfdatetime_posix_time_t *posix_time,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the POSIX time into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_posix_time_copy_to_utf32_string_with_index(
+     libfdatetime_posix_time_t *posix_time,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Systemtime functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a SYSTEMTIME
+ * Make sure the value systemtime is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_initialize(
+     libfdatetime_systemtime_t **systemtime,
+     libfdatetime_error_t **error );
+
+/* Frees a SYSTEMTIME
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_free(
+     libfdatetime_systemtime_t **systemtime,
+     libfdatetime_error_t **error );
+
+/* Converts a byte stream into a SYSTEMTIME
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_copy_from_byte_stream(
+     libfdatetime_systemtime_t *systemtime,
+     const uint8_t *byte_stream,
+     size_t byte_stream_size,
+     int byte_order,
+     libfdatetime_error_t **error );
+
+/* Deterimes the size of the string for the SYSTEMTIME
+ * The string size includes the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_get_string_size(
+     libfdatetime_systemtime_t *systemtime,
+     size_t *string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the SYSTEMTIME into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_copy_to_utf8_string(
+     libfdatetime_systemtime_t *systemtime,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the SYSTEMTIME into a string
+ * The strings is encoded in UTF-8
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_copy_to_utf8_string_with_index(
+     libfdatetime_systemtime_t *systemtime,
+     uint8_t *utf8_string,
+     size_t utf8_string_size,
+     size_t *utf8_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the SYSTEMTIME into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_copy_to_utf16_string(
+     libfdatetime_systemtime_t *systemtime,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the SYSTEMTIME into a string
+ * The strings is encoded in UTF-16
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_copy_to_utf16_string_with_index(
+     libfdatetime_systemtime_t *systemtime,
+     uint16_t *utf16_string,
+     size_t utf16_string_size,
+     size_t *utf16_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the SYSTEMTIME into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_copy_to_utf32_string(
+     libfdatetime_systemtime_t *systemtime,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+/* Converts the SYSTEMTIME into a string
+ * The strings is encoded in UTF-32
+ * The string size should include the end of string character
+ * Returns 1 if successful or -1 on error
+ */
+LIBFDATETIME_EXTERN \
+int libfdatetime_systemtime_copy_to_utf32_string_with_index(
+     libfdatetime_systemtime_t *systemtime,
+     uint32_t *utf32_string,
+     size_t utf32_string_size,
+     size_t *utf32_string_index,
+     uint32_t string_format_flags,
+     libfdatetime_error_t **error );
+
+#if defined( __cplusplus )
+}
+#endif
+
+#endif /* !defined( _LIBFDATETIME_H ) */
+

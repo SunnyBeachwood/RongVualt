@@ -1,0 +1,22 @@
+TODO
+* systemtime print invalid times as hex string
+* add functions similar to:
+  - libfvalue_integer_copy_from_integer and libfvalue_integer_copy_to_integer
+* change function comment for UTF size and copy functions
+  see libfvalue
+* formatting support
+  - add support for duration
+* filetime check for -0 ?
+* add a more sophisticated day of the month check in date time values
+* have API functions return 0 if value is not a valid date and time ?
+
+Date time values:
+* add non-with-index functions ?
+
+FAT date and time
+* implement individual fat_date and fat_time support ?
+
+20090906
+* see `git log' for more recent change log
+* Created stand-alone version of version used in libpff
+

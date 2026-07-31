@@ -1,0 +1,70 @@
+Name: libcfile
+Version: @VERSION@
+Release: 1
+Summary: Library to support cross-platform C file functions
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libcfile
+@libcfile_spec_requires@ @ax_libcerror_spec_requires@ @ax_libclocale_spec_requires@ @ax_libcnotify_spec_requires@ @ax_libuna_spec_requires@
+BuildRequires: gcc @ax_libcerror_spec_build_requires@ @ax_libclocale_spec_build_requires@ @ax_libcnotify_spec_build_requires@ @ax_libuna_spec_build_requires@
+
+%description -n libcfile
+Library to support cross-platform C file functions
+
+%package -n libcfile-static
+Summary: Library to support cross-platform C file functions
+Group: Development/Libraries
+Requires: libcfile = %{version}-%{release}
+
+%description -n libcfile-static
+Static library version of libcfile.
+
+%package -n libcfile-devel
+Summary: Header files and libraries for developing applications for libcfile
+Group: Development/Libraries
+Requires: libcfile = %{version}-%{release}
+
+%description -n libcfile-devel
+Header files and libraries for developing applications for libcfile.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libcfile
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libcfile-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libcfile-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libcfile.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

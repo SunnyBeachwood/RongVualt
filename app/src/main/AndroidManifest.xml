@@ -1,136 +1,132 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    package="com.sovworks.eds.android"
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <supports-screens android:anyDensity="true"/>
-    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- The embedded FTP server obtains its advertised LAN address from
+         WifiManager and holds a Wi-Fi lock while it is serving clients. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- Material Files keeps long-running copy/move/delete work alive with a
+         partial wake lock. Without this normal file operations crash on start. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Android grants this only from its dedicated Settings page. Material
+         Files requests it on demand before direct shared-storage browsing. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <application
-        android:name="com.sovworks.eds.android.EdsApplication"
+        android:name="org.eds.veracrypt.VeraCryptApplication"
         android:allowBackup="false"
-        android:icon="@drawable/ic_launcher_eds"
-        android:label="@string/eds"
-        android:theme="@style/Theme.EDS">
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@drawable/rongvault_icon"
+        android:label="@string/app_name"
+        android:roundIcon="@drawable/rongvault_icon"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VeraCrypt"
+        android:localeConfig="@xml/locales_config">
+        <!-- Required by AppCompat 1.7 when Activities are created on Android
+             16. Locale state remains app-private. -->
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data android:name="autoStoreLocales" android:value="true" />
+        </service>
         <activity
-            android:name=".filemanager.activities.FileManagerActivity"
-            android:label="@string/eds"
+            android:name="org.eds.veracrypt.ui.ContainerCatalogActivity"
             android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-            <intent-filter>
-                <category android:name="android.intent.category.DEFAULT"/>
-
-                <action android:name="android.intent.action.SEND"/>
-                <action android:name="android.intent.action.SEND_MULTIPLE"/>
-
-                <data android:mimeType="*/*"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <data android:mimeType="resource/folder"/>
-                <data android:scheme="file"/>
-                <data android:host="*"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.PICK"/>
-                <data android:mimeType="*/*"/>
-            </intent-filter>
-            <intent-filter tools:ignore="AppIndexingApiError">
-                <action android:name="android.intent.action.VIEW"/>
-
-                <category android:name="android.intent.category.DEFAULT"/>
-                <category android:name="android.intent.category.BROWSABLE"/>
-                <category android:name="android.intent.category.OPENABLE"/>
-
-                <data android:scheme="file"/>
-                <data android:scheme="content"/>
-                <data android:mimeType="*/*"/>
-                <data android:pathPattern=".*\\.tc"/>
-                <data android:pathPattern=".*\\.eds"/>
-                <data android:pathPattern=".*\\.luks"/>
-                <data android:pathPattern=".*\\.vc"/>
-                <data android:pathPattern=".*\\.hc"/>
-                <data android:pathPattern=".*\\.dvf"/>
-                <data android:host="*"/>
-            </intent-filter>
-        </activity>
-        <activity android:name=".locations.activities.LocationListActivity" android:windowSoftInputMode="adjustPan" />
-        <activity android:name=".locations.activities.CreateLocationActivity" android:windowSoftInputMode="adjustPan" />
-        <activity
-            android:name=".locations.activities.LocationSettingsActivity"
-            android:windowSoftInputMode="adjustPan"
-            android:label="@string/settings" />
-        <activity android:name=".activities.LocationShortcutWidgetConfigActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
-            android:name=".activities.CancelTaskActivity"
-            android:excludeFromRecents="true"
-            android:theme="@style/Dialog"
-            android:label="@string/eds"
-            android:exported="false">
+            android:name="org.eds.veracrypt.ui.MaterialFilesContainerPickerActivity"
+            android:exported="false"
+            android:screenOrientation="unspecified" />
+        <activity
+            android:name="me.zhanghai.android.files.filelist.FileListActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MaterialFiles.Material3" />
+        <!-- The library's secondary screens are launched from FileListActivity
+             but are separate activities. Give them the same upstream theme so
+             they cannot inherit RongVault's Material theme by accident. -->
+        <activity android:name="me.zhanghai.android.files.filelist.OpenFileActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.filelist.EditFileActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.AddStorageDialogActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.AddDocumentTreeActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.EditDocumentTreeDialogActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.EditFtpServerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.EditSftpServerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.AddLanSmbServerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.EditSmbServerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.EditWebDavServerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.storage.StorageListActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.ftpserver.FtpServerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.settings.SettingsActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.about.AboutActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity
+            android:name="me.zhanghai.android.files.viewer.text.TextEditorActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MaterialFiles.Material3">
             <intent-filter>
-                <action android:name="com.sovworks.eds.android.ACTION_CANCEL_TASK"/>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="text/*" />
+                <data android:mimeType="application/json" />
+                <data android:mimeType="application/xml" />
+                <data android:mimeType="application/yaml" />
+                <data android:mimeType="application/javascript" />
+                <data android:mimeType="application/markdown" />
+                <data android:mimeType="application/x-markdown" />
+            </intent-filter>
+            <!-- Some document providers label Markdown as generic binary data. Keep this
+                 fallback extension-scoped so RongVault is not offered for every binary file. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="application/octet-stream" />
+                <data android:pathPattern=".*\.md" />
+                <data android:pathPattern=".*\.MD" />
+                <data android:pathPattern=".*\.markdown" />
+                <data android:pathPattern=".*\.MARKDOWN" />
+                <data android:pathPattern=".*\.mkd" />
+                <data android:pathPattern=".*\.MKD" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".filemanager.activities.ImageViewerActivity"
-            android:label="@string/image_viewer"/>
-        <activity
-            android:name=".locations.activities.CloseLocationsActivity"
-            android:excludeFromRecents="true"/>
-        <activity
-            android:name=".locations.activities.OpenLocationsActivity"
-            android:excludeFromRecents="true"/>
-        <activity
-            android:name=".activities.VersionHistory"
-            android:label="@string/version_history"/>
-        <activity
-            android:name=".settings.activities.ProgramSettingsActivity"
-            android:label="@string/settings"
-            android:launchMode="singleTop"
-            android:windowSoftInputMode="adjustPan"/>
-        <activity
-            android:name=".settings.activities.OpeningOptionsActivity"
-            android:label="@string/settings"
-            android:windowSoftInputMode="adjustPan"/>
-        <service android:name=".service.FileOpsService"/>
-        <service android:name=".service.LocationsService"/>
-        <receiver android:name=".widgets.LocationShortcutWidget"
-                  android:label="@string/eds_shortcut"
-                  android:exported="true">
+        <activity android:name="me.zhanghai.android.files.viewer.markdown.MarkdownViewerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <activity android:name="me.zhanghai.android.files.viewer.image.ImageViewerActivity" android:theme="@style/Theme.MaterialFiles.Material3" />
+        <!-- Material Files keeps application setup and temporary file handles
+             behind private providers. Android requires an authority even for
+             non-exported providers. -->
+        <provider
+            android:name="me.zhanghai.android.files.app.AppProvider"
+            android:authorities="${applicationId}.materialfiles.app"
+            android:exported="false" />
+        <provider
+            android:name="me.zhanghai.android.files.file.FileProvider"
+            android:authorities="${applicationId}.materialfiles.files"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+        <service
+            android:name="org.eds.veracrypt.documents.VolumeForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+        <provider
+            android:name="org.eds.veracrypt.documents.UnlockedDocumentsProvider"
+            android:authorities="${applicationId}.unlocked"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
             <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="com.sovworks.eds.android.BROADCAST_LOCATION_CHANGED"/>
-            </intent-filter>
-            <meta-data android:name="android.appwidget.provider"
-                       android:resource="@xml/widget_info"/>
-        </receiver>
-        <receiver android:name=".widgets.CloseAllContainersWidget"
-                  android:label="@string/close_all_containers"
-                  android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.sovworks.eds.android.BROADCAST_LOCATION_CHANGED"/>
-            </intent-filter>
-            <intent-filter>
-                <action android:name="com.sovworks.eds.android.BROADCAST_ALL_CONTAINERS_CLOSED"/>
-            </intent-filter>
-
-            <meta-data android:name="android.appwidget.provider"
-                       android:resource="@xml/close_all_containers_widget_info"/>
-        </receiver>
+        </provider>
     </application>
-</manifest> 
+</manifest>

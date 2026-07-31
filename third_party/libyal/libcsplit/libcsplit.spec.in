@@ -1,0 +1,70 @@
+Name: libcsplit
+Version: @VERSION@
+Release: 1
+Summary: Library to support cross-platform C split string functions
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libcsplit
+@libcsplit_spec_requires@ @ax_libcerror_spec_requires@
+BuildRequires: gcc @ax_libcerror_spec_build_requires@
+
+%description -n libcsplit
+Library to support cross-platform C split string functions
+
+%package -n libcsplit-static
+Summary: Library to support cross-platform C split string functions
+Group: Development/Libraries
+Requires: libcsplit = %{version}-%{release}
+
+%description -n libcsplit-static
+Static library version of libcsplit.
+
+%package -n libcsplit-devel
+Summary: Header files and libraries for developing applications for libcsplit
+Group: Development/Libraries
+Requires: libcsplit = %{version}-%{release}
+
+%description -n libcsplit-devel
+Header files and libraries for developing applications for libcsplit.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libcsplit
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libcsplit-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libcsplit-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libcsplit.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

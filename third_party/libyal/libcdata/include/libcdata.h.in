@@ -1,0 +1,1245 @@
+/*
+ * Library to support cross-platform C generic data functions
+ *
+ * Copyright (C) 2006-2026, Joachim Metz <joachim.metz@gmail.com>
+ *
+ * Refer to AUTHORS for acknowledgements.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#if !defined( _LIBCDATA_H )
+#define _LIBCDATA_H
+
+#include <libcdata/definitions.h>
+#include <libcdata/error.h>
+#include <libcdata/extern.h>
+#include <libcdata/features.h>
+#include <libcdata/types.h>
+
+#include <stdio.h>
+
+#if defined( __cplusplus )
+extern "C" {
+#endif
+
+/* -------------------------------------------------------------------------
+ * Support functions
+ * ------------------------------------------------------------------------- */
+
+/* Returns the library version as a string
+ */
+LIBCDATA_EXTERN \
+const char *libcdata_get_version(
+             void );
+
+/* -------------------------------------------------------------------------
+ * Error functions
+ * ------------------------------------------------------------------------- */
+
+/* Frees an error
+ */
+LIBCDATA_EXTERN \
+void libcdata_error_free(
+      libcdata_error_t **error );
+
+/* Prints a descriptive string of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_error_fprint(
+     libcdata_error_t *error,
+     FILE *stream );
+
+/* Prints a descriptive string of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_error_sprint(
+     libcdata_error_t *error,
+     char *string,
+     size_t size );
+
+/* Prints a backtrace of the error to the stream
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_error_backtrace_fprint(
+     libcdata_error_t *error,
+     FILE *stream );
+
+/* Prints a backtrace of the error to the string
+ * The end-of-string character is not included in the return value
+ * Returns the amount of printed characters if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_error_backtrace_sprint(
+     libcdata_error_t *error,
+     char *string,
+     size_t size );
+
+/* -------------------------------------------------------------------------
+ * Array functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates an array
+ * Make sure the value array is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_initialize(
+     libcdata_array_t **array,
+     int number_of_entries,
+     libcdata_error_t **error );
+
+/* Frees an array
+ * The entries are freed using the entry_free_function
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_free(
+     libcdata_array_t **array,
+     int (*entry_free_function)(
+            intptr_t **entry,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Empties an array and frees its entries
+ * The entries are freed using the entry_free_function
+ * If the entry_free_function fails for a specific entry it is not freed and kept in the array
+ *
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_empty(
+     libcdata_array_t *array,
+     int (*entry_free_function)(
+            intptr_t **entry,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Clears an array and frees its entries
+ * The entries are freed using the entry_free_function
+ * If the entry_free_function fails for a specific entry it is not freed and kept in the array
+ *
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_clear(
+     libcdata_array_t *array,
+     int (*entry_free_function)(
+            intptr_t **entry,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Clones the array and its entries
+ *
+ * The entries are cloned using the entry_clone_function
+ * On error the entries are freed using the entry_free_function
+ *
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_clone(
+     libcdata_array_t **destination_array,
+     libcdata_array_t *source_array,
+     int (*entry_free_function)(
+            intptr_t **entry,
+            libcdata_error_t **error ),
+     int (*entry_clone_function)(
+            intptr_t **destination_entry,
+            intptr_t *source_entry,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Resizes an array
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_resize(
+     libcdata_array_t *array,
+     int number_of_entries,
+     int (*entry_free_function)(
+            intptr_t **entry,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Reverses the order of the entries in the array
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_reverse(
+     libcdata_array_t *array,
+     libcdata_error_t **error );
+
+/* Retrieves the number of entries in the array
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_get_number_of_entries(
+     libcdata_array_t *array,
+     int *number_of_entries,
+     libcdata_error_t **error );
+
+/* Retrieves a specific entry from the array
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_get_entry_by_index(
+     libcdata_array_t *array,
+     int entry_index,
+     intptr_t **entry,
+     libcdata_error_t **error );
+
+/* Retrieves a specific entry from the array
+ *
+ * Uses the entry_compare_function to determine the similarity of the entries
+ * The entry_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Returns 1 if successful, 0 if no such value or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_get_entry_by_value(
+     libcdata_array_t *array,
+     intptr_t *entry,
+     int (*entry_compare_function)(
+            intptr_t *first_entry,
+            intptr_t *second_entry,
+            libcdata_error_t **error ),
+     intptr_t **existing_entry,
+     libcdata_error_t **error );
+
+/* Sets a specific entry in the array
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_set_entry_by_index(
+     libcdata_array_t *array,
+     int entry_index,
+     intptr_t *entry,
+     libcdata_error_t **error );
+
+/* Prepends an entry
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_prepend_entry(
+     libcdata_array_t *array,
+     intptr_t *entry,
+     libcdata_error_t **error );
+
+/* Appends an entry
+ * Sets the entry index to the newly appended entry
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_append_entry(
+     libcdata_array_t *array,
+     int *entry_index,
+     intptr_t *entry,
+     libcdata_error_t **error );
+
+/* Inserts an entry in the array
+ *
+ * Uses the entry_compare_function to determine the order of the entries
+ * The entry_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Duplicate entries are allowed by default and inserted after the last duplicate entry.
+ * Only allowing unique entries can be enforced by setting the flag LIBCDATA_INSERT_FLAG_UNIQUE_ENTRIES
+ *
+ * entry_index is set when the entry was successfully inserted
+ *
+ * Returns 1 if successful, 0 if the entry already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_insert_entry(
+     libcdata_array_t *array,
+     int *entry_index,
+     intptr_t *entry,
+     int (*entry_compare_function)(
+            intptr_t *first_entry,
+            intptr_t *second_entry,
+            libcdata_error_t **error ),
+     uint8_t insert_flags,
+     libcdata_error_t **error );
+
+/* Removes an entry
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_array_remove_entry(
+     libcdata_array_t *array,
+     int entry_index,
+     intptr_t **entry,
+     libcdata_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Balanced tree functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a tree
+ * Make sure the value tree is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_initialize(
+     libcdata_btree_t **tree,
+     int maximum_number_of_sub_nodes,
+     libcdata_error_t **error );
+
+/* Frees a tree, its sub nodes
+ * Uses the value_free_function to free the value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_free(
+     libcdata_btree_t **tree,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Retrieves the number of values in the tree
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_get_number_of_values(
+     libcdata_btree_t *tree,
+     int *number_of_values,
+     libcdata_error_t **error );
+
+/* Retrieves a specific value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_get_value_by_index(
+     libcdata_btree_t *tree,
+     int value_index,
+     intptr_t **value,
+     libcdata_error_t **error );
+
+/* Retrieves a value from the tree
+ *
+ * Uses the value_compare_function to determine the similarity of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Returns 1 if successful, 0 if no such value or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_get_value_by_value(
+     libcdata_btree_t *tree,
+     intptr_t *value,
+     int (*value_compare_function)(
+            intptr_t *first_value,
+            intptr_t *second_value,
+            libcdata_error_t **error ),
+     libcdata_tree_node_t **upper_node,
+     intptr_t **existing_value,
+     libcdata_error_t **error );
+
+/* Inserts a value into a tree
+ *
+ * Uses the value_compare_function to determine the order of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Returns 1 if successful, 0 if the value already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_insert_value(
+     libcdata_btree_t *tree,
+     int *value_index,
+     intptr_t *value,
+     int (*value_compare_function)(
+            intptr_t *first_value,
+            intptr_t *second_value,
+            libcdata_error_t **error ),
+     libcdata_tree_node_t **upper_node,
+     intptr_t **existing_value,
+     libcdata_error_t **error );
+
+/* Replaces a value in the tree
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_replace_value(
+     libcdata_btree_t *tree,
+     libcdata_tree_node_t *upper_node,
+     int *value_index,
+     intptr_t *value,
+     int *replacement_value_index,
+     intptr_t *replacement_value,
+     libcdata_error_t **error );
+
+/* Removes a value from the tree
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_btree_remove_value(
+     libcdata_btree_t *tree,
+     libcdata_tree_node_t *upper_node,
+     int *value_index,
+     intptr_t *value,
+     libcdata_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * List functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a list
+ * Make sure the value list is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_initialize(
+     libcdata_list_t **list,
+     libcdata_error_t **error );
+
+/* Frees a list including the elements
+ * Uses the value_free_function to free the element value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_free(
+     libcdata_list_t **list,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Empties a list and frees the elements
+ * Uses the value_free_function to free the element value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_empty(
+     libcdata_list_t *list,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Clones the list and its elements
+ *
+ * The values are cloned using the value_clone_function
+ * On error the values are freed using the value_free_function
+ *
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_clone(
+     libcdata_list_t **destination_list,
+     libcdata_list_t *source_list,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     int (*value_clone_function)(
+            intptr_t **destination_value,
+            intptr_t *source_value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Retrieves the number of elements in the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_get_number_of_elements(
+     libcdata_list_t *list,
+     int *number_of_elements,
+     libcdata_error_t **error );
+
+/* Retrieves the first element in the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_get_first_element(
+     libcdata_list_t *list,
+     libcdata_list_element_t **element,
+     libcdata_error_t **error );
+
+/* Retrieves the last element in the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_get_last_element(
+     libcdata_list_t *list,
+     libcdata_list_element_t **element,
+     libcdata_error_t **error );
+
+/* Retrieves a specific element from the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_get_element_by_index(
+     libcdata_list_t *list,
+     int element_index,
+     libcdata_list_element_t **element,
+     libcdata_error_t **error );
+
+/* Retrieves a specific value from the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_get_value_by_index(
+     libcdata_list_t *list,
+     int element_index,
+     intptr_t **value,
+     libcdata_error_t **error );
+
+/* Prepends a list element to the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_prepend_element(
+     libcdata_list_t *list,
+     libcdata_list_element_t *element,
+     libcdata_error_t **error );
+
+/* Prepends a value to the list
+ * Creates a new list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_prepend_value(
+     libcdata_list_t *list,
+     intptr_t *value,
+     libcdata_error_t **error );
+
+/* Appends a list element to the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_append_element(
+     libcdata_list_t *list,
+     libcdata_list_element_t *element,
+     libcdata_error_t **error );
+
+/* Appends a value to the list
+ * Creates a new list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_append_value(
+     libcdata_list_t *list,
+     intptr_t *value,
+     libcdata_error_t **error );
+
+/* Inserts a list element into the list
+ *
+ * Uses the value_compare_function to determine the order of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Duplicate entries are allowed by default and inserted after the last duplicate value.
+ * Only allowing unique entries can be enforced by setting the flag LIBCDATA_INSERT_FLAG_UNIQUE_ENTRIES
+ *
+ * Returns 1 if successful, 0 if the list element already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_insert_element(
+     libcdata_list_t *list,
+     libcdata_list_element_t *element_to_insert,
+     int (*value_compare_function)(
+            intptr_t *first,
+            intptr_t *second,
+            libcdata_error_t **error ),
+     uint8_t insert_flags,
+     libcdata_error_t **error );
+
+/* Inserts a list element into the list
+ *
+ * Uses the value_compare_function to determine the order of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Duplicate entries are allowed by default and inserted after the last duplicate value.
+ * Only allowing unique entries can be enforced by setting the flag LIBCDATA_INSERT_FLAG_UNIQUE_ENTRIES
+ *
+ * Returns 1 if successful, 0 if the list element already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_insert_element_with_existing(
+     libcdata_list_t *list,
+     libcdata_list_element_t *element_to_insert,
+     int (*value_compare_function)(
+            intptr_t *first,
+            intptr_t *second,
+            libcdata_error_t **error ),
+     uint8_t insert_flags,
+     libcdata_list_element_t **existing_element,
+     libcdata_error_t **error );
+
+/* Inserts a value to the list
+ *
+ * Creates a new list element
+ *
+ * Uses the value_compare_function to determine the order of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Duplicate entries are allowed by default and inserted after the last duplicate value.
+ * Only allowing unique entries can be enforced by setting the flag LIBCDATA_INSERT_FLAG_UNIQUE_ENTRIES
+ *
+ * Returns 1 if successful, 0 if the list element already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_insert_value(
+     libcdata_list_t *list,
+     intptr_t *value,
+     int (*value_compare_function)(
+            intptr_t *first,
+            intptr_t *second,
+            libcdata_error_t **error ),
+     uint8_t insert_flags,
+     libcdata_error_t **error );
+
+/* Inserts a value to the list
+ *
+ * Creates a new list element
+ *
+ * Uses the value_compare_function to determine the order of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Duplicate entries are allowed by default and inserted after the last duplicate value.
+ * Only allowing unique entries can be enforced by setting the flag LIBCDATA_INSERT_FLAG_UNIQUE_ENTRIES
+ *
+ * Returns 1 if successful, 0 if the list element already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_insert_value_with_existing(
+     libcdata_list_t *list,
+     intptr_t *value,
+     int (*value_compare_function)(
+            intptr_t *first,
+            intptr_t *second,
+            libcdata_error_t **error ),
+     uint8_t insert_flags,
+     intptr_t **existing_value,
+     libcdata_error_t **error );
+
+/* Removes a list element from the list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_remove_element(
+     libcdata_list_t *list,
+     libcdata_list_element_t *element_to_remove,
+     libcdata_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * List element functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a list element
+ * Make sure the value element is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_initialize(
+     libcdata_list_element_t **element,
+     libcdata_error_t **error );
+
+/* Frees a list element
+ * Uses the value_free_function to free the element value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_free(
+     libcdata_list_element_t **element,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Retrieves the previous element from the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_get_previous_element(
+     libcdata_list_element_t *element,
+     libcdata_list_element_t **previous_element,
+     libcdata_error_t **error );
+
+/* Sets the previous element in the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_set_previous_element(
+     libcdata_list_element_t *element,
+     libcdata_list_element_t *previous_element,
+     libcdata_error_t **error );
+
+/* Retrieves the next element from the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_get_next_element(
+     libcdata_list_element_t *element,
+     libcdata_list_element_t **next_element,
+     libcdata_error_t **error );
+
+/* Sets the next element in the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_set_next_element(
+     libcdata_list_element_t *element,
+     libcdata_list_element_t *next_element,
+     libcdata_error_t **error );
+
+/* Retrieves the previous and next element from the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_get_elements(
+     libcdata_list_element_t *element,
+     libcdata_list_element_t **previous_element,
+     libcdata_list_element_t **next_element,
+     libcdata_error_t **error );
+
+/* Sets the previous and next element in the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_set_elements(
+     libcdata_list_element_t *element,
+     libcdata_list_element_t *previous_element,
+     libcdata_list_element_t *next_element,
+     libcdata_error_t **error );
+
+/* Retrieves the value from the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_get_value(
+     libcdata_list_element_t *element,
+     intptr_t **value,
+     libcdata_error_t **error );
+
+/* Sets the value in the list element
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_list_element_set_value(
+     libcdata_list_element_t *element,
+     intptr_t *value,
+     libcdata_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Range list functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a range list
+ * Make sure the value range_list is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_initialize(
+     libcdata_range_list_t **range_list,
+     libcdata_error_t **error );
+
+/* Frees a range list including the elements
+ * Uses the value_free_function to free the element value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_free(
+     libcdata_range_list_t **range_list,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Empties a range list and frees the elements
+ * Uses the value_free_function to free the element value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_empty(
+     libcdata_range_list_t *range_list,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Clones the range list
+ *
+ * The values are cloned using the value_clone_function
+ * On error the values are freed using the value_free_function
+ *
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_clone(
+     libcdata_range_list_t **destination_range_list,
+     libcdata_range_list_t *source_range_list,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     int (*value_clone_function)(
+            intptr_t **destination_value,
+            intptr_t *source_value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Retrieves the number of elements in the range list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_get_number_of_elements(
+     libcdata_range_list_t *range_list,
+     int *number_of_elements,
+     libcdata_error_t **error );
+
+/* Retrieves the first element in the range list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_get_first_element(
+     libcdata_range_list_t *range_list,
+     libcdata_list_element_t **element,
+     libcdata_error_t **error );
+
+/* Retrieves the last element in the range list
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_get_last_element(
+     libcdata_range_list_t *range_list,
+     libcdata_list_element_t **element,
+     libcdata_error_t **error );
+
+/* Inserts a range
+ *
+ * The values are merged using the value_merge_function.
+ * If the source value is NULL the merge function is not called.
+ *
+ * After a merge and on error the values are freed using
+ * the value_free_function
+ *
+ * Returns 1 if successful, 0 if the range was merged or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_insert_range(
+     libcdata_range_list_t *range_list,
+     uint64_t range_start,
+     uint64_t range_size,
+     intptr_t *value,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     int (*value_merge_function)(
+            intptr_t *destination_value,
+            intptr_t *source_value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Inserts a range list
+ *
+ * The values are merged using the value_merge_function.
+ * If the source value is NULL the merge function is not called.
+ *
+ * After a merge and on error the values are freed using
+ * the value_free_function
+ *
+ * The values in the source_range_list are not affected.
+ *
+ * Returns 1 if successful, or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_insert_range_list(
+     libcdata_range_list_t *range_list,
+     libcdata_range_list_t *source_range_list,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     int (*value_merge_function)(
+            intptr_t *destination_value,
+            intptr_t *source_value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Removes a range
+ *
+ * The values are split using the value_merge_function.
+ * If the source value is NULL the split function is not called.
+ * On return destination_value of the value_merge_function
+ * should contain data greater equal to the split_range_offset.
+ *
+ * After a split and on error the values are freed using
+ * the value_free_function
+ *
+ * Returns 1 if successful, or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_remove_range(
+     libcdata_range_list_t *range_list,
+     uint64_t range_start,
+     uint64_t range_size,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     int (*value_split_function)(
+            intptr_t **destination_value,
+            intptr_t *source_value,
+            uint64_t split_range_offset,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Retrieves a specific range
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_get_range_by_index(
+     libcdata_range_list_t *range_list,
+     int element_index,
+     uint64_t *range_start,
+     uint64_t *range_size,
+     intptr_t **value,
+     libcdata_error_t **error );
+
+/* Retrieves a range for a specific range offset
+ * Returns 1 if successful, 0 if no range was found or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_get_range_at_offset(
+     libcdata_range_list_t *range_list,
+     uint64_t range_offset,
+     uint64_t *range_start,
+     uint64_t *range_size,
+     intptr_t **value,
+     libcdata_error_t **error );
+
+/* Determines if a certain range is present in the list
+ * This function does not check for partial overlapping ranges
+ * Returns 1 if a range is present, 0 if not or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_range_is_present(
+     libcdata_range_list_t *range_list,
+     uint64_t range_start,
+     uint64_t range_size,
+     libcdata_error_t **error );
+
+/* Determines if a certain range overlaps with a range in the list
+ * Returns 1 if an overlapping range is present, 0 if not or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_range_has_overlapping_range(
+     libcdata_range_list_t *range_list,
+     uint64_t range_start,
+     uint64_t range_size,
+     libcdata_error_t **error );
+
+/* Retrieves the range spanning the ranges in the range list
+ * Returns 1 if present, 0 if not present or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_range_list_get_spanning_range(
+     libcdata_range_list_t *range_list,
+     uint64_t *range_start,
+     uint64_t *range_size,
+     libcdata_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Tree node functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a tree node
+ * Make sure the value node is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_initialize(
+     libcdata_tree_node_t **node,
+     libcdata_error_t **error );
+
+/* Frees a tree node, its sub nodes
+ * Uses the value_free_function to free the value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_free(
+     libcdata_tree_node_t **node,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Empties a tree node and frees its sub nodes
+ * Uses the value_free_function to free the value of the sub nodes
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_empty(
+     libcdata_tree_node_t *node,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Clones the tree node and its sub nodes
+ *
+ * The values are cloned using the value_clone_function
+ * On error the values are freed using the value_free_function
+ *
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_clone(
+     libcdata_tree_node_t **destination_node,
+     libcdata_tree_node_t *source_node,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcdata_error_t **error ),
+     int (*value_clone_function)(
+            intptr_t **destination_value,
+            intptr_t *source_value,
+            libcdata_error_t **error ),
+     libcdata_error_t **error );
+
+/* Retrieves the value from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_value(
+     libcdata_tree_node_t *node,
+     intptr_t **value,
+     libcdata_error_t **error );
+
+/* Sets the value in the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_set_value(
+     libcdata_tree_node_t *node,
+     intptr_t *value,
+     libcdata_error_t **error );
+
+/* Retrieves the parent node from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_parent_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t **parent_node,
+     libcdata_error_t **error );
+
+/* Sets the parent node in the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_set_parent_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *parent_node,
+     libcdata_error_t **error );
+
+/* Retrieves the previous node from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_previous_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t **previous_node,
+     libcdata_error_t **error );
+
+/* Sets the previous node in the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_set_previous_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *previous_node,
+     libcdata_error_t **error );
+
+/* Retrieves the next node from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_next_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t **next_node,
+     libcdata_error_t **error );
+
+/* Sets the next node in the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_set_next_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *next_node,
+     libcdata_error_t **error );
+
+/* Retrieves the nodes from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_nodes(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t **parent_node,
+     libcdata_tree_node_t **previous_node,
+     libcdata_tree_node_t **next_node,
+     libcdata_error_t **error );
+
+/* Sets the nodes in the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_set_nodes(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *parent_node,
+     libcdata_tree_node_t *previous_node,
+     libcdata_tree_node_t *next_node,
+     libcdata_error_t **error );
+
+/* Retrieves the first sub node from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_first_sub_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t **first_sub_node,
+     libcdata_error_t **error );
+
+/* Retrieves the last sub node from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_last_sub_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t **last_sub_node,
+     libcdata_error_t **error );
+
+/* Appends a sub tree node to the node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_append_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *node_to_append,
+     libcdata_error_t **error );
+
+/* Appends a value to the node
+ * Creates a new sub tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_append_value(
+     libcdata_tree_node_t *node,
+     intptr_t *value,
+     libcdata_error_t **error );
+
+/* Inserts a sub node in the node
+ *
+ * Uses the value_compare_function to determine the order of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Duplicate entries are allowed by default and inserted after the last duplicate value.
+ * Only allowing unique entries can be enforced by setting the flag LIBCDATA_INSERT_FLAG_UNIQUE_ENTRIES
+ *
+ * Returns 1 if successful, 0 if the node already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_insert_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *node_to_insert,
+     int (*value_compare_function)(
+            intptr_t *first_value,
+            intptr_t *second_value,
+            libcdata_error_t **error ),
+     uint8_t insert_flags,
+     libcdata_error_t **error );
+
+/* Inserts a value in the node
+ *
+ * Creates a new sub tree node
+ *
+ * Uses the value_compare_function to determine the order of the entries
+ * The value_compare_function should return LIBCDATA_COMPARE_LESS,
+ * LIBCDATA_COMPARE_EQUAL, LIBCDATA_COMPARE_GREATER if successful or -1 on error
+ *
+ * Duplicate entries are allowed by default and inserted after the last duplicate value.
+ * Only allowing unique entries can be enforced by setting the flag LIBCDATA_INSERT_FLAG_UNIQUE_ENTRIES
+ *
+ * Returns 1 if successful, 0 if the node already exists or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_insert_value(
+     libcdata_tree_node_t *node,
+     intptr_t *value,
+     int (*value_compare_function)(
+            intptr_t *first_value,
+            intptr_t *second_value,
+            libcdata_error_t **error ),
+     uint8_t insert_flags,
+     libcdata_error_t **error );
+
+/* Replaces a tree node with another tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_replace_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *replacement_node,
+     libcdata_error_t **error );
+
+/* Removes a sub tree node from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_remove_node(
+     libcdata_tree_node_t *node,
+     libcdata_tree_node_t *sub_node_to_remove,
+     libcdata_error_t **error );
+
+/* Retrieves the number of sub nodes in the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_number_of_sub_nodes(
+     libcdata_tree_node_t *node,
+     int *number_of_sub_nodes,
+     libcdata_error_t **error );
+
+/* Retrieves a specific sub node from the tree node
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_sub_node_by_index(
+     libcdata_tree_node_t *node,
+     int sub_node_index,
+     libcdata_tree_node_t **sub_node,
+     libcdata_error_t **error );
+
+/* Retrieves a list of all the leaf nodes
+ * Returns 1 if successful or -1 on error
+ */
+LIBCDATA_EXTERN \
+int libcdata_tree_node_get_leaf_node_list(
+     libcdata_tree_node_t *node,
+     libcdata_list_t **leaf_node_list,
+     libcdata_error_t **error );
+
+#if defined( __cplusplus )
+}
+#endif
+
+#endif /* !defined( _LIBCDATA_H ) */
+

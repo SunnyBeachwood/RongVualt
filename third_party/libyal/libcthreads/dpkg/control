@@ -1,0 +1,32 @@
+Source: libcthreads
+Priority: extra
+Maintainer: Joachim Metz <joachim.metz@gmail.com>
+Build-Depends: debhelper (>= 13), dh-autoreconf, pkg-config
+Standards-Version: 4.1.4
+Section: libs
+Homepage: https://github.com/libyal/libcthreads
+Vcs-Git: https://github.com/libyal/libcthreads.git
+
+Package: libcthreads
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: libcthreads1
+Replaces: libcthreads1
+Suggests: libcthreads-dbg
+Description: Library to support cross-platform C threads functions
+ libcthreads is a library to support cross-platform C threads functions.
+
+Package: libcthreads-dbg
+Architecture: any
+Section: debug
+Depends: libcthreads (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libcthreads
+ Debugging symbols for libcthreads.
+
+Package: libcthreads-dev
+Section: libdevel
+Architecture: any
+Depends: libcthreads (= ${binary:Version}), ${misc:Depends}
+Description: Header files and libraries for developing applications for libcthreads
+ Header files and libraries for developing applications for libcthreads.
+

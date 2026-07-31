@@ -1,0 +1,32 @@
+Source: libfdata
+Priority: extra
+Maintainer: Joachim Metz <joachim.metz@gmail.com>
+Build-Depends: debhelper (>= 13), dh-autoreconf, pkg-config
+Standards-Version: 4.1.4
+Section: libs
+Homepage: https://github.com/libyal/libfdata
+Vcs-Git: https://github.com/libyal/libfdata.git
+
+Package: libfdata
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: libfdata1
+Replaces: libfdata1
+Suggests: libfdata-dbg
+Description: Library to provide generic file data functions
+ libfdata is a library to provide generic file data functions.
+
+Package: libfdata-dbg
+Architecture: any
+Section: debug
+Depends: libfdata (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libfdata
+ Debugging symbols for libfdata.
+
+Package: libfdata-dev
+Section: libdevel
+Architecture: any
+Depends: libfdata (= ${binary:Version}), ${misc:Depends}
+Description: Header files and libraries for developing applications for libfdata
+ Header files and libraries for developing applications for libfdata.
+

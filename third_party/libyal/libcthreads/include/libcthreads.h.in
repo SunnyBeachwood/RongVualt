@@ -1,0 +1,474 @@
+/*
+ * Library to support cross-platform C threads functions
+ *
+ * Copyright (C) 2012-2026, Joachim Metz <joachim.metz@gmail.com>
+ *
+ * Refer to AUTHORS for acknowledgements.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#if !defined( _LIBCTHREADS_H )
+#define _LIBCTHREADS_H
+
+#include <libcthreads/definitions.h>
+#include <libcthreads/error.h>
+#include <libcthreads/extern.h>
+#include <libcthreads/features.h>
+#include <libcthreads/types.h>
+
+#include <stdio.h>
+
+#if defined( __cplusplus )
+extern "C" {
+#endif
+
+/* -------------------------------------------------------------------------
+ * Support functions
+ * ------------------------------------------------------------------------- */
+
+/* Returns the library version as a string
+ */
+LIBCTHREADS_EXTERN \
+const char *libcthreads_get_version(
+             void );
+
+/* -------------------------------------------------------------------------
+ * Error functions
+ * ------------------------------------------------------------------------- */
+
+/* Frees an error
+ */
+LIBCTHREADS_EXTERN \
+void libcthreads_error_free(
+      libcthreads_error_t **error );
+
+/* Prints a descriptive string of the error to the stream
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_error_fprint(
+     libcthreads_error_t *error,
+     FILE *stream );
+
+/* Prints a descriptive string of the error to the string
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_error_sprint(
+     libcthreads_error_t *error,
+     char *string,
+     size_t size );
+
+/* Prints a backtrace of the error to the stream
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_error_backtrace_fprint(
+     libcthreads_error_t *error,
+     FILE *stream );
+
+/* Prints a backtrace of the error to the string
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_error_backtrace_sprint(
+     libcthreads_error_t *error,
+     char *string,
+     size_t size );
+
+/* -------------------------------------------------------------------------
+ * Thread functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a thread
+ * Make sure the value thread is referencing, is set to NULL
+ *
+ * The callback_function should return 1 if successful and -1 on error
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_create(
+     libcthreads_thread_t **thread,
+     const libcthreads_thread_attributes_t *thread_attributes,
+     int (*callback_function)(
+            void *arguments ),
+     void *callback_function_arguments,
+     libcthreads_error_t **error );
+
+/* Joins the current thread with a specified thread
+ * The the thread is freed after join
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_join(
+     libcthreads_thread_t **thread,
+     libcthreads_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Thread attributes functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates thread attributes
+ * Make sure the value thread_attributes is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_attributes_initialize(
+     libcthreads_thread_attributes_t **thread_attributes,
+     libcthreads_error_t **error );
+
+/* Frees thread attributes
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_attributes_free(
+     libcthreads_thread_attributes_t **thread_attributes,
+     libcthreads_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Condition functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a condition
+ * Make sure the value condition is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_condition_initialize(
+     libcthreads_condition_t **condition,
+     libcthreads_error_t **error );
+
+/* Frees a condition
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_condition_free(
+     libcthreads_condition_t **condition,
+     libcthreads_error_t **error );
+
+/* Broadcasts a condition
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_condition_broadcast(
+     libcthreads_condition_t *condition,
+     libcthreads_error_t **error );
+
+/* Signals a condition
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_condition_signal(
+     libcthreads_condition_t *condition,
+     libcthreads_error_t **error );
+
+/* Waits for a condition
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_condition_wait(
+     libcthreads_condition_t *condition,
+     libcthreads_mutex_t *mutex,
+     libcthreads_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Lock functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a lock
+ * Make sure the value lock is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_lock_initialize(
+     libcthreads_lock_t **lock,
+     libcthreads_error_t **error );
+
+/* Frees a lock
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_lock_free(
+     libcthreads_lock_t **lock,
+     libcthreads_error_t **error );
+
+/* Grabs a lock
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_lock_grab(
+     libcthreads_lock_t *lock,
+     libcthreads_error_t **error );
+
+/* Releases a lock
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_lock_release(
+     libcthreads_lock_t *lock,
+     libcthreads_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Mutex functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a mutex
+ * Make sure the value mutex is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_mutex_initialize(
+     libcthreads_mutex_t **mutex,
+     libcthreads_error_t **error );
+
+/* Frees a mutex
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_mutex_free(
+     libcthreads_mutex_t **mutex,
+     libcthreads_error_t **error );
+
+/* Grabs a mutex
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_mutex_grab(
+     libcthreads_mutex_t *mutex,
+     libcthreads_error_t **error );
+
+/* Tries to grab a mutex
+ * Returns 1 if successful, 0 if not or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_mutex_try_grab(
+     libcthreads_mutex_t *mutex,
+     libcthreads_error_t **error );
+
+/* Releases a mutex
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_mutex_release(
+     libcthreads_mutex_t *mutex,
+     libcthreads_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Read/Write lock functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a read/write lock
+ * Make sure the value read_write_lock is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_read_write_lock_initialize(
+     libcthreads_read_write_lock_t **read_write_lock,
+     libcthreads_error_t **error );
+
+/* Frees a read/write lock
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_read_write_lock_free(
+     libcthreads_read_write_lock_t **read_write_lock,
+     libcthreads_error_t **error );
+
+/* Grabs a read/write lock for reading
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_read_write_lock_grab_for_read(
+     libcthreads_read_write_lock_t *read_write_lock,
+     libcthreads_error_t **error );
+
+/* Grabs a read/write lock for writing
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_read_write_lock_grab_for_write(
+     libcthreads_read_write_lock_t *read_write_lock,
+     libcthreads_error_t **error );
+
+/* Releases a read/write lock for reading
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_read_write_lock_release_for_read(
+     libcthreads_read_write_lock_t *read_write_lock,
+     libcthreads_error_t **error );
+
+/* Releases a read/write lock for writing
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_read_write_lock_release_for_write(
+     libcthreads_read_write_lock_t *read_write_lock,
+     libcthreads_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Queue functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a queue
+ * Make sure the value queue is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_initialize(
+     libcthreads_queue_t **queue,
+     int maximum_number_of_values,
+     libcthreads_error_t **error );
+
+/* Frees a queue
+ * Uses the value_free_function to free the value
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_free(
+     libcthreads_queue_t **queue,
+     int (*value_free_function)(
+            intptr_t **value,
+            libcthreads_error_t **error ),
+     libcthreads_error_t **error );
+
+/* Empties a queue
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_empty(
+     libcthreads_queue_t *queue,
+     libcthreads_error_t **error );
+
+/* Tries to pop a value off the queue
+ * Returns 1 if successful, 0 if not or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_try_pop(
+     libcthreads_queue_t *queue,
+     intptr_t **value,
+     libcthreads_error_t **error );
+
+/* Pops a value off the queue
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_pop(
+     libcthreads_queue_t *queue,
+     intptr_t **value,
+     libcthreads_error_t **error );
+
+/* Tries to push a value onto the queue
+ * Returns 1 if successful, 0 if not or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_try_push(
+     libcthreads_queue_t *queue,
+     intptr_t *value,
+     libcthreads_error_t **error );
+
+/* Pushes a value onto the queue
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_push(
+     libcthreads_queue_t *queue,
+     intptr_t *value,
+     libcthreads_error_t **error );
+
+/* Pushes a value onto the queue in sorted order
+ *
+ * Uses the value_compare_function to determine the similarity of the values
+ * The value_compare_function should return LIBCTHREADS_COMPARE_LESS,
+ * LIBCTHREADS_COMPARE_EQUAL, LIBCTHREADS_COMPARE_GREATER if successful or -1 on error
+ *
+ * Returns 1 if successful, 0 if the value already exists or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_queue_push_sorted(
+     libcthreads_queue_t *queue,
+     intptr_t *value,
+     int (*value_compare_function)(
+            intptr_t *first_value,
+            intptr_t *second_value,
+            libcthreads_error_t **error ),
+     uint8_t sort_flags,
+     libcthreads_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Thread pool functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a thread pool
+ * Make sure the value thread_pool is referencing, is set to NULL
+ *
+ * The callback_function should return 1 if successful and -1 on error
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_pool_create(
+     libcthreads_thread_pool_t **thread_pool,
+     const libcthreads_thread_attributes_t *thread_attributes,
+     int number_of_threads,
+     int maximum_number_of_values,
+     int (*callback_function)(
+            intptr_t *value,
+            void *arguments ),
+     void *callback_function_arguments,
+     libcthreads_error_t **error );
+
+/* Pushes a value onto the queue of the thread pool
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_pool_push(
+     libcthreads_thread_pool_t *thread_pool,
+     intptr_t *value,
+     libcthreads_error_t **error );
+
+/* Pushes a value onto the queue of the thread pool in sorted order
+ *
+ * Uses the value_compare_function to determine the similarity of the values
+ * The value_compare_function should return LIBCTHREADS_COMPARE_LESS,
+ * LIBCTHREADS_COMPARE_EQUAL, LIBCTHREADS_COMPARE_GREATER if successful or -1 on error
+ *
+ * Returns 1 if successful, 0 if the value already exists or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_pool_push_sorted(
+     libcthreads_thread_pool_t *thread_pool,
+     intptr_t *value,
+     int (*value_compare_function)(
+            intptr_t *first_value,
+            intptr_t *second_value,
+            libcthreads_error_t **error ),
+     uint8_t sort_flags,
+     libcthreads_error_t **error );
+
+/* Joins the current thread with a specified thread pool
+ * The the thread is freed after join
+ * Returns 1 if successful or -1 on error
+ */
+LIBCTHREADS_EXTERN \
+int libcthreads_thread_pool_join(
+     libcthreads_thread_pool_t **thread_pool,
+     libcthreads_error_t **error );
+
+#if defined( __cplusplus )
+}
+#endif
+
+#endif /* !defined( _LIBCTHREADS_H ) */
+

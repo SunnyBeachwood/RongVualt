@@ -1,0 +1,32 @@
+Source: libcnotify
+Priority: extra
+Maintainer: Joachim Metz <joachim.metz@gmail.com>
+Build-Depends: debhelper (>= 13), dh-autoreconf, pkg-config
+Standards-Version: 4.1.4
+Section: libs
+Homepage: https://github.com/libyal/libcnotify
+Vcs-Git: https://github.com/libyal/libcnotify.git
+
+Package: libcnotify
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: libcnotify1
+Replaces: libcnotify1
+Suggests: libcnotify-dbg
+Description: Library to support cross-platform C notification functions
+ libcnotify is a library to support cross-platform C notification functions.
+
+Package: libcnotify-dbg
+Architecture: any
+Section: debug
+Depends: libcnotify (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libcnotify
+ Debugging symbols for libcnotify.
+
+Package: libcnotify-dev
+Section: libdevel
+Architecture: any
+Depends: libcnotify (= ${binary:Version}), ${misc:Depends}
+Description: Header files and libraries for developing applications for libcnotify
+ Header files and libraries for developing applications for libcnotify.
+

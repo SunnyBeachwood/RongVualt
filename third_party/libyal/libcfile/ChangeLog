@@ -1,0 +1,25 @@
+TODO
+* add block support for write ?
+* validate WINAPI versions of fallback functions
+* add fallback versions of
+  - GetLastError
+* add libcfile_codepage.h and codepage functions
+* what about disk full on write errno = ENOSPC
+
+Tests:
+* move creation of temporary filename (mkstemp) into helper function
+* add open close
+* add write when opened with read ?
+* add IO control tests ?
+* add test to retrieve size from device ?
+
+Notes:
+* WINAPI ReadFile
+  When the file is UNBUFFERED it appears that nNumberOfBytesToRead must be a
+  multiple of sector size. Any other value will result in error 0x57
+  (ERROR_INVALID_PARAMETER).
+
+20120403
+* Worked on stand-alone version
+* see `git log' for more recent change log
+

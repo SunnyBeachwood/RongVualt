@@ -1,0 +1,75 @@
+TODO
+* use physical and logical offset terms?
+* standarize element_file_index or element_data_file_index names
+* add checks for unsupported flags
+
+* hide cache in fdata structures do not pass to callback?
+  - pass value and free function instead?
+* vector: fail on segments that are not multitudes of element size
+* change "at offset" into hexadecimal value
+* list and write - set is also used by read callback
+  have flag that tells function to initiate write callback ?
+* rewrite
+  - update libfdata_tree_initialize
+* add callback to calculate cache index ?
+  - allow to be NULL by default and fallback to default behavior
+  - separate set function
+* add/improve tests
+  - area
+  - list (init, read)
+  - range list (init)
+  - tree
+  - vector (init, read)
+* add generic type for ESEDB page, REGF hive bin, CREG data block, etc
+
+Types:
+* merge segment handling into single source file?
+* area
+  - add mapped offset support ?
+  - add mapped size write support ?
+  - change behavior of libfdata_area_get_element_value_at_offset to return 0 if offset is out of bounds like libfdata_list_set_element_value_at_offset?
+* list
+  - remove libfdata_list_cache_element_value ?
+  - reimplement libfdata_list_get_element_index_at_value_index ?
+  - prepend: optimize recalculation of element index ?
+  - add stream like read/write buffer ?
+  - add libfdata_list_set_element_by_index_with_mapped_size
+  - add libfdata_list_prepend_element_with_mapped_size
+  - add libfdata_list_set_element_at_offset
+  - write on set value ? what about create ?
+  - add calculate_cache_entry_index support
+  - implement libfdata_list_read_buffer and libfdata_list_seek_offset ?
+  - add a function to look for data range offset instead of relative list offset
+    libfdata_list_get_element_value_at_offset ?
+  - rename element_offset and equiv to element_data_offset
+* range list
+  - work in progress
+* stream
+  - add mapped offset support ?
+  - add mapped size write support ?
+* tree
+  - refactor
+  - libfdata_tree_node_set_node_value add file_io_handle argument? like other equiv functions
+  - add mapped offset support ?
+  - unload parts of the tree if it becomes too large
+* tree node
+  - refactor
+  - add mapped offset support ?
+  - allow to invalidate sub nodes data range?
+* vector
+  - add mapped offset support ?
+  - refactor
+  - write on set value ? what about create ?
+  - rename element_offset and equiv to element_data_offset
+  - change behavior of libfdata_vector_get_element_value_by_index to return 0 if offset is out of bounds like libfdata_list_set_element_value_at_offset?
+  - change behavior of libfdata_vector_get_element_value_at_offset to return 0 if offset is out of bounds like libfdata_list_set_element_value_at_offset?
+
+Optimizations:
+* mapped ranges
+  - optimize calculations by adding flag to mapped range ?
+    LIBFDATA_MAPPED_RANGE_FLAG_IS_INVALID
+
+20121211
+* created stand-alone version based on libfguid
+* see `git log' for more recent change log
+

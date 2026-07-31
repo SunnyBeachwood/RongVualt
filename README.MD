@@ -48,9 +48,6 @@ VeraCrypt 兼容的**非系统文件容器**。它将加密卷作为 Android 文
 .\gradlew.bat :app:assembleLiteDebug
 ```
 
-克隆仓库时请使用 `git clone --recurse-submodules`；若已克隆，请先运行
-`git submodule update --init --recursive` 以获取 NTFS 只读支持所需的固定版本源码。
-
 发布构建还需要在源代码之外提供全部 `EDS_RELEASE_*` 签名配置，以及 HTTPS 形式的
 `RONGVAULT_SOURCE_URL`。项目不会使用仓库中的签名密钥生成发布包。
 

@@ -1,0 +1,70 @@
+Name: libfdatetime
+Version: @VERSION@
+Release: 1
+Summary: Library to support various date and time formats
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libfdatetime
+@libfdatetime_spec_requires@ @ax_libcerror_spec_requires@
+BuildRequires: gcc @ax_libcerror_spec_build_requires@
+
+%description -n libfdatetime
+Library to support various date and time formats
+
+%package -n libfdatetime-static
+Summary: Library to support various date and time formats
+Group: Development/Libraries
+Requires: libfdatetime = %{version}-%{release}
+
+%description -n libfdatetime-static
+Static library version of libfdatetime.
+
+%package -n libfdatetime-devel
+Summary: Header files and libraries for developing applications for libfdatetime
+Group: Development/Libraries
+Requires: libfdatetime = %{version}-%{release}
+
+%description -n libfdatetime-devel
+Header files and libraries for developing applications for libfdatetime.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libfdatetime
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libfdatetime-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libfdatetime-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libfdatetime.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

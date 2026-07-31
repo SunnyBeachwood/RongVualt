@@ -1,0 +1,32 @@
+Source: libcsplit
+Priority: extra
+Maintainer: Joachim Metz <joachim.metz@gmail.com>
+Build-Depends: debhelper (>= 13), dh-autoreconf, pkg-config
+Standards-Version: 4.1.4
+Section: libs
+Homepage: https://github.com/libyal/libcsplit
+Vcs-Git: https://github.com/libyal/libcsplit.git
+
+Package: libcsplit
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: libcsplit1
+Replaces: libcsplit1
+Suggests: libcsplit-dbg
+Description: Library to support cross-platform C split string functions
+ libcsplit is a library to support cross-platform C split string functions.
+
+Package: libcsplit-dbg
+Architecture: any
+Section: debug
+Depends: libcsplit (= ${binary:Version}), ${misc:Depends}
+Description: Debugging symbols for libcsplit
+ Debugging symbols for libcsplit.
+
+Package: libcsplit-dev
+Section: libdevel
+Architecture: any
+Depends: libcsplit (= ${binary:Version}), ${misc:Depends}
+Description: Header files and libraries for developing applications for libcsplit
+ Header files and libraries for developing applications for libcsplit.
+

@@ -1,0 +1,70 @@
+Name: libuna
+Version: @VERSION@
+Release: 1
+Summary: Library to support Unicode and ASCII (byte stream) conversions
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libuna
+@libuna_spec_requires@ @ax_libcerror_spec_requires@
+BuildRequires: gcc @ax_libcerror_spec_build_requires@
+
+%description -n libuna
+Library to support Unicode and ASCII (byte stream) conversions
+
+%package -n libuna-static
+Summary: Library to support Unicode and ASCII (byte stream) conversions
+Group: Development/Libraries
+Requires: libuna = %{version}-%{release}
+
+%description -n libuna-static
+Static library version of libuna.
+
+%package -n libuna-devel
+Summary: Header files and libraries for developing applications for libuna
+Group: Development/Libraries
+Requires: libuna = %{version}-%{release}
+
+%description -n libuna-devel
+Header files and libraries for developing applications for libuna.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libuna
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libuna-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libuna-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libuna.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

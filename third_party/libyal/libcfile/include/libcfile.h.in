@@ -1,0 +1,424 @@
+/*
+ * Library to support cross-platform C file functions
+ *
+ * Copyright (C) 2008-2026, Joachim Metz <joachim.metz@gmail.com>
+ *
+ * Refer to AUTHORS for acknowledgements.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#if !defined( _LIBCFILE_H )
+#define _LIBCFILE_H
+
+#include <libcfile/codepage.h>
+#include <libcfile/definitions.h>
+#include <libcfile/error.h>
+#include <libcfile/extern.h>
+#include <libcfile/features.h>
+#include <libcfile/types.h>
+
+#include <stdio.h>
+
+#if defined( __cplusplus )
+extern "C" {
+#endif
+
+/* -------------------------------------------------------------------------
+ * Support functions
+ * ------------------------------------------------------------------------- */
+
+/* Returns the library version as a string
+ */
+LIBCFILE_EXTERN \
+const char *libcfile_get_version(
+             void );
+
+/* Retrieves the narrow system string codepage
+ * A value of 0 represents no codepage, UTF-8 encoding is used instead
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_get_codepage(
+     int *codepage,
+     libcfile_error_t **error );
+
+/* Sets the narrow system string codepage
+ * A value of 0 represents no codepage, UTF-8 encoding is used instead
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_set_codepage(
+     int codepage,
+     libcfile_error_t **error );
+
+/* Determines if a file exists
+ * Returns 1 if the file exists, 0 if not or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_exists(
+     const char *filename,
+     libcfile_error_t **error );
+
+#if defined( LIBCFILE_HAVE_WIDE_CHARACTER_TYPE )
+
+/* Determines if a file exists
+ * Returns 1 if the file exists, 0 if not or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_exists_wide(
+     const wchar_t *filename,
+     libcfile_error_t **error );
+
+#endif /* defined( LIBCFILE_HAVE_WIDE_CHARACTER_TYPE ) */
+
+/* Removes a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_remove(
+     const char *filename,
+     libcfile_error_t **error );
+
+/* Removes a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_remove_with_error_code(
+     const char *filename,
+     uint32_t *error_code,
+     libcfile_error_t **error );
+
+#if defined( LIBCFILE_HAVE_WIDE_CHARACTER_TYPE )
+
+/* Removes a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_remove_wide(
+     const wchar_t *filename,
+     libcfile_error_t **error );
+
+/* Removes a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_remove_wide_with_error_code(
+     const wchar_t *filename,
+     uint32_t *error_code,
+     libcfile_error_t **error );
+
+#endif /* defined( LIBCFILE_HAVE_WIDE_CHARACTER_TYPE ) */
+
+/* -------------------------------------------------------------------------
+ * Notify functions
+ * ------------------------------------------------------------------------- */
+
+/* Sets the verbose notification
+ */
+LIBCFILE_EXTERN \
+void libcfile_notify_set_verbose(
+      int verbose );
+
+/* Sets the notification stream
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_notify_set_stream(
+     FILE *stream,
+     libcfile_error_t **error );
+
+/* Opens the notification stream using a filename
+ * The stream is opened in append mode
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_notify_stream_open(
+     const char *filename,
+     libcfile_error_t **error );
+
+/* Closes the notification stream if opened using a filename
+ * Returns 0 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_notify_stream_close(
+     libcfile_error_t **error );
+
+/* -------------------------------------------------------------------------
+ * Error functions
+ * ------------------------------------------------------------------------- */
+
+/* Frees an error
+ */
+LIBCFILE_EXTERN \
+void libcfile_error_free(
+      libcfile_error_t **error );
+
+/* Prints a descriptive string of the error to the stream
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_error_fprint(
+     libcfile_error_t *error,
+     FILE *stream );
+
+/* Prints a descriptive string of the error to the string
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_error_sprint(
+     libcfile_error_t *error,
+     char *string,
+     size_t size );
+
+/* Prints a backtrace of the error to the stream
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_error_backtrace_fprint(
+     libcfile_error_t *error,
+     FILE *stream );
+
+/* Prints a backtrace of the error to the string
+ * Returns the number of printed characters if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_error_backtrace_sprint(
+     libcfile_error_t *error,
+     char *string,
+     size_t size );
+
+/* -------------------------------------------------------------------------
+ * File functions
+ * ------------------------------------------------------------------------- */
+
+/* Creates a file
+ * Make sure the value file is referencing, is set to NULL
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_initialize(
+     libcfile_file_t **file,
+     libcfile_error_t **error );
+
+/* Frees a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_free(
+     libcfile_file_t **file,
+     libcfile_error_t **error );
+
+/* Opens a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_open(
+     libcfile_file_t *file,
+     const char *filename,
+     int access_flags,
+     libcfile_error_t **error );
+
+/* Opens a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_open_with_error_code(
+     libcfile_file_t *file,
+     const char *filename,
+     int access_flags,
+     uint32_t *error_code,
+     libcfile_error_t **error );
+
+#if defined( LIBCFILE_HAVE_WIDE_CHARACTER_TYPE )
+
+/* Opens a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_open_wide(
+     libcfile_file_t *file,
+     const wchar_t *filename,
+     int access_flags,
+     libcfile_error_t **error );
+
+/* Opens a file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_open_wide_with_error_code(
+     libcfile_file_t *file,
+     const wchar_t *filename,
+     int access_flags,
+     uint32_t *error_code,
+     libcfile_error_t **error );
+
+#endif /* defined( LIBCFILE_HAVE_WIDE_CHARACTER_TYPE ) */
+
+/* Closes the file
+ * Returns 0 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_close(
+     libcfile_file_t *file,
+     libcfile_error_t **error );
+
+/* Reads a buffer from the file
+ * Returns the number of bytes read if successful, or -1 on error
+ */
+LIBCFILE_EXTERN \
+ssize_t libcfile_file_read_buffer(
+         libcfile_file_t *file,
+         uint8_t *buffer,
+         size_t size,
+         libcfile_error_t **error );
+
+/* Reads a buffer from the file
+ * Returns the number of bytes read if successful, or -1 on error
+ */
+LIBCFILE_EXTERN \
+ssize_t libcfile_file_read_buffer_with_error_code(
+         libcfile_file_t *file,
+         uint8_t *buffer,
+         size_t size,
+         uint32_t *error_code,
+         libcfile_error_t **error );
+
+/* Writes a buffer to the file
+ * Returns the number of bytes written if successful, or -1 on error
+ */
+LIBCFILE_EXTERN \
+ssize_t libcfile_file_write_buffer(
+         libcfile_file_t *file,
+         const uint8_t *buffer,
+         size_t size,
+         libcfile_error_t **error );
+
+/* Writes a buffer to the file
+ * Returns the number of bytes written if successful, or -1 on error
+ */
+LIBCFILE_EXTERN \
+ssize_t libcfile_file_write_buffer_with_error_code(
+         libcfile_file_t *file,
+         const uint8_t *buffer,
+         size_t size,
+         uint32_t *error_code,
+         libcfile_error_t **error );
+
+/* Seeks a certain offset within the file
+ * Returns the offset if the seek is successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+off64_t libcfile_file_seek_offset(
+         libcfile_file_t *file,
+         off64_t offset,
+         int whence,
+         libcfile_error_t **error );
+
+/* Resizes the file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_resize(
+     libcfile_file_t *file,
+     size64_t size,
+     libcfile_error_t **error );
+
+/* Checks if the file is open
+ * Returns 1 if open, 0 if not or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_is_open(
+     libcfile_file_t *file,
+     libcfile_error_t **error );
+
+/* Retrieves the current offset in the file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_get_offset(
+     libcfile_file_t *file,
+     off64_t *offset,
+     libcfile_error_t **error );
+
+/* Retrieves the size of the file
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_get_size(
+     libcfile_file_t *file,
+     size64_t *size,
+     libcfile_error_t **error );
+
+/* Determines if a file is a device
+ * Returns 1 if true, 0 if not or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_is_device(
+     libcfile_file_t *file,
+     libcfile_error_t **error );
+
+/* Read data from a device file using IO control
+ * Returns the number of bytes read if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+ssize_t libcfile_file_io_control_read(
+         libcfile_file_t *file,
+         uint32_t control_code,
+         uint8_t *control_data,
+         size_t control_data_size,
+         uint8_t *data,
+         size_t data_size,
+         libcfile_error_t **error );
+
+/* Read data from a device file using IO control
+ * Returns the number of bytes read if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+ssize_t libcfile_file_io_control_read_with_error_code(
+         libcfile_file_t *file,
+         uint32_t control_code,
+         uint8_t *control_data,
+         size_t control_data_size,
+         uint8_t *data,
+         size_t data_size,
+         uint32_t *error_code,
+         libcfile_error_t **error );
+
+/* Sets the expected access behavior so the system can optimize the access
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_set_access_behavior(
+     libcfile_file_t *file,
+     int access_behavior,
+     libcfile_error_t **error );
+
+/* Sets the block size for the read and seek operations
+ * A block size of 0 represents no block-based operations
+ * The total size must be a multitude of block size
+ * Returns 1 if successful or -1 on error
+ */
+LIBCFILE_EXTERN \
+int libcfile_file_set_block_size(
+     libcfile_file_t *file,
+     size_t block_size,
+     libcfile_error_t **error );
+
+#if defined( __cplusplus )
+}
+#endif
+
+#endif /* !defined( _LIBCFILE_H ) */
+

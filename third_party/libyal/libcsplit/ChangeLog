@@ -1,0 +1,8 @@
+TODO
+* add split flags to pass control of buffer management to split string?
+
+20120701
+* see `git log' for more recent change log
+* Initial version split of from libcpath
+* Worked on stand-alone version
+

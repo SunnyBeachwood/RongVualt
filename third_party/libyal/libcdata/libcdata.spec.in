@@ -1,0 +1,70 @@
+Name: libcdata
+Version: @VERSION@
+Release: 1
+Summary: Library to support cross-platform C generic data functions
+Group: System Environment/Libraries
+License: LGPL-3.0-or-later
+Source: %{name}-%{version}.tar.gz
+URL: https://github.com/libyal/libcdata
+@libcdata_spec_requires@ @ax_libcerror_spec_requires@ @ax_libcthreads_spec_requires@
+BuildRequires: gcc @ax_libcerror_spec_build_requires@ @ax_libcthreads_spec_build_requires@
+
+%description -n libcdata
+Library to support cross-platform C generic data functions
+
+%package -n libcdata-static
+Summary: Library to support cross-platform C generic data functions
+Group: Development/Libraries
+Requires: libcdata = %{version}-%{release}
+
+%description -n libcdata-static
+Static library version of libcdata.
+
+%package -n libcdata-devel
+Summary: Header files and libraries for developing applications for libcdata
+Group: Development/Libraries
+Requires: libcdata = %{version}-%{release}
+
+%description -n libcdata-devel
+Header files and libraries for developing applications for libcdata.
+
+%prep
+%setup -q
+
+%build
+%configure --prefix=/usr --libdir=%{_libdir} --mandir=%{_mandir}
+make %{?_smp_mflags}
+
+%install
+rm -rf %{buildroot}
+%make_install
+
+%clean
+rm -rf %{buildroot}
+
+%post -p /sbin/ldconfig
+
+%postun -p /sbin/ldconfig
+
+%files -n libcdata
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so.*
+
+%files -n libcdata-static
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.a
+
+%files -n libcdata-devel
+%license COPYING COPYING.LESSER
+%doc AUTHORS README
+%{_libdir}/*.so
+%{_libdir}/pkgconfig/libcdata.pc
+%{_includedir}/*
+%{_mandir}/man3/*
+
+%changelog
+* @SPEC_DATE@ Joachim Metz <joachim.metz@gmail.com> @VERSION@-1
+- Auto-generated
+

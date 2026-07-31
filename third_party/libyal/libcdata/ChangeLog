@@ -1,0 +1,31 @@
+TODO
+* add tests for new functions in range list
+* work on rwlock error recovery in libcdata_range_list_remove_range
+* work on rwlock error recovery in btree
+* compare function add support for less equal and greater equal?
+* expose functions in API ?
+  - libcdata_list_set_first_element and libcdata_list_set_last_element ?
+  - libcdata_btree_node functions ?
+
+Types:
+* array
+  - allocate in larger blocks
+  - add insert with existing
+* list element
+  - track parent list
+* list
+  - add current list element tracking like offset list ?
+* range list
+  - add get/set range list value functions ?
+* tree node
+  - add insert with existing
+* btree
+  - add thread lock
+  - rebalance the tree on insert and remove (add tests first)
+  - add merge functionality
+  - insert function add flags to set replace existing behavior ?
+
+20120901
+* initial version
+* see `git log' for more recent change log
+

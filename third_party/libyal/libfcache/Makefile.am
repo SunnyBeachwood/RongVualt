@@ -1,0 +1,73 @@
+ACLOCAL_AMFLAGS = -I m4
+
+SUBDIRS = \
+	include \
+	common \
+	libcerror \
+	libcthreads \
+	libcdata \
+	libfcache \
+	po \
+	manuals \
+	tests \
+	msvscpp
+
+DPKG_FILES = \
+	dpkg/changelog \
+	dpkg/changelog.in \
+	dpkg/compat \
+	dpkg/control \
+	dpkg/copyright \
+	dpkg/rules \
+	dpkg/libfcache-dev.install \
+	dpkg/libfcache.install \
+	dpkg/source/format
+
+GETTEXT_FILES = \
+	config.rpath \
+	po/Makevars.in
+
+PKGCONFIG_FILES = \
+	libfcache.pc.in
+
+SPEC_FILES = \
+	libfcache.spec \
+	libfcache.spec.in
+
+EXTRA_DIST = \
+	$(DPKG_FILES) \
+	$(GETTEXT_FILES) \
+	$(PKGCONFIG_FILES) \
+	$(SPEC_FILES)
+
+DISTCLEANFILES = \
+	config.status \
+	config.cache \
+	config.log \
+	libfcache.pc \
+	libfcache.spec \
+	Makefile \
+	Makefile.in \
+	po/Makevars
+
+pkgconfigdir = $(libdir)/pkgconfig
+
+pkgconfig_DATA = \
+	libfcache.pc
+
+check-build: all
+	cd $(srcdir)/tests && $(MAKE) check-build $(AM_MAKEFLAGS)
+
+libtool: @LIBTOOL_DEPS@
+	cd $(srcdir) && $(SHELL) ./config.status --recheck
+
+lib: library
+
+library:
+	(cd $(srcdir)/common && $(MAKE) $(AM_MAKEFLAGS))
+	(cd $(srcdir)/libcerror && $(MAKE) $(AM_MAKEFLAGS))
+	(cd $(srcdir)/libcthreads && $(MAKE) $(AM_MAKEFLAGS))
+	(cd $(srcdir)/libcdata && $(MAKE) $(AM_MAKEFLAGS))
+	(cd $(srcdir)/libfcache && $(MAKE) $(AM_MAKEFLAGS))
+	(cd $(srcdir)/po && $(MAKE) $(AM_MAKEFLAGS))
+

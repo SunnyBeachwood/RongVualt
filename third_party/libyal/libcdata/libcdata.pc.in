@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libcdata
+Description: Library to support cross-platform C generic data functions
+Version: @VERSION@
+Libs: -L${libdir} -lcdata
+Libs.private: @ax_libcerror_pc_libs_private@ @ax_libcthreads_pc_libs_private@ @ax_pthread_pc_libs_private@
+Cflags: -I${includedir}
+
