@@ -19,9 +19,16 @@ class InfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, state: Bundle?) {
         val about = requireArguments().getBoolean(ARG_ABOUT)
-        val raw = resources.openRawResource(if (about) R.raw.rongvault_about else R.raw.rongvault_help)
+        val raw = resources.openRawResource(if (about) R.raw.rongvault_readme else R.raw.rongvault_help)
             .bufferedReader(Charsets.UTF_8).use { it.readText() }
             .replace("{{VERSION}}", BuildConfig.VERSION_NAME)
+            .let { markdown ->
+                if (about) {
+                    "$markdown\n\n---\n\n[Open the RongVualt GitHub repository](https://github.com/SunnyBeachwood/RongVualt)"
+                } else {
+                    markdown
+                }
+            }
         Markwon.builder(requireContext()).build().setMarkdown(binding!!.infoBody, raw)
         (activity as? ContainerCatalogActivity)?.setInfoTitle(
             if (about) R.string.rv_menu_about else R.string.rv_menu_help,
