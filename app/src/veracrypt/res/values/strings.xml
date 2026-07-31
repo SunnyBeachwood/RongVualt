@@ -61,7 +61,7 @@
     <string name="vc_remove_confirm">Remove from catalog</string>
     <string name="vc_remove_container_warning">This only removes the container from RongVault. The original container file will not be deleted.</string>
     <string name="vc_open_embedded_files">Open built-in file manager</string>
-    <string name="vc_open_system_files">Open system Files</string>
+    <string name="vc_open_system_files">Open system file manager</string>
     <string name="vc_system_files_unavailable">The system file picker is unavailable.</string>
     <string name="vc_catalog_permission_error">Android did not grant persistent access to this container.</string>
     <string name="vc_catalog_add_error">Unable to add the selected container.</string>

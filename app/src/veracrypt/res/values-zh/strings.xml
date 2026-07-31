@@ -60,7 +60,7 @@
     <string name="vc_remove_confirm">确认移除</string>
     <string name="vc_remove_container_warning">只会从容匣列表中移除，不会删除原始容器文件。</string>
     <string name="vc_open_embedded_files">打开内置文件管理器</string>
-    <string name="vc_open_system_files">打开系统文件</string>
+    <string name="vc_open_system_files">打开系统文件管理器</string>
     <string name="vc_system_files_unavailable">系统文件选择器不可用。</string>
     <string name="vc_catalog_permission_error">Android 未授予此容器的持久访问权限。</string>
     <string name="vc_catalog_add_error">无法添加所选容器。</string>

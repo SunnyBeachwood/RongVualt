@@ -15,3 +15,19 @@ app/build-local
 # Native build intermediates
 .cxx/
 externalNativeBuild/
+
+# Local tool caches, staging trees and diagnostic output.
+.gradle-user/
+.kotlin/
+.third-party-fatfs-staging/
+.third-party-ntfs-staging/
+build-*.log
+test-*.stdout.log
+test-*.stderr.log
+hs_err_pid*.log
+replay_pid*.log
+markdown-preview-test.md
+
+# Local upstream checkouts; the build uses third_party/dav4jvm-modern instead.
+third_party/dav4jvm/
+third_party/dav4jvm-1.7.4/
