@@ -48,3 +48,12 @@
 -dontnote androidx.**
 
 -dontwarn java.awt.*
+
+# Material Files transitively brings optional desktop-only integrations. They
+# are not packaged or reachable on Android, but R8 still sees their optional
+# type references while shrinking the embedded file manager.
+-dontwarn java.rmi.UnmarshalException
+-dontwarn javax.el.**
+-dontwarn org.ietf.jgss.**
+-dontwarn pl.droidsonroids.gif.GifDrawable
+-dontwarn sun.security.x509.X509Key

@@ -271,7 +271,7 @@ class VolumeDetailsFragment : Fragment() {
     private fun browse() {
         val session = UnlockedVolumeService.volumes.findForContainer(containerId)?.session ?: return
         UnlockedVolumeService.rootUri(session)?.let { rootUri ->
-            startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            (requireActivity() as ContainerCatalogActivity).startTrustedActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 type = "*/*"
                 putExtra(DocumentsContract.EXTRA_INITIAL_URI, rootUri)
             })

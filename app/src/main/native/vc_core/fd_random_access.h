@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
+#include <sys/types.h>
+#include <time.h>
 
 namespace vc_core {
 
@@ -39,7 +41,7 @@ public:
     RandomAccessCounters counters() const;
 
 private:
-    FdRandomAccess(int fd, bool writable, std::uint64_t size);
+    FdRandomAccess(int fd, bool writable, std::uint64_t size, timespec access_time, timespec modified_time);
     void close() noexcept;
     void checkRange(std::uint64_t offset, std::size_t length, bool allow_end) const;
 
@@ -47,6 +49,8 @@ private:
     int fd_ = -1;
     bool writable_ = false;
     std::uint64_t size_ = 0;
+    timespec access_time_ {};
+    timespec modified_time_ {};
     mutable RandomAccessCounters counters_ {};
 };
 

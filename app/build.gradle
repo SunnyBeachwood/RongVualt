@@ -9,8 +9,14 @@ def releaseProperties = [
         'EDS_RELEASE_KEY_ALIAS',
         'EDS_RELEASE_KEY_PASSWORD'
 ]
-def hasReleaseSigning = releaseProperties.every { providers.gradleProperty(it).isPresent() }
-def sourceUrl = providers.gradleProperty('RONGVAULT_SOURCE_URL').orElse('').get()
+def localReleaseProperties = new Properties()
+def localReleasePropertiesFile = rootProject.file('release-signing.properties')
+if (localReleasePropertiesFile.isFile()) {
+    localReleasePropertiesFile.withInputStream { localReleaseProperties.load(it) }
+}
+def releaseProperty = { name -> providers.gradleProperty(name).orElse(localReleaseProperties.getProperty(name, '')).get() }
+def hasReleaseSigning = releaseProperties.every { !releaseProperty(it).isBlank() }
+def sourceUrl = releaseProperty('RONGVAULT_SOURCE_URL')
 
 android {
     namespace 'com.sovworks.eds.android'
@@ -23,8 +29,8 @@ android {
         applicationId providers.gradleProperty('EDS_APPLICATION_ID').orElse('app.rongvault').get()
         minSdk 35
         targetSdk 37
-        versionCode 2
-        versionName '1.0.1'
+        versionCode 5
+        versionName '1.0.4'
         buildConfigField 'String', 'RONGVAULT_SOURCE_URL', '"' + sourceUrl.replace('"', '\\"') + '"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
@@ -36,10 +42,10 @@ android {
     signingConfigs {
         if (hasReleaseSigning) {
             release {
-                storeFile file(providers.gradleProperty('EDS_RELEASE_STORE_FILE').get())
-                storePassword providers.gradleProperty('EDS_RELEASE_STORE_PASSWORD').get()
-                keyAlias providers.gradleProperty('EDS_RELEASE_KEY_ALIAS').get()
-                keyPassword providers.gradleProperty('EDS_RELEASE_KEY_PASSWORD').get()
+                storeFile rootProject.file(releaseProperty('EDS_RELEASE_STORE_FILE'))
+                storePassword releaseProperty('EDS_RELEASE_STORE_PASSWORD')
+                keyAlias releaseProperty('EDS_RELEASE_KEY_ALIAS')
+                keyPassword releaseProperty('EDS_RELEASE_KEY_PASSWORD')
             }
         }
     }
@@ -127,9 +133,22 @@ android {
     }
 }
 
+// 发布包名称面向下载者，而不是 Gradle 变体名。仅生成 arm64-v8a 的正式包。
+androidComponents {
+    onVariants(selector().withBuildType('release')) { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("RongVualt-${android.defaultConfig.versionName}-arm64_v8.apk")
+        }
+    }
+}
+
 dependencies {
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
-    implementation project(':materialfiles')
+    implementation(project(':materialfiles')) {
+        // Android supplies org.xmlpull.v1. Shipping xpp3 as well makes R8 see
+        // the platform interface as both a program and library class.
+        exclude group: 'org.ogce', module: 'xpp3'
+    }
     implementation 'androidx.annotation:annotation:1.9.1'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.biometric:biometric:1.1.0'

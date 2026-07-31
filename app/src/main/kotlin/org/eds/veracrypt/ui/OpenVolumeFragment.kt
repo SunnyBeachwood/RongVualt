@@ -252,7 +252,9 @@ class OpenVolumeFragment : SensitiveFragment() {
     private fun showProviderRoot(session: org.eds.veracrypt.domain.VolumeSession): Boolean {
         if (!isAdded) return false
         val treeUri = UnlockedVolumeService.rootTreeUri(session) ?: return false
-        startActivity(FileManagerIntents.unlockedVolume(requireContext(), treeUri))
+        (requireActivity() as ContainerCatalogActivity).startTrustedActivity(
+            FileManagerIntents.unlockedVolume(requireContext(), treeUri),
+        )
         parentFragmentManager.popBackStack()
         return true
     }

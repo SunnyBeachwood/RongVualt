@@ -41,6 +41,8 @@ class ContainerCatalogActivity : AppCompatActivity() {
     private var shouldAuthenticate = false
     private var authenticating = false
     private var exiting = false
+    /** One transition into a RongVault workflow must not lock its own return. */
+    private var trustedNavigationPending = false
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,6 +85,13 @@ class ContainerCatalogActivity : AppCompatActivity() {
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: android.view.Menu): Boolean {
+        // The toolbar sits above the full-screen lock overlay on some OEM
+        // builds. Removing actions here makes the overlay an actual boundary.
+        menu.setGroupVisible(0, !binding.appLockOverlay.isVisible)
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     private fun shakeBrand() {
         ObjectAnimator.ofPropertyValuesHolder(
             binding.appToolbar,
@@ -95,7 +104,9 @@ class ContainerCatalogActivity : AppCompatActivity() {
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (binding.appLockOverlay.isVisible) return true
+        return when (item.itemId) {
         R.id.menu_open_embedded_files -> {
             openEmbeddedFiles()
             true
@@ -124,7 +135,8 @@ class ContainerCatalogActivity : AppCompatActivity() {
             showLanguageChooser()
             true
         }
-        else -> super.onOptionsItemSelected(item)
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private fun showLanguageChooser() {
@@ -230,7 +242,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     private fun openSystemFiles() {
         try {
-            startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+            startTrustedActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 addCategory(Intent.CATEGORY_OPENABLE)
                 type = "*/*"
             })
@@ -241,7 +253,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     private fun openEmbeddedFiles() {
         try {
-            startActivity(FileManagerIntents.browse(this))
+            startTrustedActivity(FileManagerIntents.browse(this))
         } catch (_: Exception) {
             Toast.makeText(this, R.string.vc_system_files_unavailable, Toast.LENGTH_SHORT).show()
         }
@@ -257,9 +269,12 @@ class ContainerCatalogActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        if (!isChangingConfigurations && !authenticating) {
+        if (trustedNavigationPending) {
+            trustedNavigationPending = false
+        } else if (!isChangingConfigurations && !authenticating) {
             shouldAuthenticate = true
             binding.appLockOverlay.isVisible = true
+            invalidateOptionsMenu()
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         }
         super.onStop()
@@ -267,6 +282,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     private fun showAppLock() {
         binding.appLockOverlay.isVisible = true
+        invalidateOptionsMenu()
         binding.appLockStatus.setText(R.string.vc_app_locked_message)
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         // The system-owned biometric surface may use an OEM-controlled black
@@ -287,6 +303,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
                 )
                 shouldAuthenticate = false
                 binding.appLockOverlay.isVisible = false
+                invalidateOptionsMenu()
             } catch (_: CancellationException) {
                 binding.appLockStatus.setText(R.string.vc_app_auth_failed)
             } catch (_: Throwable) {
@@ -295,6 +312,17 @@ class ContainerCatalogActivity : AppCompatActivity() {
                 authenticating = false
                 binding.appUnlock.isEnabled = true
             }
+        }
+    }
+
+    /** Starts an app-owned browser or document workflow without relocking on return. */
+    internal fun startTrustedActivity(intent: Intent) {
+        trustedNavigationPending = true
+        try {
+            startActivity(intent)
+        } catch (error: Throwable) {
+            trustedNavigationPending = false
+            throw error
         }
     }
 }

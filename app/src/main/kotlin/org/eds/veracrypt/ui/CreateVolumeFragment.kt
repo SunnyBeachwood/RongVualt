@@ -107,7 +107,7 @@ class CreateVolumeFragment : SensitiveFragment() {
                 val session = app.repository.createNormal(entry, options, credentials, progress.reporter)
                 screen.createStatus.text = getString(com.sovworks.eds.android.R.string.vc_volume_unlocked)
                 UnlockedVolumeService.rootUri(session)?.let { rootUri ->
-                    startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    (requireActivity() as ContainerCatalogActivity).startTrustedActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                         type = "*/*"
                         putExtra(DocumentsContract.EXTRA_INITIAL_URI, rootUri)
                     })

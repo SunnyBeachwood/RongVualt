@@ -36,7 +36,9 @@ FdRandomAccess FdRandomAccess::Open(int fd, bool writable) {
         if (fstat(duplicate, &status) != 0) ThrowErrno("stat container descriptor");
         if (status.st_size < 0) throw std::invalid_argument("Container length is unknown");
         if (lseek(duplicate, 0, SEEK_CUR) == static_cast<off_t>(-1)) ThrowErrno("seek container descriptor");
-        return FdRandomAccess(duplicate, writable, static_cast<std::uint64_t>(status.st_size));
+        return FdRandomAccess(
+                duplicate, writable, static_cast<std::uint64_t>(status.st_size),
+                status.st_atim, status.st_mtim);
     } catch (...) {
         ::close(duplicate);
         throw;
@@ -48,17 +50,19 @@ FdRandomAccess FdRandomAccess::Duplicate() const {
     if (fd_ < 0) throw std::runtime_error("Container descriptor is closed");
     const int duplicate = fcntl(fd_, F_DUPFD_CLOEXEC, 0);
     if (duplicate < 0) ThrowErrno("duplicate container descriptor");
-    return FdRandomAccess(duplicate, writable_, size_);
+    return FdRandomAccess(duplicate, writable_, size_, access_time_, modified_time_);
 }
 
-FdRandomAccess::FdRandomAccess(int fd, bool writable, std::uint64_t size)
-    : fd_(fd), writable_(writable), size_(size) {}
+FdRandomAccess::FdRandomAccess(int fd, bool writable, std::uint64_t size, timespec access_time, timespec modified_time)
+    : fd_(fd), writable_(writable), size_(size), access_time_(access_time), modified_time_(modified_time) {}
 
 FdRandomAccess::FdRandomAccess(FdRandomAccess&& other) noexcept {
     std::lock_guard<std::mutex> lock(other.mutex_);
     fd_ = other.fd_;
     writable_ = other.writable_;
     size_ = other.size_;
+    access_time_ = other.access_time_;
+    modified_time_ = other.modified_time_;
     counters_ = other.counters_;
     other.fd_ = -1;
     other.size_ = 0;
@@ -72,6 +76,8 @@ FdRandomAccess& FdRandomAccess::operator=(FdRandomAccess&& other) noexcept {
     fd_ = other.fd_;
     writable_ = other.writable_;
     size_ = other.size_;
+    access_time_ = other.access_time_;
+    modified_time_ = other.modified_time_;
     counters_ = other.counters_;
     other.fd_ = -1;
     other.size_ = 0;
@@ -144,6 +150,13 @@ RandomAccessCounters FdRandomAccess::counters() const {
 
 void FdRandomAccess::close() noexcept {
     if (fd_ >= 0) {
+        // Opening a writable SAF descriptor can update a provider's observed
+        // access/modified time even before the encrypted volume is changed.
+        // Restore the original POSIX timestamps on close. Filesystems that do
+        // not expose timestamp mutation simply reject futimens; the encrypted
+        // data close must never fail because metadata restoration is optional.
+        const timespec timestamps[] {access_time_, modified_time_};
+        (void) futimens(fd_, timestamps);
         ::close(fd_);
         fd_ = -1;
     }

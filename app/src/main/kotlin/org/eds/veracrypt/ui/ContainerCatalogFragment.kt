@@ -176,7 +176,9 @@ class ContainerCatalogFragment : Fragment() {
     private fun browse(entry: ContainerCatalogEntry) {
         val session = UnlockedVolumeService.volumes.findForContainer(entry.id)?.session ?: return
         UnlockedVolumeService.rootTreeUri(session)?.let { treeUri ->
-            startActivity(FileManagerIntents.unlockedVolume(requireContext(), treeUri))
+            (requireActivity() as ContainerCatalogActivity).startTrustedActivity(
+                FileManagerIntents.unlockedVolume(requireContext(), treeUri),
+            )
         }
     }
 

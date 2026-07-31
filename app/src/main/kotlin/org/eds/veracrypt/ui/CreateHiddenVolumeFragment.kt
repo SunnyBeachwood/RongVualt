@@ -130,7 +130,7 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
                 val hidden = app.repository.createHidden(entry, outer, options, credentials, progress.reporter)
                 screen.createStatus.text = getString(R.string.vc_volume_unlocked)
                 UnlockedVolumeService.rootUri(hidden)?.let { rootUri ->
-                    startActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    (requireActivity() as ContainerCatalogActivity).startTrustedActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                         type = "*/*"
                         putExtra(DocumentsContract.EXTRA_INITIAL_URI, rootUri)
                     })

@@ -11,6 +11,8 @@ local.properties
 *.jks
 app/build-local.gradle
 app/build-local
+release-signing.properties
+CHANGELOG.md
 
 # Native build intermediates
 .cxx/
