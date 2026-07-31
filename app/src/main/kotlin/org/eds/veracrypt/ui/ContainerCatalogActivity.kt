@@ -111,10 +111,6 @@ class ContainerCatalogActivity : AppCompatActivity() {
             openEmbeddedFiles()
             true
         }
-        R.id.menu_help -> {
-            showInfo(false)
-            true
-        }
         R.id.menu_open_system_files -> {
             openSystemFiles()
             true

@@ -67,6 +67,8 @@
     <string name="vc_catalog_add_error">Unable to add the selected container.</string>
     <string name="vc_unnamed_container">Unnamed container</string>
     <string name="vc_password">Password</string>
+    <string name="vc_confirm_creation_password">Confirm password</string>
+    <string name="vc_creation_passwords_do_not_match">The passwords do not match.</string>
     <string name="vc_pim">PIM</string>
     <string name="vc_kdf">Key derivation function</string>
     <string name="vc_open_hidden_volume">Open hidden volume</string>

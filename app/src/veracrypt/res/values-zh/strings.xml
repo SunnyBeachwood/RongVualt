@@ -66,6 +66,8 @@
     <string name="vc_catalog_add_error">无法添加所选容器。</string>
     <string name="vc_unnamed_container">未命名容器</string>
     <string name="vc_password">密码</string>
+    <string name="vc_confirm_creation_password">确认密码</string>
+    <string name="vc_creation_passwords_do_not_match">两次输入的密码不一致。</string>
     <string name="vc_pim">PIM</string>
     <string name="vc_kdf">密钥派生函数</string>
     <string name="vc_open_hidden_volume">打开隐藏卷</string>

@@ -50,17 +50,11 @@ internal class LocalLinuxFileAttributeView(
             e.toFileSystemException(path.toString()).printStackTrace()
             PosixGroup(stat.st_gid, null)
         }
-        val seLinuxContext = try {
-            if (noFollowLinks) {
-                Syscall.lgetfilecon(path)
-            } else {
-                Syscall.getfilecon(path)
-            }
-        } catch (e: SyscallException) {
-            // SELinux calls may fail with ENODATA or ENOTSUP, and there may be other errors.
-            e.toFileSystemException(path.toString()).printStackTrace()
-            if (e.errno == OsConstants.ENODATA) ByteString.EMPTY else null
-        }
+        // SELinux labels are optional display metadata. Querying them through
+        // libselinux enters lgetxattr(), which is unstable on some Android 16
+        // vendor builds and can abort the whole process while listing /sdcard.
+        // File access and all ordinary POSIX attributes remain unaffected.
+        val seLinuxContext: ByteString? = null
         return LinuxFileAttributes.from(stat, owner, group, seLinuxContext)
     }
 

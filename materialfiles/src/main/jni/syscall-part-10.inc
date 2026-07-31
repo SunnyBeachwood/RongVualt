@@ -3,27 +3,45 @@
     char *name = mallocStringFromByteString(env, javaName);
     jbyteArray javaValue = NULL;
     while (true) {
-        size_t size = (size_t) TEMP_FAILURE_RETRY(lgetxattr(path, name, NULL, 0));
-        if (errno) {
+        const ssize_t queriedSize = TEMP_FAILURE_RETRY(lgetxattr(path, name, NULL, 0));
+        if (queriedSize < 0) {
             break;
         }
-        //char value[size] = {};
-        char value[size];
-        TEMP_FAILURE_RETRY(lgetxattr(path, name, value, size));
-        if (errno) {
+        if (queriedSize > INT32_MAX) {
+            errno = EOVERFLOW;
+            break;
+        }
+        const size_t capacity = (size_t) queriedSize;
+        char *value = malloc(capacity > 0 ? capacity : 1);
+        if (!value) {
+            errno = ENOMEM;
+            break;
+        }
+        const ssize_t actualSize = TEMP_FAILURE_RETRY(lgetxattr(path, name, value, capacity));
+        if (actualSize < 0) {
+            const int error = errno;
+            free(value);
+            errno = error;
             if (errno == ERANGE) {
                 // Attribute value changed since our last call to lgetxattr(), try again.
                 continue;
             }
             break;
         }
-        jsize javaValueLength = (jsize) size;
+        if (actualSize > INT32_MAX) {
+            free(value);
+            errno = EOVERFLOW;
+            break;
+        }
+        jsize javaValueLength = (jsize) actualSize;
         javaValue = (*env)->NewByteArray(env, javaValueLength);
         if (!javaValue) {
+            free(value);
             break;
         }
         const jbyte *javaValueBuffer = (const jbyte *) value;
         (*env)->SetByteArrayRegion(env, javaValue, 0, javaValueLength, javaValueBuffer);
+        free(value);
         break;
     }
     free(path);

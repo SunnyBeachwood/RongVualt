@@ -43,6 +43,7 @@ class TextEditorViewModel(file: Path) : ViewModel() {
 
     private var loadJob: Job? = null
     private var reloadJob: Job? = null
+    private var detectedEncoding: DetectedTextEncoding? = null
 
     init {
         viewModelScope.launch {
@@ -83,6 +84,12 @@ class TextEditorViewModel(file: Path) : ViewModel() {
                 file.readAllBytes()
             }
             currentCoroutineContext().ensureActive()
+            if (detectedEncoding == null) {
+                detectTextEncoding(bytes).also {
+                    detectedEncoding = it
+                    encoding.value = it.charset
+                }
+            }
             _bytesState.value = DataState.Success(bytes)
         } catch (e: CancellationException) {
             e.printStackTrace()
@@ -106,7 +113,7 @@ class TextEditorViewModel(file: Path) : ViewModel() {
                             _textState.value = _textState.value.toLoading()
                             try {
                                 val text = withContext(Dispatchers.Default) {
-                                    String(bytesState.data, encoding)
+                                    decodeText(bytesState.data, encoding, detectedEncoding)
                                 }
                                 currentCoroutineContext().ensureActive()
                                 _textState.value = DataState.Success(text)
@@ -135,7 +142,7 @@ class TextEditorViewModel(file: Path) : ViewModel() {
             val argument = path to text
             _writeFileState.value = ActionState.Running(argument)
             val bytes = withContext(Dispatchers.Default) {
-                text.toByteArray(encoding.value)
+                encodeText(text, encoding.value, detectedEncoding)
             }
             FileJobService.write(path, bytes, context) { successful ->
                 if (successful) {

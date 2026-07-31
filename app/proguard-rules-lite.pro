@@ -41,6 +41,21 @@
 
 -keep class org.apache.** { *; }
 
+# The embedded file manager's syscall bridge resolves these constructors and
+# fields from native code with JNI.  R8 may otherwise rewrite their signatures
+# even when name obfuscation is disabled, causing a native abort at startup.
+-keep class me.zhanghai.android.files.provider.linux.syscall.** { *; }
+-keep class me.zhanghai.android.files.provider.common.ByteString { *; }
+
+# vc_core invokes callbacks and constructs result/error objects through JNI.
+# Keep the complete bridge surface: R8 cannot see these native lookups and
+# would otherwise remove methods such as NativeUnlockProgress.onProgress().
+-keep class org.eds.veracrypt.nativecore.VcCore { *; }
+-keep class org.eds.veracrypt.nativecore.VcCoreFailure { *; }
+-keep class org.eds.veracrypt.nativecore.NativeFileEntry { *; }
+-keep class org.eds.veracrypt.nativecore.NativeUnlockProgress { *; }
+-keep class org.eds.veracrypt.nativecore.NativeCreateProgress { *; }
+
 -dontwarn org.apache.**
 -dontwarn javax.servlet.**
 

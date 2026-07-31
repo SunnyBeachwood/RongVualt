@@ -95,8 +95,19 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
             screen.createStatus.text = getString(R.string.vc_hidden_requires_outer)
             return
         }
+        screen.passwordConfirmLayout.error = null
         val passwordChars = screen.password.text?.toString()?.toCharArray() ?: CharArray(0)
+        val confirmationChars = screen.passwordConfirm.text?.toString()?.toCharArray() ?: CharArray(0)
         screen.password.text?.clear()
+        screen.passwordConfirm.text?.clear()
+        if (!passwordChars.contentEquals(confirmationChars)) {
+            passwordChars.fill('\u0000')
+            confirmationChars.fill('\u0000')
+            screen.passwordConfirmLayout.error = getString(R.string.vc_creation_passwords_do_not_match)
+            screen.passwordConfirm.requestFocus()
+            return
+        }
+        confirmationChars.fill('\u0000')
         val credentials = VolumeCredentials(
             SecretPassword(passwordChars),
             screen.pim.text?.toString()?.toIntOrNull() ?: 0,

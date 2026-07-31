@@ -23,11 +23,6 @@
         android:title="@string/vc_exit_app"
         app:showAsAction="never" />
     <item
-        android:id="@+id/menu_help"
-        android:icon="@drawable/ic_menu_help"
-        android:title="@string/rv_menu_help"
-        app:showAsAction="never" />
-    <item
         android:id="@+id/menu_about"
         android:icon="@drawable/ic_menu_info"
         android:title="@string/rv_menu_about"

@@ -71,8 +71,19 @@ class CreateVolumeFragment : SensitiveFragment() {
             screen.createStatus.text = getString(com.sovworks.eds.android.R.string.vc_invalid_size)
             return
         }
+        screen.passwordConfirmLayout.error = null
         val passwordChars = screen.password.text?.toString()?.toCharArray() ?: CharArray(0)
+        val confirmationChars = screen.passwordConfirm.text?.toString()?.toCharArray() ?: CharArray(0)
         screen.password.text?.clear()
+        screen.passwordConfirm.text?.clear()
+        if (!passwordChars.contentEquals(confirmationChars)) {
+            passwordChars.fill('\u0000')
+            confirmationChars.fill('\u0000')
+            screen.passwordConfirmLayout.error = getString(com.sovworks.eds.android.R.string.vc_creation_passwords_do_not_match)
+            screen.passwordConfirm.requestFocus()
+            return
+        }
+        confirmationChars.fill('\u0000')
         val credentials = VolumeCredentials(
             SecretPassword(passwordChars),
             pim = screen.pim.text?.toString()?.toIntOrNull() ?: 0,

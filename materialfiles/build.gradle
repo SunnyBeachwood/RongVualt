@@ -4,6 +4,12 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.parcelize'
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
 android {
     namespace 'me.zhanghai.android.files'
     compileSdk 37
