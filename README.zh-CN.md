@@ -25,14 +25,34 @@ VeraCrypt 兼容的**非系统文件容器**。它将加密卷作为 Android 文
 - 支持普通卷和隐藏卷；写入外层卷时可启用隐藏卷保护。
 - 支持密码、PIM 和密钥文件；可选使用 Android Keystore 与设备生物识别保护已保存的
   外层卷凭据。
-- 支持 VeraCrypt 非系统容器的 AES、Serpent、Twofish 及部分级联算法和 KDF 组合；
-  使用主卷头和备用卷头进行识别。
+- 支持 VeraCrypt 非系统容器的 AES、Serpent、Twofish 单一算法 XTS 加密；使用主卷头和
+  备用卷头进行识别。
 - FAT 和 exFAT 卷支持读写、创建、重命名、删除、复制、移动及导入/导出；NTFS 仅以
   只读方式打开。
 - 通过 `DocumentsProvider` 向 Android 系统文件界面提供已解锁卷，并在卷解锁或长时间
   文件操作期间运行前台服务。
 - 内置文件管理器提供目录浏览、搜索、排序、显示隐藏文件、新建、重命名、删除以及
   卷内复制/移动等操作。
+- 支持 `.md`、`.markdown`、`.mkd` 和标准 Markdown MIME 类型文件的格式化预览；该功能
+  默认开启，可在设置中关闭，仍可切换回源文件编辑。
+
+## 加密算法与 VeraCrypt 兼容范围
+
+RongVault 采用 VeraCrypt 非系统容器的基本设计：数据以 XTS 模式加密，卷头由密码、PIM 和
+密钥文件保护，并使用选定的密码派生函数（KDF）。当前首个版本的范围有意小于桌面版
+VeraCrypt：
+
+| 项目 | RongVault 1.0.2 范围 | 与桌面 VeraCrypt 的差距 |
+| --- | --- | --- |
+| 数据加密算法 | 可打开和创建 **AES、Serpent、Twofish 单一算法 XTS** 容器。 | VeraCrypt 还提供 Camellia、Kuznyechik 及多算法级联；RongVault 首版不支持这些额外算法和级联。 |
+| KDF 选项 | 打开卷和修改凭据时可选择 PBKDF2-HMAC-SHA-512、SHA-256、BLAKE2s、Whirlpool、Streebog、Argon2id；当前 UI 创建新卷使用 PBKDF2-HMAC-SHA-512。 | VeraCrypt 的桌面端配置覆盖和测试更完整。RongVault 的每种 KDF/算法组合在兼容性矩阵标为已验证前，均应视为依赖具体兼容性测试。 |
+| 卷类型 | 非系统文件容器、普通卷和隐藏卷。 | VeraCrypt 还支持系统加密，并可使用分区和整块磁盘。 |
+| 文件系统 | FAT、exFAT 可读写；NTFS 只读。 | VeraCrypt 通过桌面操作系统驱动挂载卷，与主机文件系统的集成模式不同。 |
+| 平台 | Android 15+、`arm64-v8a`，通过 SAF 和 `DocumentsProvider` 工作。 | VeraCrypt 提供 Windows、macOS、Linux 的官方桌面发行版。 |
+
+可选择 KDF 并不等于所有组合都已完成互操作验证，尤其是 Argon2id 和少见组合。请查阅
+[`docs/COMPATIBILITY_MATRIX.md`](docs/COMPATIBILITY_MATRIX.md) 了解已记录的测试状态。若需要
+系统加密、分区支持、完整算法/级联选择或桌面级验证，应使用桌面 VeraCrypt。
 
 ## 平台与构建环境
 
@@ -93,13 +113,20 @@ RongVault 参考 VeraCrypt 的公开容器格式和兼容性行为，目标是�
 
 ## 内置文件管理器与 Material Files（质感文件）
 
-内置文件管理器借鉴并集成了开源项目
+内置文件管理器借鉴、内置并适配了开源项目
 [Material Files（质感文件）](https://github.com/zhanghai/MaterialFiles) 1.7.4 的代码、
-文件操作流程和 Material Design 体验。该部分经过适配后仅服务于已解锁的加密卷：
+文件操作流程和 Material Design 体验。RongVault 对该部分作出了以下适配：
 
-- 通过 RongVault 的 `UnlockedDocumentsProvider` 访问卷内文件；
-- 不启用 Material Files 的 Root/Shizuku、网络存储、FTP 服务、APK 安装器或其凭据存储；
-- 文件浏览和操作仍受加密卷会话及前台操作保护约束，不使用主机明文临时路径。
+- 文件访问改由 RongVault 的 `UnlockedDocumentsProvider` 提供，使文件管理器只看到当前的
+  加密卷会话，而非主机存储路径；
+- 新建、复制、移动、删除和重命名均受卷会话及前台操作保护约束，常规卷内操作不使用主机
+  明文临时目录；
+- 不初始化或暴露 Material Files 的 Root/Shizuku、网络存储、FTP 服务、APK 安装器和凭据
+  存储功能；
+- 集成并适配了 Material Files 的 Markdown 查看器：识别 `.md`、`.markdown`、`.mkd` 文件名
+  和 Markdown MIME 类型，使用 Markwon 渲染格式化预览（包括表格、删除线、任务列表和
+  本地相对图片），解析卷内相对链接，并可返回源文件编辑。Markdown 渲染默认开启，用户可
+  在设置中关闭。
 
 Material Files 以 [GPL-3.0-or-later](https://github.com/zhanghai/MaterialFiles/blob/master/LICENSE)
 发布。本项目保留导入文件的版权和许可证声明，并在源代码中保留其完整许可证文本与上游来源说明，详见
