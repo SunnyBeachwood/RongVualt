@@ -1,5 +1,7 @@
 # RongVault（Android VeraCrypt 容器工具）
 
+[English](README.MD)
+
 RongVault 是一款面向 Android 的离线加密容器工具，用于创建、打开和管理
 VeraCrypt 兼容的**非系统文件容器**。它将加密卷作为 Android 文档提供者暴露，
 因此可以在解锁后通过内置文件管理器或系统“文件”应用访问卷内文件，而无需将
