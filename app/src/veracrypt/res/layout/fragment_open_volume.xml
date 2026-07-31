@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:orientation="vertical" android:padding="@dimen/rv_screen_padding" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" app:cardCornerRadius="@dimen/rv_card_radius" app:cardUseCompatPadding="true">
+            <LinearLayout android:orientation="vertical" android:padding="@dimen/rv_card_padding" android:layout_width="match_parent" android:layout_height="wrap_content">
+                <TextView android:id="@+id/container_name" android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                <com.google.android.material.textfield.TextInputLayout android:id="@+id/password_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_password" app:endIconMode="password_toggle">
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/password" android:inputType="textPassword" android:importantForAutofill="noExcludeDescendants" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
+                <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_pim">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/pim" android:inputType="number" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                </com.google.android.material.textfield.TextInputLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+        <TextView android:text="@string/vc_kdf" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Spinner android:id="@+id/kdf" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Spinner android:id="@+id/cipher" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <TextView android:text="@string/vc_keyfiles" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+            <Button android:id="@+id/select_keyfiles" android:text="@string/vc_select_keyfiles" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <Button android:id="@+id/select_keyfile_directory" android:text="@string/vc_select_keyfile_directory" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <Button android:id="@+id/generate_keyfile" android:text="@string/vc_generate_keyfile" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        </LinearLayout>
+        <LinearLayout android:id="@+id/keyfile_list" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <CheckBox android:id="@+id/protect_hidden_volume" android:text="@string/vc_protect_hidden_volume" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <LinearLayout android:id="@+id/hidden_protection_credentials" android:visibility="gone" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
+        <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_hidden_password" app:endIconMode="password_toggle">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/hidden_password" android:inputType="textPassword" android:importantForAutofill="noExcludeDescendants" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        </com.google.android.material.textfield.TextInputLayout>
+            <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_hidden_pim">
+                <com.google.android.material.textfield.TextInputEditText android:id="@+id/hidden_pim" android:inputType="number" android:importantForAutofill="no" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+            <TextView android:text="@string/vc_hidden_keyfiles" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
+                <Button android:id="@+id/select_hidden_keyfiles" android:text="@string/vc_select_keyfiles" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <Button android:id="@+id/select_hidden_keyfile_directory" android:text="@string/vc_select_keyfile_directory" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+                <Button android:id="@+id/generate_hidden_keyfile" android:text="@string/vc_generate_keyfile" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/hidden_keyfile_list" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        </LinearLayout>
+        <ProgressBar
+            android:id="@+id/open_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:indeterminate="false"
+            android:max="1"
+            android:visibility="gone" />
+        <TextView android:id="@+id/open_status" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <Button android:id="@+id/cancel_unlock" android:text="@string/vc_cancel_unlock" android:visibility="gone" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        <Button android:id="@+id/biometric_unlock" android:text="@string/vc_biometric_unlock" android:visibility="gone" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        <Button android:id="@+id/unlock" android:text="@string/vc_unlock" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RongVault</string>
+    <string name="app_version">RongVault</string>
+    <string name="rv_container_details">Container details</string>
+    <string name="rv_more_container_actions">More container actions</string>
+    <string name="rv_state_locked">Locked</string>
+    <string name="rv_state_unlocked">Unlocked</string>
+    <string name="rv_state_read_only">Read-only</string>
+    <string name="rv_state_protection_triggered">Protection triggered</string>
+    <string name="rv_summary_locked">Unlock this container to browse its files.</string>
+    <string name="rv_summary_unlocked_read_write">Ready for secure read and write access.</string>
+    <string name="rv_summary_unlocked_read_only">Open for secure read-only access.</string>
+    <string name="rv_summary_protection_triggered">Hidden-volume protection rejected a write; this session is now read-only.</string>
+    <string name="rv_details_session_closed">This container is locked. Unlock it again to view its details.</string>
+    <string name="rv_return_to_catalog">Return to containers</string>
+    <string name="rv_details_status">Status: %1$s</string>
+    <string name="rv_details_volume_kind">Volume type: %1$s</string>
+    <string name="rv_details_filesystem">File system: %1$s</string>
+    <string name="rv_details_access">Access: %1$s</string>
+    <string name="rv_details_size">Logical size: %1$s</string>
+    <string name="rv_details_sector">Sector size: %1$s</string>
+    <string name="rv_details_cipher">Cipher: %1$s</string>
+    <string name="rv_details_kdf">KDF: %1$s</string>
+    <string name="rv_details_backup_header">Opened with backup header: %1$s</string>
+    <string name="rv_kind_normal">Normal volume</string>
+    <string name="rv_kind_hidden">Hidden volume</string>
+    <string name="rv_access_read_only">Read-only</string>
+    <string name="rv_access_read_write">Read and write</string>
+    <string name="rv_unknown">Unknown</string>
+    <string name="rv_bytes">%1$d bytes</string>
+    <string name="rv_yes">Yes</string>
+    <string name="rv_no">No</string>
+    <string name="vc_transfer_encrypt_import">Encrypt import</string>
+    <string name="vc_transfer_decrypt_export">Decrypt export</string>
+    <string name="vc_transfer_encrypt_notification">Encrypting %1$s (%2$d/%3$d)</string>
+    <string name="vc_transfer_decrypt_notification">Decrypting %1$s (%2$d/%3$d)</string>
+    <string name="vc_transfer_cancel">Cancel transfer</string>
+    <string name="vc_transfer_current">Current file: %1$s</string>
+    <string name="vc_transfer_files">File %1$d of %2$d</string>
+    <string name="vc_transfer_bytes">Processed %1$s / %2$s</string>
+    <string name="vc_transfer_speed">Speed: %1$s/s</string>
+    <string name="vc_transfer_remaining">Remaining: %1$s</string>
+    <string name="vc_transfer_unknown_total">Total size is unavailable; showing processed bytes.</string>
+    <string name="vc_transfer_waiting">Preparing transfer…</string>
+    <string name="vc_transfer_completed">Transfer completed: %1$d succeeded, %2$d failed.</string>
+    <string name="vc_transfer_partial">Transfer partially completed: %1$d succeeded, %2$d failed.</string>
+    <string name="vc_transfer_failed">Transfer failed: %1$s</string>
+    <string name="vc_transfer_cancelled">Transfer cancelled.</string>
+    <string name="vc_transfer_already_running">Another transfer is already running.</string>
+    <string name="vc_transfer_cannot_lock">Lock the volume after the transfer finishes or is cancelled.</string>
+    <string name="vc_transfer_invalid_source">The selected source does not match the transfer direction.</string>
+    <string name="vc_transfer_invalid_target">Choose a valid target: the unlocked volume for import, or external storage for export.</string>
+    <string name="vc_container_catalog_title">Containers</string>
+    <string name="vc_catalog_empty">No containers have been added.</string>
+    <string name="vc_add_container">Add</string>
+    <string name="vc_add_existing_container">Add existing container</string>
+    <string name="vc_create_container">Create</string>
+    <string name="vc_open_container">Open</string>
+    <string name="vc_remove_container">Remove</string>
+    <string name="vc_remove_confirm">Remove from catalog</string>
+    <string name="vc_remove_container_warning">This only removes the container from RongVault. The original container file will not be deleted.</string>
+    <string name="vc_open_embedded_files">Open built-in file manager</string>
+    <string name="vc_open_system_files">Open system Files</string>
+    <string name="vc_system_files_unavailable">The system file picker is unavailable.</string>
+    <string name="vc_catalog_permission_error">Android did not grant persistent access to this container.</string>
+    <string name="vc_catalog_add_error">Unable to add the selected container.</string>
+    <string name="vc_unnamed_container">Unnamed container</string>
+    <string name="vc_password">Password</string>
+    <string name="vc_pim">PIM</string>
+    <string name="vc_kdf">Key derivation function</string>
+    <string name="vc_open_hidden_volume">Open hidden volume</string>
+    <string name="vc_open_read_only">Open read-only</string>
+    <string name="vc_opening_volume">Opening volume</string>
+    <string name="vc_unlock_preparing">Preparing unlock inputs</string>
+    <string name="vc_unlock_deriving">Deriving key and verifying volume header</string>
+    <string name="vc_unlock_deriving_progress">Checking headers: %1$d of %2$d</string>
+    <string name="vc_cancel_unlock">Cancel</string>
+    <string name="vc_unlock_cancelling">Cancelling unlock</string>
+    <string name="vc_unlock_cancelled">Unlock cancelled.</string>
+    <string name="vc_unlock_mounting">Mounting encrypted filesystem</string>
+    <string name="vc_unlock_registering">Preparing encrypted file browser</string>
+    <string name="vc_open_browser_failed">The volume was unlocked, but the encrypted file browser could not be opened.</string>
+    <string name="vc_biometric_save_skipped">Credentials were not saved; continuing with manual unlock.</string>
+    <string name="vc_biometric_cancelled">Biometric authentication was cancelled.</string>
+    <string name="vc_volume_unlocked">Volume unlocked</string>
+    <string name="vc_volume_already_unlocked">This volume is already unlocked. Browse it or lock it before opening again.</string>
+    <string name="vc_open_failed">Unable to open volume</string>
+    <string name="vc_invalid_credentials">Password, PIM or keyfiles are incorrect, or the container format is unsupported.</string>
+    <string name="vc_enable_biometric_title">Enable biometric unlock?</string>
+    <string name="vc_enable_biometric_message">Save these outer-volume credentials behind your device authentication for future unlocks?</string>
+    <string name="vc_enable_biometric">Enable</string>
+    <string name="vc_unlock">Unlock</string>
+    <string name="vc_save_with_biometric">Use biometric authentication to save these unlock credentials</string>
+    <string name="vc_change_credentials">Change credentials</string>
+    <string name="vc_change_credentials_unavailable">Credential changes require a writable unlocked container with no active file transfer.</string>
+    <string name="vc_change_credentials_description">A device authentication is required before updating both volume headers.</string>
+    <string name="vc_new_password">New password</string>
+    <string name="vc_confirm_password">Confirm new password</string>
+    <string name="vc_passwords_do_not_match">The new passwords do not match.</string>
+    <string name="vc_credentials_changed">Credentials updated.</string>
+    <string name="vc_biometric_unlock">Unlock with biometric authentication</string>
+    <string name="vc_biometric_keyfiles_not_saved">Credentials with keyfiles or hidden-volume protection are not saved.</string>
+    <string name="vc_biometric_unavailable">Saved credentials are unavailable. Enter the password manually.</string>
+    <string name="vc_biometric_prompt_title">Authenticate to unlock the saved volume</string>
+    <string name="vc_app_locked_title">App locked</string>
+    <string name="vc_app_locked_message">Authenticate to continue.</string>
+    <string name="vc_app_unlock">Authenticate</string>
+    <string name="vc_app_auth_prompt_title">Authenticate to continue</string>
+    <string name="vc_app_auth_failed">Authentication is required to use the app.</string>
+    <string name="vc_size_mib">Size (MiB)</string>
+    <string name="vc_invalid_size">Enter a valid size in MiB.</string>
+    <string name="vc_creating_volume">Creating and fully formatting volume</string>
+    <string name="vc_create_failed">Unable to create volume</string>
+    <string name="vc_cancel_creation">Cancel</string>
+    <string name="vc_cancelling_creation">Cancelling creation</string>
+    <string name="vc_initializing_volume">Initializing encrypted area: %1$d%%</string>
+    <string name="vc_formatting_volume">Formatting encrypted filesystem</string>
+    <string name="vc_finalizing_volume">Finalizing encrypted volume</string>
+    <string name="vc_create_volume">Create volume</string>
+    <string name="vc_keyfiles">Keyfiles</string>
+    <string name="vc_select_keyfiles">Add files</string>
+    <string name="vc_select_keyfile_directory">Add directory</string>
+    <string name="vc_generate_keyfile">Generate 64 KiB</string>
+    <string name="vc_remove_keyfile">Remove</string>
+    <string name="vc_keyfile_generate_failed">Unable to generate keyfile</string>
+    <string name="vc_browse_volume">Browse</string>
+    <string name="vc_lock_volume">Lock</string>
+    <string name="vc_create_hidden_volume">Create hidden</string>
+    <string name="vc_volume_unlocked_label">Unlocked</string>
+    <string name="vc_hidden_capacity">Maximum safe hidden capacity: %1$d MiB</string>
+    <string name="vc_hidden_requires_outer">Open a writable FAT or exFAT outer volume first.</string>
+    <string name="vc_protect_hidden_volume">Protect hidden volume when writing outer volume</string>
+    <string name="vc_hidden_password">Hidden volume password</string>
+    <string name="vc_hidden_pim">Hidden volume PIM</string>
+    <string name="vc_hidden_keyfiles">Hidden-volume keyfiles</string>
+    <string name="vc_hidden_protection_triggered">Hidden-volume protection stopped a write. This volume is now read-only; lock and remount it before writing again.</string>
+    <string name="vc_foreground_channel">Unlocked encrypted volumes</string>
+    <string name="rv_menu_help">User guide</string>
+    <string name="rv_menu_about">About RongVault</string>
+    <string name="rv_menu_language">Language</string>
+    <string name="rv_language_title">Language</string>
+    <string name="rv_language_system">Follow system</string>
+    <string name="rv_language_chinese">Simplified Chinese</string>
+    <string name="rv_language_english">English</string>
+    <string name="vc_clear_catalog_on_exit">Clear container list on exit</string>
+    <string name="vc_clear_catalog_on_exit_title">Clear container list on exit?</string>
+    <string name="vc_clear_catalog_on_exit_message">When enabled, exiting RongVault removes all saved containers and saved unlock credentials from the list. Container files and SAF permissions are not deleted. Android cannot guarantee cleanup after a force-stop or direct process kill.</string>
+    <string name="vc_exit_app">Exit RongVault</string>
+    <string name="vc_exit_app_title">Exit RongVault</string>
+    <string name="vc_exit_app_active_message">A transfer or unlocked volume is still active. Stop the transfer and lock all volumes before exiting?</string>
+    <string name="vc_exit_app_message">Exit RongVault now?</string>
+    <string name="vc_exit_app_transfer_timeout">The transfer did not stop in time; the app was not exited.</string>
+    <string name="rv_help_body">Quick start
+
+Add an existing container or create a new one. Select a container and choose Unlock, then browse files in RongVault’s built-in file manager. Lock the volume when finished.
+
+Normal and hidden volumes
+Normal volumes support FAT/exFAT read and write. NTFS is read-only. Hidden-volume protection should be enabled when writing to an outer volume. Do not write casually to an outer volume while a hidden volume matters.
+
+Passwords and security
+PIM and KDF settings must match the container. Keyfiles are never saved as biometric credentials. Saved credentials are encrypted by Android Keystore. Back up volume headers and remember that forgotten passwords cannot be recovered.
+
+Compatible formats
+RongVault reads VeraCrypt-compatible containers using AES, Serpent, Twofish and supported cascades/KDFs. It is an independent project and is not affiliated with VeraCrypt.</string>
+    <string name="rv_about_body">RongVault
+
+Version 0.1.0-dev
+
+RongVault provides offline access to VeraCrypt-compatible file containers on Android. It is an independent project and is not affiliated with or endorsed by VeraCrypt.
+
+The app does not require network access. It is released under GPLv3-or-later. Third-party components include Botan, FatFs and libyal projects; see the project license files for the complete notices.</string>
+    <string name="vc_foreground_title">VeraCrypt is active</string>
+    <string name="vc_foreground_processing">Processing an encrypted volume</string>
+    <string name="vc_foreground_unlocking_one">Unlocking an encrypted volume: %1$s</string>
+    <string name="vc_foreground_unlocking_many">Unlocking %1$d encrypted volumes</string>
+    <string name="vc_foreground_one_volume">One encrypted volume is unlocked</string>
+    <string name="vc_foreground_many_volumes">%1$d encrypted volumes are unlocked</string>
+    <string name="vc_file_browser_title">Encrypted files</string>
+    <string name="vc_file_browser_root">Volume root</string>
+    <string name="vc_file_browser_folder">Folder</string>
+    <string name="vc_file_browser_new_folder">New folder</string>
+    <string name="vc_file_browser_new_file">New file</string>
+    <string name="vc_file_browser_folder_name">Folder name</string>
+    <string name="vc_file_browser_file_name">File name</string>
+    <string name="vc_file_browser_no_handler">No application can open this file type.</string>
+    <string name="vc_file_browser_operation_failed">File operation failed.</string>
+    <string name="vc_file_browser_rename">Rename</string>
+    <string name="vc_file_browser_delete">Delete</string>
+    <string name="vc_file_browser_copy">Copy to this folder</string>
+    <string name="vc_file_browser_move">Move to this folder</string>
+    <string name="vc_file_browser_search">Search</string>
+    <string name="vc_file_browser_search_hint">Search current folder</string>
+    <string name="vc_file_browser_up">Up</string>
+    <string name="vc_file_browser_refresh">Refresh</string>
+    <string name="vc_file_browser_sort">Sort</string>
+    <string name="vc_file_browser_show_hidden">Show hidden files</string>
+    <string name="vc_file_browser_no_search_results">No matching files or folders.</string>
+    <string name="vc_file_browser_empty_folder">This folder is empty.</string>
+    <string name="vc_file_browser_sort_name">Name</string>
+    <string name="vc_file_browser_sort_modified">Modified time</string>
+    <string name="vc_file_browser_sort_size">Size</string>
+    <string name="vc_file_browser_sort_type">Type</string>
+    <string name="vc_file_browser_ascending">Ascending</string>
+    <string name="vc_file_browser_descending">Descending</string>
+    <string name="vc_volume_kind_normal">Outer volume</string>
+    <string name="vc_volume_kind_hidden">Hidden volume</string>
+    <string name="vc_navigation_volume_subtitle">%1$s · %2$s</string>
+</resources>

@@ -1,0 +1,131 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+def releaseProperties = [
+        'EDS_RELEASE_STORE_FILE',
+        'EDS_RELEASE_STORE_PASSWORD',
+        'EDS_RELEASE_KEY_ALIAS',
+        'EDS_RELEASE_KEY_PASSWORD'
+]
+def hasReleaseSigning = releaseProperties.every { providers.gradleProperty(it).isPresent() }
+
+android {
+    namespace 'com.sovworks.eds.android'
+    compileSdk 37
+    ndkVersion '28.2.13676358'
+
+    defaultConfig {
+        // The Java package remains stable during the staged migration. The
+        // installable identity is new and can be overridden for private builds.
+        applicationId providers.gradleProperty('EDS_APPLICATION_ID').orElse('org.eds.veracrypt').get()
+        minSdk 29
+        targetSdk 37
+        versionCode 1
+        versionName '0.1.0-dev'
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(providers.gradleProperty('EDS_RELEASE_STORE_FILE').get())
+                storePassword providers.gradleProperty('EDS_RELEASE_STORE_PASSWORD').get()
+                keyAlias providers.gradleProperty('EDS_RELEASE_KEY_ALIAS').get()
+                keyPassword providers.gradleProperty('EDS_RELEASE_KEY_PASSWORD').get()
+            }
+        }
+    }
+
+    flavorDimensions 'edition'
+    productFlavors {
+        lite {
+            dimension 'edition'
+            externalNativeBuild {
+                cmake {
+                    targets 'vc_core', 'edsxts', 'edsctr', 'edsaes', 'edsserpent', 'edstwofish', 'edswhirlpool', 'fdraio', 'localxts', 'edscfb', 'edscbc'
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            externalNativeBuild {
+                cmake {
+                    cFlags '-DDEBUG'
+                }
+            }
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules-lite.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+        viewBinding true
+    }
+
+    externalNativeBuild {
+        cmake {
+            path file('CMakeLists.txt')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/LICENSE.txt', 'META-INF/LICENSE', 'META-INF/NOTICE.txt', 'META-INF/NOTICE']
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.drewnoakes:metadata-extractor:2.19.0'
+    implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.core:core:1.17.0'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
+    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+    implementation 'androidx.exifinterface:exifinterface:1.3.7'
+    implementation 'androidx.localbroadcastmanager:localbroadcastmanager:1.1.0'
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.21'
+    implementation 'com.trello.rxlifecycle2:rxlifecycle:2.2.2'
+    implementation 'com.trello.rxlifecycle2:rxlifecycle-android:2.2.2'
+    implementation 'com.trello.rxlifecycle2:rxlifecycle-components:2.2.2'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.jetbrains.kotlin:kotlin-test:2.3.21'
+}
+
+// Release artifacts must never be produced with a fallback, debug, or
+// source-controlled signing identity.
+tasks.configureEach {
+    if (name.toLowerCase(Locale.ROOT).contains('release')) {
+        doFirst {
+            if (!hasReleaseSigning) {
+                throw new GradleException('Release signing is required. Supply all EDS_RELEASE_* Gradle properties outside source control.')
+            }
+        }
+    }
+}

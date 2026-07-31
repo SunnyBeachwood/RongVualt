@@ -1,0 +1,117 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.parcelize'
+}
+
+android {
+    namespace 'me.zhanghai.android.files'
+    compileSdk 37
+
+    defaultConfig {
+        minSdk 35
+        consumerProguardFiles 'consumer-rules.pro'
+        buildConfigField 'String', 'APPLICATION_ID', '"app.rongvault"'
+        buildConfigField 'String', 'FILE_PROVIDIER_AUTHORITY', '"app.rongvault.materialfiles.files"'
+        buildConfigField 'int', 'VERSION_CODE', '1'
+    }
+
+    buildFeatures {
+        aidl true
+        buildConfig true
+        viewBinding true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+
+    packaging {
+        resources {
+            excludes += ['META-INF/LICENSE.txt', 'META-INF/LICENSE', 'META-INF/NOTICE.txt', 'META-INF/NOTICE']
+        }
+    }
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.2.10')
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1'
+    implementation 'androidx.activity:activity-ktx:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
+    implementation 'androidx.exifinterface:exifinterface:1.3.7'
+    implementation 'androidx.fragment:fragment-ktx:1.8.1'
+    implementation 'androidx.lifecycle:lifecycle-common-java8:2.8.2'
+    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.2'
+    implementation 'androidx.lifecycle:lifecycle-process:2.8.2'
+    implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.2'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.2'
+    implementation 'androidx.preference:preference-ktx:1.2.1'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'io.noties.markwon:core:4.6.2'
+    implementation 'io.noties.markwon:ext-tables:4.6.2'
+    implementation 'io.noties.markwon:ext-strikethrough:4.6.2'
+    implementation 'io.noties.markwon:ext-tasklist:4.6.2'
+    implementation 'io.noties.markwon:image:4.6.2'
+    implementation 'com.caverock:androidsvg-aar:1.4'
+    implementation 'com.davemorrissey.labs:subsampling-scale-image-view-androidx:3.10.0'
+    implementation 'com.drakeet.drawer:drawer:1.0.3'
+    implementation 'com.h6ah4i.android.materialshadowninepatch:materialshadowninepatch:1.0.0'
+    implementation 'com.h6ah4i.android.widget.advrecyclerview:advrecyclerview:1.0.0'
+    implementation('com.hierynomus:smbj:0.11.5') {
+        exclude group: 'org.bouncycastle', module: 'bcprov-jdk15on'
+    }
+    implementation('com.hierynomus:sshj:0.35.0') {
+        exclude group: 'org.bouncycastle', module: 'bcprov-jdk15on'
+    }
+    implementation 'com.leinardi.android:speed-dial:3.3.0'
+    implementation('com.rapid7.client:dcerpc:0.12.1') {
+        exclude group: 'com.google.guava', module: 'guava'
+        exclude group: 'org.bouncycastle', module: 'bcprov-jdk15on'
+    }
+    implementation 'com.google.guava:guava:33.0.0-android'
+    implementation 'com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava'
+    implementation 'com.takisoft.preferencex:preferencex:1.1.0'
+    implementation 'commons-net:commons-net:3.8.0'
+    implementation 'de.psdev.licensesdialog:licensesdialog:2.1.0'
+    implementation 'dev.chrisbanes:insetter-ktx:0.3.1'
+    implementation 'dev.rikka.rikkax.preference:simplemenu-preference:1.0.3'
+    implementation('eu.agno3.jcifs:jcifs-ng:2.1.10') {
+        exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
+    }
+    implementation 'org.bouncycastle:bcprov-jdk15to18:1.77'
+    implementation platform('io.coil-kt:coil-bom:2.6.0')
+    implementation 'io.coil-kt:coil'
+    implementation 'io.coil-kt:coil-gif'
+    implementation 'io.coil-kt:coil-svg'
+    implementation 'io.coil-kt:coil-video'
+    implementation 'me.zhanghai.android.appiconloader:appiconloader:1.5.0'
+    implementation 'me.zhanghai.android.fastscroll:library:1.3.0'
+    implementation 'me.zhanghai.android.foregroundcompat:library:1.0.2'
+    implementation 'me.zhanghai.android.libarchive:library:1.1.0'
+    implementation 'me.zhanghai.android.libselinux:library:2.1.0'
+    implementation 'me.zhanghai.android.retrofile:library:1.1.1'
+    implementation 'me.zhanghai.android.systemuihelper:library:1.0.0'
+    implementation 'net.sourceforge.streamsupport:android-retrostreams:1.7.4'
+    implementation 'org.apache.ftpserver:ftpserver-core:1.2.0'
+    implementation('org.apache.mina:mina-core') {
+        version { strictly '2.1.3' }
+    }
+    implementation 'org.slf4j:slf4j-android:1.7.36'
+    implementation('com.github.bitfireAT:dav4jvm:1.0.0') {
+        // xpp3 declares an obsolete JUnit runtime dependency which conflicts
+        // with AndroidX Test's JUnit 4.13 requirement on Android 16.
+        exclude group: 'junit', module: 'junit'
+    }
+    implementation 'com.github.chrisbanes:PhotoView:2.3.0'
+
+    testImplementation 'junit:junit:4.13.2'
+}

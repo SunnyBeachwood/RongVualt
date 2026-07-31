@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="@dimen/rv_screen_padding">
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/details_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="@dimen/rv_card_radius"
+            app:cardUseCompatPadding="true"
+            xmlns:app="http://schemas.android.com/apk/res-auto">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/rv_card_padding">
+
+                <TextView android:id="@+id/details_name" android:layout_width="match_parent" android:layout_height="wrap_content" android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+                <TextView android:id="@+id/details_status" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+                <TextView android:id="@+id/details_kind" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" />
+                <TextView android:id="@+id/details_filesystem" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/details_access" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/details_size" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/details_sector" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/details_cipher" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/details_kdf" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/details_backup_header" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/details_locked"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            app:cardCornerRadius="@dimen/rv_card_radius"
+            app:cardUseCompatPadding="true">
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="@dimen/rv_card_padding" android:text="@string/rv_details_session_closed" android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/transfer_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rv_section_spacing"
+            android:visibility="gone"
+            xmlns:app="http://schemas.android.com/apk/res-auto"
+            app:cardCornerRadius="@dimen/rv_card_radius"
+            app:cardUseCompatPadding="true">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="@dimen/rv_card_padding">
+                <TextView android:id="@+id/transfer_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+                <TextView android:id="@+id/transfer_file" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <ProgressBar android:id="@+id/transfer_progress" style="?android:attr/progressBarStyleHorizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" />
+                <TextView android:id="@+id/transfer_percent" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+                <TextView android:id="@+id/transfer_bytes" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" />
+                <TextView android:id="@+id/transfer_speed" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" />
+                <TextView android:id="@+id/transfer_remaining" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" />
+                <TextView android:id="@+id/transfer_failures" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/transfer_cancel" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end" android:text="@string/vc_transfer_cancel" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/rv_section_spacing"
+            android:gravity="end"
+            android:orientation="horizontal">
+            <com.google.android.material.button.MaterialButton android:id="@+id/details_browse" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vc_browse_volume" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/details_import" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vc_transfer_encrypt_import" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/details_export" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vc_transfer_decrypt_export" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/details_lock" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vc_lock_volume" />
+            <com.google.android.material.button.MaterialButton android:id="@+id/details_return" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/rv_return_to_catalog" android:visibility="gone" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

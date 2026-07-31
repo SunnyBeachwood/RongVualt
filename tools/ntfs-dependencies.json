@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "purpose": "Android read-only NTFS dependency closure for vc_core",
+  "libraries": [
+    { "name": "libcerror", "repository": "https://github.com/libyal/libcerror", "minimumVersion": "20120425", "revision": "3c27e720a6cfe2a07b2c40a36971249c3479f6de" },
+    { "name": "libcthreads", "repository": "https://github.com/libyal/libcthreads", "minimumVersion": "20160404", "revision": "0afb2f58f980a52c0e8b660b234c27686683c854" },
+    { "name": "libcdata", "repository": "https://github.com/libyal/libcdata", "minimumVersion": "20230108", "revision": "d8bd16d44110182060c8988e7338b5ee29554d8f" },
+    { "name": "libclocale", "repository": "https://github.com/libyal/libclocale", "minimumVersion": "20120425", "revision": "dbcc7ab34e6be8f5ad09d7e12e66999c7e9e0513" },
+    { "name": "libcnotify", "repository": "https://github.com/libyal/libcnotify", "minimumVersion": "20120425", "revision": "4068933706632dbf5fd77c02300c8c851acee646" },
+    { "name": "libcsplit", "repository": "https://github.com/libyal/libcsplit", "minimumVersion": "20120701", "revision": "1d91226e21ef3300f89b61fd1c6f6d6fb96e6071" },
+    { "name": "libuna", "repository": "https://github.com/libyal/libuna", "minimumVersion": "20230702", "revision": "6dae4d259ce4bec95274964918906a0fdaf8b564" },
+    { "name": "libcfile", "repository": "https://github.com/libyal/libcfile", "minimumVersion": "20160409", "revision": "e2274ecced9f233d4a388d1a8d1666036b1d8cbd" },
+    { "name": "libcpath", "repository": "https://github.com/libyal/libcpath", "minimumVersion": "20180716", "revision": "6003e68102f4c1b238646b4a1501f287e0891dce" },
+    { "name": "libbfio", "repository": "https://github.com/libyal/libbfio", "minimumVersion": "20201125", "revision": "9603beb63808f194447cf7529f2e8f558f99b7ae" },
+    { "name": "libfcache", "repository": "https://github.com/libyal/libfcache", "minimumVersion": "20191109", "revision": "1c61f1af2a7875c394a60e04194ba046f871b064" },
+    { "name": "libfdata", "repository": "https://github.com/libyal/libfdata", "minimumVersion": "20201129", "revision": "cdb99e659ca5c816839813652cf7c4e8fa5fad9d" },
+    { "name": "libfdatetime", "repository": "https://github.com/libyal/libfdatetime", "minimumVersion": "20180910", "revision": "4c5500ada3f20d336f41438cfbf51060d8402963" },
+    { "name": "libfguid", "repository": "https://github.com/libyal/libfguid", "minimumVersion": "20120426", "revision": "3d8fbb6a36665ed1593f23cae52ffc35e8dbd919" },
+    { "name": "libfwnt", "repository": "https://github.com/libyal/libfwnt", "minimumVersion": "20191217", "revision": "46ca73565966642cdc21dd19ddf9ce5851919d0e" },
+    { "name": "libfsntfs", "repository": "https://github.com/libyal/libfsntfs", "minimumVersion": "20260727", "revision": "2eccb7a4356e919d50bb7f8956a683131141f0d3" }
+  ]
+}

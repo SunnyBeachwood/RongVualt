@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="rv_primary">#126E82</color>
+    <color name="rv_secondary">#2F9C95</color>
+    <color name="rv_tertiary">#335C81</color>
+    <color name="rv_background">#F6FBFC</color>
+    <color name="rv_surface">#F6FBFC</color>
+    <color name="rv_surface_variant">#DCEFF1</color>
+    <color name="rv_outline">#B8C9CC</color>
+    <color name="rv_outline_subtle">#D5E1E3</color>
+    <color name="rv_on_surface">#172024</color>
+    <color name="rv_success">#2E7D5B</color>
+    <color name="rv_warning">#A76B00</color>
+    <color name="rv_error">#BA1A1A</color>
+</resources>

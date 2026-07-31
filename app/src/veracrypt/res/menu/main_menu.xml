@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/menu_open_embedded_files"
+        android:icon="@drawable/ic_menu_folder_open"
+        android:title="@string/vc_open_embedded_files"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_open_system_files"
+        android:icon="@drawable/ic_menu_device"
+        android:title="@string/vc_open_system_files"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_clear_catalog_on_exit"
+        android:icon="@drawable/ic_menu_clean"
+        android:title="@string/vc_clear_catalog_on_exit"
+        android:checkable="true"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_exit_app"
+        android:icon="@drawable/ic_menu_exit"
+        android:title="@string/vc_exit_app"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_help"
+        android:icon="@drawable/ic_menu_help"
+        android:title="@string/rv_menu_help"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_about"
+        android:icon="@drawable/ic_menu_info"
+        android:title="@string/rv_menu_about"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/menu_language"
+        android:icon="@drawable/ic_menu_language"
+        android:title="@string/rv_menu_language"
+        app:showAsAction="never" />
+</menu>

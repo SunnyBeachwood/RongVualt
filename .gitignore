@@ -1,0 +1,17 @@
+# Android/Gradle build products
+.gradle/
+build/
+**/build/
+local.properties
+*.iml
+.idea/
+
+# Signing and local release configuration. Never commit credentials.
+*.keystore
+*.jks
+app/build-local.gradle
+app/build-local
+
+# Native build intermediates
+.cxx/
+externalNativeBuild/

@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <activity android:name="me.zhanghai.android.files.filelist.FileListActivity" tools:ignore="UnusedAttribute" exported="false" xmlns:tools="http://schemas.android.com/tools">
+      <!-- @see me.zhanghai.android.files.file.isSupportedArchive -->
+      <!-- @see https://android.googlesource.com/platform/packages/apps/DocumentsUI/+/main/AndroidManifest.xml -->
+      <!--
+              ~ Unusable until we implement DocumentsProvider.
+            <intent-filter>
+                <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            -->
+    </activity>
+    <activity android:name="me.zhanghai.android.files.filelist.OpenFileActivity" exported="false">
+    </activity>
+    <activity android:name="me.zhanghai.android.files.filelist.EditFileActivity" android:label="@string/file_edit_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.filelist.OpenFileAsDialogActivity" android:label="@string/file_open_as_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.AddStorageDialogActivity" android:label="@string/storage_add_storage_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.EditDeviceStorageDialogActivity" android:label="@string/storage_edit_device_storage_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.AddExternalStorageShortcutActivity" android:label="@string/storage_add_external_storage_shortcut_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.EditExternalStorageShortcutDialogActivity" android:label="@string/storage_edit_external_storage_shortcut_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.AddDocumentTreeActivity" android:label="@string/storage_add_document_tree_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.EditDocumentTreeDialogActivity" android:label="@string/storage_edit_document_tree_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.EditFtpServerActivity" android:label="@string/storage_edit_ftp_server_title_edit" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.EditSftpServerActivity" android:label="@string/storage_edit_sftp_server_title_edit" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.AddLanSmbServerActivity" android:label="@string/storage_add_lan_smb_server_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.EditSmbServerActivity" android:label="@string/storage_edit_smb_server_title_edit" exported="false" />
+    <activity android:name="me.zhanghai.android.files.storage.EditWebDavServerActivity" android:label="@string/storage_edit_webdav_server_title_edit" exported="false" />
+    <activity android:name="me.zhanghai.android.files.navigation.EditBookmarkDirectoryDialogActivity" android:label="@string/navigation_edit_bookmark_directory_title" exported="false" />
+    <activity android:name="me.zhanghai.android.files.ftpserver.FtpServerActivity" android:label="@string/ftp_server_title" android:launchMode="singleTop" exported="false">
+    </activity>
+    <activity android:name="me.zhanghai.android.files.settings.SettingsActivity" android:label="@string/settings_title" android:launchMode="singleTop" exported="false">
+    </activity>
+    <activity android:name="me.zhanghai.android.files.storage.StorageListActivity" android:label="@string/storage_list_title" android:launchMode="singleTop" exported="false" />
+    <activity android:name="me.zhanghai.android.files.settings.StandardDirectoryListActivity" android:label="@string/settings_standard_directory_list_title" android:launchMode="singleTop" exported="false" />
+    <activity android:name="me.zhanghai.android.files.settings.BookmarkDirectoryListActivity" android:label="@string/settings_bookmark_directory_list_title" android:launchMode="singleTop" exported="false" />
+    <activity android:name="me.zhanghai.android.files.about.AboutActivity" android:label="@string/about_title" android:launchMode="singleTop" exported="false" />
+    <activity android:name="me.zhanghai.android.files.fileaction.ArchivePasswordDialogActivity" exported="false" />
+    <activity android:name="me.zhanghai.android.files.filejob.FileJobErrorDialogActivity" exported="false" />
+    <activity android:name="me.zhanghai.android.files.filejob.FileJobConflictDialogActivity" exported="false" />
+    <activity android:name="me.zhanghai.android.files.viewer.saveas.SaveAsActivity" android:label="@string/save_as_title" exported="false">
+    </activity>
+    <activity android:name="me.zhanghai.android.files.viewer.text.TextEditorActivity" android:label="@string/text_editor_title" exported="false">
+    </activity>
+    <activity android:name="me.zhanghai.android.files.viewer.markdown.MarkdownViewerActivity" android:label="@string/markdown_viewer_title" exported="false">
+    </activity>
+    <activity android:name="me.zhanghai.android.files.viewer.image.ImageViewerActivity" android:label="@string/image_viewer_title" exported="false">
+    </activity>
+    <!-- Copy, move, archive and text-save jobs call startForeground().  Android 14+
+         rejects services without an explicit type, so keep this aligned with the
+         host's FOREGROUND_SERVICE_DATA_SYNC permission. -->
+    <service android:name="me.zhanghai.android.files.filejob.FileJobService" android:foregroundServiceType="dataSync" exported="false" />
+    <!-- Android 14+ rejects startForeground() unless the service declares a
+         concrete type. FTP transfers are user-initiated data synchronization. -->
+    <service
+        android:name="me.zhanghai.android.files.ftpserver.FtpServerService"
+        android:foregroundServiceType="dataSync"
+        android:exported="false" />
+    <service android:name="me.zhanghai.android.files.ftpserver.FtpServerTileService" android:label="@string/ftp_server_title" tools:ignore="NewApi" exported="false" xmlns:tools="http://schemas.android.com/tools">
+    </service>
+    <service android:name="androidx.appcompat.app.AppLocalesMetadataHolderService" android:enabled="false" exported="false">
+    </service>
+    <provider android:name="me.zhanghai.android.files.app.AppProvider" exported="false" />
+    <provider android:name="me.zhanghai.android.files.file.FileProvider" exported="false" />
+    <receiver android:name="me.zhanghai.android.files.filejob.FileJobReceiver" exported="false" />
+    <receiver android:name="me.zhanghai.android.files.ftpserver.FtpServerReceiver" exported="false" />
+  </application>
+</manifest>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.VeraCrypt" parent="Theme.MaterialFiles.Material3">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        <item name="android:statusBarColor">@color/rv_surface</item>
+        <item name="android:navigationBarColor">@color/rv_surface</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="colorPrimary">@color/rv_primary</item>
+        <item name="colorSecondary">@color/rv_secondary</item>
+        <item name="android:windowBackground">@color/rv_background</item>
+    </style>
+</resources>
