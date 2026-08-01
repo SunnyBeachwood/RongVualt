@@ -5,9 +5,6 @@ import android.content.Intent
 import android.widget.Toast
 import android.Manifest
 import android.os.Build
-import android.animation.ObjectAnimator
-import android.animation.PropertyValuesHolder
-import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.activity.result.contract.ActivityResultContracts
 import android.view.WindowManager
 import android.view.MenuItem
@@ -19,7 +16,6 @@ import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.appcompat.view.menu.MenuBuilder
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.lifecycleScope
 import java.util.concurrent.CancellationException
@@ -51,9 +47,6 @@ class ContainerCatalogActivity : AppCompatActivity() {
         binding = ActivityContainerCatalogBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setSupportActionBar(binding.appToolbar)
-        // The title area remains a compact, playful home affordance while the
-        // action buttons keep their normal independent click handling.
-        binding.appToolbar.setOnClickListener { shakeBrand() }
         binding.appToolbar.setNavigationOnClickListener { onBackPressedDispatcher.onBackPressed() }
         supportFragmentManager.addOnBackStackChangedListener {
             if (supportFragmentManager.backStackEntryCount == 0) {
@@ -77,10 +70,6 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
-        // AppCompat normally suppresses icons in overflow menus. These are
-        // semantic, not decorative: they make the long action labels faster
-        // to scan and distinguish at a glance.
-        (menu as? MenuBuilder)?.setOptionalIconsVisible(true)
         menu.findItem(R.id.menu_clear_catalog_on_exit)?.isChecked = app.catalog.clearOnExitEnabled()
         return true
     }
@@ -90,18 +79,6 @@ class ContainerCatalogActivity : AppCompatActivity() {
         // builds. Removing actions here makes the overlay an actual boundary.
         menu.setGroupVisible(0, !binding.appLockOverlay.isVisible)
         return super.onPrepareOptionsMenu(menu)
-    }
-
-    private fun shakeBrand() {
-        ObjectAnimator.ofPropertyValuesHolder(
-            binding.appToolbar,
-            PropertyValuesHolder.ofFloat("translationX", 0f, -10f, 9f, -7f, 5f, -2f, 0f),
-            PropertyValuesHolder.ofFloat("rotation", 0f, -1.2f, 1.2f, -0.8f, 0.4f, 0f),
-        ).apply {
-            duration = 420
-            interpolator = AccelerateDecelerateInterpolator()
-            start()
-        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

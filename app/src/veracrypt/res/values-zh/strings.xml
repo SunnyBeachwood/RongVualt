@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">容匣</string>
+    <string name="rv_home_security_title">安全容器</string>
+    <string name="rv_home_overview">%1$d 个容器 · %2$d 个已解锁</string>
+    <string name="rv_home_container_count">共 %1$d 个</string>
+    <string name="rv_create_new_container">新建容器</string>
+    <string name="rv_empty_catalog_title">你的容匣已准备就绪</string>
+    <string name="rv_empty_catalog_message">添加已有加密容器，或新建一个容器后开始使用。</string>
+    <string name="rv_unlock_container">解锁 %1$s</string>
+    <string name="rv_browse_container">浏览 %1$s</string>
     <string name="rv_container_details">容器详情</string>
     <string name="rv_more_container_actions">更多容器操作</string>
     <string name="rv_state_locked">已锁定</string>

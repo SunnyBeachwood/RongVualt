@@ -75,4 +75,23 @@ class ContainerUiModelsTest {
         val names = VolumeDetailsUiModel::class.java.declaredFields.map { it.name }
         assertFalse(names.any { it.contains("uri", true) || it.contains("password", true) || it.contains("pim", true) || it.contains("keyfile", true) || it.contains("offset", true) })
     }
+
+    @Test fun catalogSummaryCountsOnlyCataloguedUnlockedVolumes() {
+        val other = ContainerCatalogEntry(UUID.randomUUID(), "content://private/other", "other.hc")
+
+        val summary = catalogSummary(listOf(entry), setOf(entry.id, other.id))
+
+        assertEquals(1, summary.totalContainers)
+        assertEquals(1, summary.unlockedContainers)
+    }
+
+    @Test fun cardDiffKeepsRowsStableAndRebindsChangedState() {
+        val locked = entry.toCardUi(null)
+        val unlocked = entry.toCardUi(ContainerRuntimeSnapshot(
+            VolumeKind.NORMAL, VolumeFileSystem.EXFAT, false, VolumeSessionState.Open,
+        ))
+
+        assertTrue(CONTAINER_CARD_DIFF_CALLBACK.areItemsTheSame(locked, unlocked))
+        assertFalse(CONTAINER_CARD_DIFF_CALLBACK.areContentsTheSame(locked, unlocked))
+    }
 }

@@ -3,11 +3,26 @@
     <style name="Theme.VeraCrypt" parent="Theme.MaterialFiles.Material3">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">?attr/isLightTheme</item>
+        <item name="android:windowLightNavigationBar">?attr/isLightTheme</item>
         <item name="android:statusBarColor">@color/rv_surface</item>
         <item name="android:navigationBarColor">@color/rv_surface</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="colorPrimary">@color/rv_primary</item>
+        <item name="colorOnPrimary">@color/rv_on_primary</item>
+        <item name="colorPrimaryContainer">@color/rv_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/rv_on_primary_container</item>
         <item name="colorSecondary">@color/rv_secondary</item>
+        <item name="colorOnSecondary">@color/rv_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/rv_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/rv_on_secondary_container</item>
+        <item name="colorTertiary">@color/rv_tertiary</item>
+        <item name="colorSurface">@color/rv_surface</item>
+        <item name="colorOnSurface">@color/rv_on_surface</item>
+        <item name="colorSurfaceVariant">@color/rv_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/rv_on_surface_variant</item>
+        <item name="colorOutline">@color/rv_outline</item>
+        <item name="colorError">@color/rv_error</item>
+        <item name="colorErrorContainer">@color/rv_error_container</item>
         <item name="android:windowBackground">@color/rv_background</item>
     </style>
 </resources>

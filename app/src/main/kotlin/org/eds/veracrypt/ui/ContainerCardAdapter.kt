@@ -1,14 +1,17 @@
 package org.eds.veracrypt.ui
 
-import android.graphics.Color
+import android.content.res.ColorStateList
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.sovworks.eds.android.R
 import com.sovworks.eds.android.databinding.ItemContainerCardBinding
 
+/** Renders only the safe catalog projection; credentials and source URIs never reach a row. */
 internal class ContainerCardAdapter(
     private val onUnlock: (ContainerCardUiModel) -> Unit,
     private val onBrowse: (ContainerCardUiModel) -> Unit,
@@ -17,37 +20,37 @@ internal class ContainerCardAdapter(
     private val onCreateHidden: (ContainerCardUiModel) -> Unit,
     private val onChangeCredentials: (ContainerCardUiModel) -> Unit,
     private val onRemove: (ContainerCardUiModel) -> Unit,
-) : RecyclerView.Adapter<ContainerCardAdapter.Holder>() {
-    private var items: List<ContainerCardUiModel> = emptyList()
+) : ListAdapter<ContainerCardUiModel, ContainerCardAdapter.Holder>(CONTAINER_CARD_DIFF_CALLBACK) {
 
-    fun submitList(models: List<ContainerCardUiModel>) {
-        items = models
-        notifyDataSetChanged()
+    init {
+        setHasStableIds(true)
+    }
+
+    override fun getItemId(position: Int): Long = getItem(position).entry.id.let {
+        it.mostSignificantBits xor it.leastSignificantBits
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder = Holder(
         ItemContainerCardBinding.inflate(LayoutInflater.from(parent.context), parent, false),
     )
 
-    override fun onBindViewHolder(holder: Holder, position: Int) = holder.bind(items[position])
-    override fun getItemCount(): Int = items.size
+    override fun onBindViewHolder(holder: Holder, position: Int) = holder.bind(getItem(position))
 
     inner class Holder(private val binding: ItemContainerCardBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: ContainerCardUiModel) = with(binding) {
             containerName.text = item.entry.displayName
             containerState.text = stateLabel(item)
-            containerState.chipBackgroundColor = android.content.res.ColorStateList.valueOf(stateColor(item))
-            containerState.setTextColor(Color.WHITE)
+            containerState.setTextColor(binding.root.context.getColor(stateColor(item)))
             containerSummary.text = summaryLabel(item)
-            if (item.state == ContainerCardState.LOCKED) {
-                primaryAction.setText(R.string.vc_unlock)
-                primaryAction.setOnClickListener { onUnlock(item) }
-            } else {
-                primaryAction.setText(R.string.vc_browse_volume)
-                primaryAction.setOnClickListener { onBrowse(item) }
+            containerStateIcon.setImageResource(stateIcon(item))
+            containerStateIcon.imageTintList = ColorStateList.valueOf(binding.root.context.getColor(stateColor(item)))
+            containerStateIcon.backgroundTintList = ColorStateList.valueOf(binding.root.context.getColor(stateContainerColor(item)))
+
+            root.contentDescription = actionDescription(item)
+            root.setOnClickListener {
+                if (item.state == ContainerCardState.LOCKED) onUnlock(item) else onBrowse(item)
             }
-            detailsAction.isVisible = item.canShowDetails
-            detailsAction.setOnClickListener { onDetails(item) }
+
             lockAction.isVisible = item.canLock
             lockAction.setOnClickListener { onLock(item) }
             moreActions.setOnClickListener { showMore(item) }
@@ -55,11 +58,13 @@ internal class ContainerCardAdapter(
 
         private fun showMore(item: ContainerCardUiModel) {
             PopupMenu(binding.root.context, binding.moreActions).apply {
-                if (item.canCreateHiddenVolume) menu.add(0, MENU_CREATE_HIDDEN, 0, R.string.vc_create_hidden_volume)
-                if (item.canChangeCredentials) menu.add(0, MENU_CHANGE_CREDENTIALS, 1, R.string.vc_change_credentials)
-                menu.add(0, MENU_REMOVE, 2, R.string.vc_remove_container)
+                if (item.canShowDetails) menu.add(0, MENU_DETAILS, 0, R.string.rv_container_details)
+                if (item.canCreateHiddenVolume) menu.add(0, MENU_CREATE_HIDDEN, 1, R.string.vc_create_hidden_volume)
+                if (item.canChangeCredentials) menu.add(0, MENU_CHANGE_CREDENTIALS, 2, R.string.vc_change_credentials)
+                menu.add(0, MENU_REMOVE, 3, R.string.vc_remove_container)
                 setOnMenuItemClickListener { menu ->
                     when (menu.itemId) {
+                        MENU_DETAILS -> onDetails(item)
                         MENU_CREATE_HIDDEN -> onCreateHidden(item)
                         MENU_CHANGE_CREDENTIALS -> onChangeCredentials(item)
                         MENU_REMOVE -> onRemove(item)
@@ -68,6 +73,11 @@ internal class ContainerCardAdapter(
                 }
             }.show()
         }
+
+        private fun actionDescription(item: ContainerCardUiModel): String = binding.root.context.getString(
+            if (item.state == ContainerCardState.LOCKED) R.string.rv_unlock_container else R.string.rv_browse_container,
+            item.entry.displayName,
+        )
 
         private fun stateLabel(item: ContainerCardUiModel): String = binding.root.context.getString(when (item.state) {
             ContainerCardState.LOCKED -> R.string.rv_state_locked
@@ -83,17 +93,41 @@ internal class ContainerCardAdapter(
             ContainerCardState.PROTECTION_TRIGGERED -> R.string.rv_summary_protection_triggered
         })
 
-        private fun stateColor(item: ContainerCardUiModel): Int = binding.root.context.getColor(when (item.state) {
-            ContainerCardState.LOCKED -> R.color.rv_secondary
+        private fun stateIcon(item: ContainerCardUiModel): Int = when (item.state) {
+            ContainerCardState.LOCKED -> R.drawable.ic_container_locked
+            ContainerCardState.UNLOCKED_READ_WRITE -> R.drawable.ic_container_unlocked
+            ContainerCardState.UNLOCKED_READ_ONLY -> R.drawable.ic_container_read_only
+            ContainerCardState.PROTECTION_TRIGGERED -> R.drawable.ic_container_protection
+        }
+
+        private fun stateColor(item: ContainerCardUiModel): Int = when (item.state) {
+            ContainerCardState.LOCKED -> R.color.rv_locked
             ContainerCardState.UNLOCKED_READ_WRITE -> R.color.rv_success
             ContainerCardState.UNLOCKED_READ_ONLY -> R.color.rv_warning
             ContainerCardState.PROTECTION_TRIGGERED -> R.color.rv_error
-        })
+        }
+
+        private fun stateContainerColor(item: ContainerCardUiModel): Int = when (item.state) {
+            ContainerCardState.LOCKED -> R.color.rv_locked_container
+            ContainerCardState.UNLOCKED_READ_WRITE -> R.color.rv_success_container
+            ContainerCardState.UNLOCKED_READ_ONLY -> R.color.rv_warning_container
+            ContainerCardState.PROTECTION_TRIGGERED -> R.color.rv_error_container
+        }
     }
 
     private companion object {
+        const val MENU_DETAILS = 0
         const val MENU_CREATE_HIDDEN = 1
         const val MENU_REMOVE = 2
         const val MENU_CHANGE_CREDENTIALS = 3
+
     }
+}
+
+internal val CONTAINER_CARD_DIFF_CALLBACK = object : DiffUtil.ItemCallback<ContainerCardUiModel>() {
+    override fun areItemsTheSame(oldItem: ContainerCardUiModel, newItem: ContainerCardUiModel): Boolean =
+        oldItem.entry.id == newItem.entry.id
+
+    override fun areContentsTheSame(oldItem: ContainerCardUiModel, newItem: ContainerCardUiModel): Boolean =
+        oldItem == newItem
 }

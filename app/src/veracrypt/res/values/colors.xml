@@ -1,15 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="rv_primary">#126E82</color>
-    <color name="rv_secondary">#2F9C95</color>
-    <color name="rv_tertiary">#335C81</color>
-    <color name="rv_background">#F6FBFC</color>
-    <color name="rv_surface">#F6FBFC</color>
-    <color name="rv_surface_variant">#DCEFF1</color>
-    <color name="rv_outline">#B8C9CC</color>
-    <color name="rv_outline_subtle">#D5E1E3</color>
-    <color name="rv_on_surface">#172024</color>
-    <color name="rv_success">#2E7D5B</color>
-    <color name="rv_warning">#A76B00</color>
+    <color name="rv_primary">#126C67</color>
+    <color name="rv_on_primary">#FFFFFF</color>
+    <color name="rv_primary_container">#B8EDE6</color>
+    <color name="rv_on_primary_container">#00201D</color>
+    <color name="rv_secondary">#4A635F</color>
+    <color name="rv_on_secondary">#FFFFFF</color>
+    <color name="rv_secondary_container">#CDE8E2</color>
+    <color name="rv_on_secondary_container">#06201C</color>
+    <color name="rv_tertiary">#3F6280</color>
+    <color name="rv_background">#F6F9F7</color>
+    <color name="rv_surface">#FCFDFC</color>
+    <color name="rv_surface_variant">#DCE5E1</color>
+    <color name="rv_on_surface_variant">#404946</color>
+    <color name="rv_outline">#707A76</color>
+    <color name="rv_outline_subtle">#D5DEDA</color>
+    <color name="rv_on_surface">#171D1B</color>
+    <color name="rv_success">#176B50</color>
+    <color name="rv_success_container">#B8F1D2</color>
+    <color name="rv_warning">#855D00</color>
+    <color name="rv_warning_container">#FFDEA1</color>
     <color name="rv_error">#BA1A1A</color>
+    <color name="rv_error_container">#FFDAD6</color>
+    <color name="rv_locked">#52605C</color>
+    <color name="rv_locked_container">#E5ECE8</color>
 </resources>

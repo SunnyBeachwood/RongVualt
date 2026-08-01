@@ -6,66 +6,151 @@
     android:orientation="vertical"
     android:padding="@dimen/rv_screen_padding">
 
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="@color/rv_primary_container"
+        app:cardCornerRadius="@dimen/rv_card_radius"
+        app:cardElevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/rv_card_padding">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_vault_shield"
+                app:tint="@color/rv_on_primary_container" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rv_home_security_title"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                    android:textColor="@color/rv_on_primary_container" />
+
+                <TextView
+                    android:id="@+id/catalog_overview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                    android:textColor="@color/rv_on_primary_container" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/rv_section_spacing"
-        android:gravity="end"
         android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/add_container"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="wrap_content"
+            android:id="@+id/add_existing_container"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="@string/vc_add_container" />
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:icon="@drawable/ic_add_container"
+            android:maxLines="2"
+            android:minHeight="52dp"
+            android:text="@string/vc_add_existing_container" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/create_container"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:icon="@drawable/ic_create_container"
+            android:maxLines="2"
+            android:minHeight="52dp"
+            android:text="@string/rv_create_new_container" />
     </LinearLayout>
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/catalog_status_card"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="@dimen/rv_section_spacing"
-        android:visibility="gone"
-        app:cardCornerRadius="@dimen/rv_card_radius"
-        app:strokeColor="@color/rv_outline_subtle"
-        app:strokeWidth="1dp"
-        app:cardUseCompatPadding="true">
+        android:layout_marginTop="24dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/catalog_status"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:padding="@dimen/rv_card_padding"
-            android:textColor="@color/rv_on_surface" />
-    </com.google.android.material.card.MaterialCardView>
+            android:layout_weight="1"
+            android:text="@string/vc_container_catalog_title"
+            android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/container_list"
+        <TextView
+            android:id="@+id/catalog_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
+            android:textColor="@color/rv_on_surface_variant" />
+    </LinearLayout>
+
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="@dimen/rv_section_spacing"
-        android:layout_weight="1"
-        android:background="@drawable/rv_catalog_frame"
-        android:clipToPadding="false"
-        android:padding="8dp" />
+        android:layout_marginTop="8dp"
+        android:layout_weight="1">
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/empty_catalog"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:visibility="gone"
-        app:cardCornerRadius="@dimen/rv_card_radius"
-        app:strokeColor="@color/rv_outline_subtle"
-        app:strokeWidth="1dp"
-        app:cardUseCompatPadding="true">
-
-        <TextView
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/container_list"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="@dimen/rv_section_spacing" />
+
+        <LinearLayout
+            android:id="@+id/empty_catalog"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:gravity="center"
-            android:padding="@dimen/rv_card_padding"
-            android:text="@string/vc_catalog_empty"
-            android:textAppearance="@style/TextAppearance.Material3.BodyLarge" />
-    </com.google.android.material.card.MaterialCardView>
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_empty_vault"
+                app:tint="@color/rv_secondary" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="@string/rv_empty_catalog_title"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="@string/rv_empty_catalog_message"
+                android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                android:textColor="@color/rv_on_surface_variant" />
+        </LinearLayout>
+    </FrameLayout>
 </LinearLayout>

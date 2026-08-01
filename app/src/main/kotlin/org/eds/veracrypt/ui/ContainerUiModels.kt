@@ -1,5 +1,6 @@
 package org.eds.veracrypt.ui
 
+import java.util.UUID
 import org.eds.veracrypt.catalog.ContainerCatalogEntry
 import org.eds.veracrypt.domain.VolumeFileSystem
 import org.eds.veracrypt.domain.VolumeKind
@@ -29,6 +30,20 @@ internal data class ContainerCardUiModel(
     val canLock: Boolean,
     val canCreateHiddenVolume: Boolean,
     val canChangeCredentials: Boolean,
+)
+
+/** Small, safe aggregate for the catalog header. It never exposes a container source. */
+internal data class ContainerCatalogSummary(
+    val totalContainers: Int,
+    val unlockedContainers: Int,
+)
+
+internal fun catalogSummary(
+    entries: List<ContainerCatalogEntry>,
+    activeContainerIds: Set<UUID>,
+): ContainerCatalogSummary = ContainerCatalogSummary(
+    totalContainers = entries.size,
+    unlockedContainers = entries.count { it.id in activeContainerIds },
 )
 
 internal fun ContainerRuntimeSnapshot.cardState(): ContainerCardState = when {

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="rv_primary">#83D5CA</color>
+    <color name="rv_on_primary">#003732</color>
+    <color name="rv_primary_container">#005049</color>
+    <color name="rv_on_primary_container">#A0F2E6</color>
+    <color name="rv_secondary">#B1CCC6</color>
+    <color name="rv_on_secondary">#1C3531</color>
+    <color name="rv_secondary_container">#344C47</color>
+    <color name="rv_on_secondary_container">#CDE8E2</color>
+    <color name="rv_tertiary">#A7CBEF</color>
+    <color name="rv_background">#0E1513</color>
+    <color name="rv_surface">#111A17</color>
+    <color name="rv_surface_variant">#404946</color>
+    <color name="rv_on_surface_variant">#C0C9C5</color>
+    <color name="rv_outline">#8A938F</color>
+    <color name="rv_outline_subtle">#303936</color>
+    <color name="rv_on_surface">#DEE5E1</color>
+    <color name="rv_success">#79D9AB</color>
+    <color name="rv_success_container">#005238</color>
+    <color name="rv_warning">#F2C36A</color>
+    <color name="rv_warning_container">#674B00</color>
+    <color name="rv_error">#FFB4AB</color>
+    <color name="rv_error_container">#93000A</color>
+    <color name="rv_locked">#C2CCC8</color>
+    <color name="rv_locked_container">#36413D</color>
+</resources>

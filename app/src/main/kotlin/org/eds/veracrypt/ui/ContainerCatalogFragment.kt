@@ -13,12 +13,15 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import com.sovworks.eds.android.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import kotlinx.coroutines.awaitCancellation
-import kotlinx.coroutines.coroutineScope
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import org.eds.veracrypt.VeraCryptApplication
 import org.eds.veracrypt.catalog.ContainerCatalogEntry
@@ -26,13 +29,13 @@ import org.eds.veracrypt.documents.UnlockedVolumeService
 import org.eds.veracrypt.documents.FileTransferManager
 import org.eds.veracrypt.catalog.ContainerSourceResolver
 import org.eds.veracrypt.domain.VolumeFileSystem
-import org.eds.veracrypt.domain.VolumeSessionState
 import com.sovworks.eds.android.databinding.FragmentContainerCatalogBinding
 
 /** SAF-only catalog. Entries store an opaque random ID plus a persisted URI grant. */
 class ContainerCatalogFragment : Fragment() {
     private var binding: FragmentContainerCatalogBinding? = null
     private var entries: List<ContainerCatalogEntry> = emptyList()
+    private var activeVolumes = emptyList<org.eds.veracrypt.session.UnlockedVolume>()
     private lateinit var adapter: ContainerCardAdapter
 
     private val selectContainer = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -48,6 +51,7 @@ class ContainerCatalogFragment : Fragment() {
         return FragmentContainerCatalogBinding.inflate(inflater, container, false).also { binding = it }.root
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, state: Bundle?) {
         adapter = ContainerCardAdapter(
             onUnlock = { showOpen(it.entry) },
@@ -58,26 +62,33 @@ class ContainerCatalogFragment : Fragment() {
             onChangeCredentials = { showChangeCredentials(it.entry) },
             onRemove = { remove(it.entry) },
         )
-        binding!!.containerList.layoutManager = LinearLayoutManager(requireContext())
+        binding!!.containerList.layoutManager = GridLayoutManager(
+            requireContext(),
+            if (resources.configuration.screenWidthDp >= TABLET_MIN_WIDTH_DP) 2 else 1,
+        )
         binding!!.containerList.adapter = adapter
-        binding!!.addContainer.setOnClickListener { showAddContainerMenu() }
+        binding!!.containerList.itemAnimator = null
+        binding!!.addExistingContainer.setOnClickListener { selectExistingContainer() }
+        binding!!.createContainer.setOnClickListener { createContainer.launch("container.hc") }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                UnlockedVolumeService.volumes.volumes.collectLatest { volumes ->
-                    refresh()
-                    coroutineScope {
-                        volumes.forEach { volume -> launch { volume.session.state.collect { refresh() } } }
-                        awaitCancellation()
+                UnlockedVolumeService.volumes.volumes
+                    .flatMapLatest { volumes ->
+                        if (volumes.isEmpty()) flowOf(volumes)
+                        else combine(volumes.map { it.session.state }) { volumes }
                     }
-                }
+                    .collectLatest { volumes ->
+                        activeVolumes = volumes
+                        render()
+                    }
             }
         }
-        refresh()
+        reloadCatalog()
     }
 
     override fun onResume() {
         super.onResume()
-        refresh()
+        reloadCatalog()
     }
 
     override fun onDestroyView() {
@@ -99,7 +110,7 @@ class ContainerCatalogFragment : Fragment() {
                 requireContext().contentResolver.takePersistableUriPermission(uri, flags)
             }
             val entry = app.catalog.add(uri, displayName(uri))
-            refresh()
+            reloadCatalog()
             showOpen(entry)
         } catch (error: SecurityException) {
             showMessage(getString(R.string.vc_catalog_permission_error))
@@ -108,19 +119,11 @@ class ContainerCatalogFragment : Fragment() {
         }
     }
 
-    private fun showAddContainerMenu() {
-        MaterialAlertDialogBuilder(requireContext())
-            .setItems(arrayOf(getString(R.string.vc_add_existing_container), getString(R.string.vc_create_container))) { _, which ->
-                if (which == 0) {
-                    val tree = android.provider.DocumentsContract.buildTreeDocumentUri(
-                        "com.android.externalstorage.documents", "primary:"
-                    )
-                    selectContainer.launch(FileManagerIntents.picker(requireContext(), tree))
-                } else {
-                    createContainer.launch("container.hc")
-                }
-            }
-            .show()
+    private fun selectExistingContainer() {
+        val tree = android.provider.DocumentsContract.buildTreeDocumentUri(
+            "com.android.externalstorage.documents", "primary:",
+        )
+        selectContainer.launch(FileManagerIntents.picker(requireContext(), tree))
     }
 
     private fun configureNewContainer(uri: Uri) {
@@ -155,7 +158,7 @@ class ContainerCatalogFragment : Fragment() {
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.vc_remove_confirm) { _, _ ->
                 app.catalog.remove(entry.id)
-                refresh()
+                reloadCatalog()
             }
             .show()
     }
@@ -197,7 +200,8 @@ class ContainerCatalogFragment : Fragment() {
             return
         }
         volume?.let { UnlockedVolumeService.volumes.close(it.id) }
-        refresh()
+        activeVolumes = activeVolumes.filterNot { it.containerId == entry.id }
+        render()
     }
 
     private fun showCreateHidden(entry: ContainerCatalogEntry) {
@@ -215,16 +219,25 @@ class ContainerCatalogFragment : Fragment() {
             .commit()
     }
 
-    private fun refresh() {
+    private fun reloadCatalog() {
         if (!isAdded || !::adapter.isInitialized) return
         entries = app.catalog.list()
+        render()
+    }
+
+    private fun render() {
+        if (!isAdded || !::adapter.isInitialized) return
+        val volumesByContainer = activeVolumes.associateBy { it.containerId }
         val models = entries.map { entry ->
-            UnlockedVolumeService.volumes.findForContainer(entry.id)?.session?.let { session ->
+            volumesByContainer[entry.id]?.session?.let { session ->
                 ContainerRuntimeSnapshot(session.volumeKind, session.fileSystem, session.isReadOnly, session.state.value, session.canModifyContainer)
             }.let(entry::toCardUi)
         }
         adapter.submitList(models)
         binding?.emptyCatalog?.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+        val summary = catalogSummary(entries, volumesByContainer.keys)
+        binding?.catalogOverview?.text = getString(R.string.rv_home_overview, summary.totalContainers, summary.unlockedContainers)
+        binding?.catalogCount?.text = getString(R.string.rv_home_container_count, summary.totalContainers)
     }
 
     private fun showChangeCredentials(entry: ContainerCatalogEntry) {
@@ -240,9 +253,12 @@ class ContainerCatalogFragment : Fragment() {
     }
 
     private fun showMessage(message: String) {
-        binding?.catalogStatus?.text = message
-        binding?.catalogStatusCard?.visibility = View.VISIBLE
+        binding?.root?.let { Snackbar.make(it, message, Snackbar.LENGTH_LONG).show() }
     }
 
     private val app: VeraCryptApplication get() = requireActivity().application as VeraCryptApplication
+
+    private companion object {
+        const val TABLET_MIN_WIDTH_DP = 600
+    }
 }

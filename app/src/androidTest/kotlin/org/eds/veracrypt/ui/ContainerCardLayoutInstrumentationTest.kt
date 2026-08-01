@@ -19,15 +19,13 @@ class ContainerCardLayoutInstrumentationTest {
         val binding = ItemContainerCardBinding.inflate(android.view.LayoutInflater.from(context))
         binding.containerName.text = "A very long encrypted container name.img"
         binding.containerSummary.text = "Opened read-only for safe access."
-        binding.primaryAction.setText(R.string.vc_browse_volume)
-        binding.detailsAction.visibility = View.VISIBLE
         binding.lockAction.visibility = View.VISIBLE
         val width = (320 * context.resources.displayMetrics.density).toInt()
 
         binding.root.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
         binding.root.layout(0, 0, width, binding.root.measuredHeight)
 
-        listOf(binding.primaryAction, binding.detailsAction, binding.lockAction, binding.moreActions).forEach { action ->
+        listOf(binding.lockAction, binding.moreActions).forEach { action ->
             assertTrue("${action.contentDescription ?: action.javaClass.simpleName} starts outside the card", action.left >= 0)
             assertTrue("${action.contentDescription ?: action.javaClass.simpleName} exceeds the card", action.right <= width)
             assertTrue("Action must remain touchable", action.measuredHeight >= (48 * context.resources.displayMetrics.density).toInt())
