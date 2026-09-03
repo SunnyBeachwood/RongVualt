@@ -10,6 +10,7 @@ import java.nio.charset.CodingErrorAction
 import java.util.UUID
 import org.eds.veracrypt.domain.CipherHint
 import org.eds.veracrypt.domain.KdfHint
+import org.eds.veracrypt.domain.MAX_PIM_VALUE
 import org.eds.veracrypt.domain.SecretPassword
 import org.eds.veracrypt.domain.VolumeAccessMode
 import org.eds.veracrypt.domain.VolumeCredentials
@@ -113,7 +114,7 @@ internal class SavedUnlockCredential private constructor(
                     password = passwordBytes
                     data.readFully(passwordBytes)
                     val pim = data.readInt()
-                    require(pim >= 0) { "Invalid saved PIM" }
+                    require(pim in 0..MAX_PIM_VALUE) { "Invalid saved PIM" }
                     val cipher = CipherHint.valueOf(data.readUTF()).also { require(it != CipherHint.AUTO) }
                     val kdf = KdfHint.valueOf(data.readUTF()).also { require(it != KdfHint.AUTO) }
                     val volumeKind = VolumeKind.valueOf(data.readUTF())

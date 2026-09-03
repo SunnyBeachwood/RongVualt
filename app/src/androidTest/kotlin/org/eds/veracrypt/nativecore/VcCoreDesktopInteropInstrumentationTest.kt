@@ -7,6 +7,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import java.io.File
 import org.eds.veracrypt.domain.CipherHint
 import org.eds.veracrypt.domain.KdfHint
+import org.eds.veracrypt.domain.MAX_PIM_VALUE
 import org.eds.veracrypt.domain.SecretPassword
 import org.eds.veracrypt.domain.VolumeAccessMode
 import org.eds.veracrypt.domain.VolumeCreateOptions
@@ -30,10 +31,38 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class VcCoreDesktopInteropInstrumentationTest {
     private val interopCipher: CipherHint
-        get() = when (InstrumentationRegistry.getArguments().getString("vc.cipher")?.uppercase()) {
+        get() = when (InstrumentationRegistry.getArguments().getString("vc.cipher")?.uppercase() ?: "AES") {
+            "AES" -> CipherHint.AES
             "SERPENT" -> CipherHint.SERPENT
             "TWOFISH" -> CipherHint.TWOFISH
-            else -> CipherHint.AES
+            "CAMELLIA" -> CipherHint.CAMELLIA
+            "AES-TWOFISH" -> CipherHint.TWOFISH_AES
+            "AES-TWOFISH-SERPENT" -> CipherHint.SERPENT_TWOFISH_AES
+            "SERPENT-AES" -> CipherHint.AES_SERPENT
+            "SERPENT-TWOFISH-AES" -> CipherHint.AES_TWOFISH_SERPENT
+            "TWOFISH-SERPENT" -> CipherHint.SERPENT_TWOFISH
+            else -> error("vc.cipher must be one of the 9 VeraCrypt creation suites")
+        }
+
+    private val interopKdf: KdfHint
+        get() = when (InstrumentationRegistry.getArguments().getString("vc.kdf")?.uppercase() ?: "SHA-512") {
+            "SHA-512" -> KdfHint.PBKDF2_HMAC_SHA512
+            "SHA-256" -> KdfHint.PBKDF2_HMAC_SHA256
+            "BLAKE2S-256" -> KdfHint.PBKDF2_HMAC_BLAKE2S
+            "WHIRLPOOL" -> KdfHint.PBKDF2_HMAC_WHIRLPOOL
+            "STREEBOG" -> KdfHint.PBKDF2_HMAC_STREEBOG
+            "ARGON2", "ARGON2ID" -> KdfHint.ARGON2ID
+            else -> error("vc.kdf must be one of the 6 supported VeraCrypt KDFs")
+        }
+
+    private val interopPim: Int
+        get() {
+            val raw = InstrumentationRegistry.getArguments().getString("vc.pim") ?: return 1
+            val value = raw.toLongOrNull() ?: error("vc.pim must be an integer")
+            require(value in 0..MAX_PIM_VALUE.toLong()) {
+                "vc.pim must be between 0 and $MAX_PIM_VALUE"
+            }
+            return value.toInt()
         }
 
     @Test
@@ -72,8 +101,8 @@ class VcCoreDesktopInteropInstrumentationTest {
                     sizeBytes = CONTAINER_BYTES,
                     volumeKind = VolumeKind.NORMAL,
                     cipher = interopCipher,
-                    kdf = KdfHint.PBKDF2_HMAC_SHA512,
-                    pim = 1,
+                    kdf = interopKdf,
+                    pim = interopPim,
                     fileSystem = VolumeFileSystem.EXFAT,
                 )
                 NativeRequestCodec.encodeCreate(options, credentials).use { request ->
@@ -170,8 +199,8 @@ class VcCoreDesktopInteropInstrumentationTest {
 
     private fun credentials() = VolumeCredentials(
         password = SecretPassword(PASSWORD.toCharArray()),
-        pim = 1,
-        kdfHint = KdfHint.PBKDF2_HMAC_SHA512,
+        pim = interopPim,
+        kdfHint = interopKdf,
     )
 
     private fun assumeInteropEnabled() = assumeTrue(

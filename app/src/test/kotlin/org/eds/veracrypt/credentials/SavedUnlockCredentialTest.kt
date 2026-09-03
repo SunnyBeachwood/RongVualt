@@ -1,8 +1,11 @@
 package org.eds.veracrypt.credentials
 
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import org.eds.veracrypt.domain.CipherHint
 import org.eds.veracrypt.domain.KdfHint
 import org.eds.veracrypt.domain.KeyfileSource
+import org.eds.veracrypt.domain.MAX_PIM_VALUE
 import org.eds.veracrypt.domain.SecretPassword
 import org.eds.veracrypt.domain.VolumeAccessMode
 import org.eds.veracrypt.domain.VolumeCredentials
@@ -95,5 +98,26 @@ class SavedUnlockCredentialTest {
     fun recordIdIsOpaqueAndContainerScoped() {
         val id = UUID.fromString("ee9292a8-bd8b-4436-9099-982405eac03a")
         check(SavedUnlockCredential.recordId(id) == "unlock-ee9292a8-bd8b-4436-9099-982405eac03a")
+    }
+
+    @Test
+    fun persistedCredentialsRejectPimOutsideTheVeraCryptRange() {
+        listOf(-1, MAX_PIM_VALUE + 1).forEach { invalidPim ->
+            check(runCatching { SavedUnlockCredential.decode(encodedCredential(invalidPim)) }.isFailure)
+        }
+    }
+
+    private fun encodedCredential(pim: Int): ByteArray = ByteArrayOutputStream().use { output ->
+        DataOutputStream(output).use { data ->
+            data.writeInt(2)
+            data.writeInt(4)
+            data.write("pass".encodeToByteArray())
+            data.writeInt(pim)
+            data.writeUTF(CipherHint.AES.name)
+            data.writeUTF(KdfHint.PBKDF2_HMAC_SHA512.name)
+            data.writeUTF(VolumeKind.NORMAL.name)
+            data.writeUTF(VolumeAccessMode.AUTOMATIC.name)
+        }
+        output.toByteArray()
     }
 }

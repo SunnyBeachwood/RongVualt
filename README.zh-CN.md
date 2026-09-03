@@ -25,8 +25,8 @@ VeraCrypt 兼容的**非系统文件容器**。它将加密卷作为 Android 文
 - 支持普通卷和隐藏卷；写入外层卷时可启用隐藏卷保护。
 - 支持密码、PIM 和密钥文件；可选使用 Android Keystore 与设备生物识别保护已保存的
   外层卷凭据。
-- 支持 VeraCrypt 非系统容器的 AES、Serpent、Twofish 单一算法 XTS 加密；使用主卷头和
-  备用卷头进行识别。
+- 支持 VeraCrypt 1.26.29 的 15 种非系统 XTS 算法进行打开和自动识别；普通卷和隐藏卷
+  创建页面开放 Windows 版的 9 种创建算法。1.1.0 新增内容仍处于待编译、待验证状态。
 - FAT 和 exFAT 卷支持读写、创建、重命名、删除、复制、移动及导入/导出；NTFS 仅以
   只读方式打开。
 - 通过 `DocumentsProvider` 向 Android 系统文件界面提供已解锁卷，并在卷解锁或长时间
@@ -39,20 +39,25 @@ VeraCrypt 兼容的**非系统文件容器**。它将加密卷作为 Android 文
 ## 加密算法与 VeraCrypt 兼容范围
 
 RongVault 采用 VeraCrypt 非系统容器的基本设计：数据以 XTS 模式加密，卷头由密码、PIM 和
-密钥文件保护，并使用选定的密码派生函数（KDF）。当前首个版本的范围有意小于桌面版
-VeraCrypt：
+密钥文件保护，并使用选定的密码派生函数（KDF）。RongVault 1.1.0 增加完整的读取算法
+注册表、9 种 Windows 创建算法、5 种 PBKDF2 和 Argon2id；这些改动已完成源代码，但仍
+保持“待编译/待验证”状态：
 
-| 项目 | RongVault 1.0.2 范围 | 与桌面 VeraCrypt 的差距 |
+现有数据的 `CipherHint` 名称与数值、native request v2 帧格式以及已保存凭据字段顺序均
+保持不变；本轮只扩展界面显示名称和可用能力列表。
+
+| 项目 | RongVault 1.1.0 代码范围（待编译/待验证） | 与桌面 VeraCrypt 的差距 |
 | --- | --- | --- |
-| 数据加密算法 | 可打开和创建 **AES、Serpent、Twofish 单一算法 XTS** 容器。 | VeraCrypt 还提供 Camellia、Kuznyechik 及多算法级联；RongVault 首版不支持这些额外算法和级联。 |
-| KDF 选项 | 打开卷和修改凭据时可选择 PBKDF2-HMAC-SHA-512、SHA-256、BLAKE2s、Whirlpool、Streebog、Argon2id；当前 UI 创建新卷使用 PBKDF2-HMAC-SHA-512。 | VeraCrypt 的桌面端配置覆盖和测试更完整。RongVault 的每种 KDF/算法组合在兼容性矩阵标为已验证前，均应视为依赖具体兼容性测试。 |
+| 数据加密算法 | 15 种 VeraCrypt 非系统 XTS 算法均注册到打开/自动识别路径。普通卷和隐藏卷创建页面开放 AES、Serpent、Twofish、Camellia、AES-Twofish、AES-Twofish-Serpent、Serpent-AES、Serpent-Twofish-AES、Twofish-Serpent 共 9 种算法。 | VeraCrypt 还支持系统加密及平台特有布局；RongVault 的每种算法在矩阵更新前均未验证。 |
+| KDF 选项 | 打开、创建、隐藏卷保护和修改凭据代码路径均携带 6 种 KDF：PBKDF2-HMAC-SHA-512（默认）、SHA-256、BLAKE2s-256、Whirlpool、Streebog、Argon2id。隐藏卷保护为保持 native v2 布局使用 KDF 自动识别；选择 Argon2id 时显示由 PIM 推导的内存量和迭代次数。 | VeraCrypt 的桌面端配置覆盖和测试更完整。RongVault 的每种 KDF/算法组合在兼容性矩阵标为已验证前，均应视为依赖具体兼容性测试。 |
 | 卷类型 | 非系统文件容器、普通卷和隐藏卷。 | VeraCrypt 还支持系统加密，并可使用分区和整块磁盘。 |
 | 文件系统 | FAT、exFAT 可读写；NTFS 只读。 | VeraCrypt 通过桌面操作系统驱动挂载卷，与主机文件系统的集成模式不同。 |
 | 平台 | Android 15+、`arm64-v8a`，通过 SAF 和 `DocumentsProvider` 工作。 | VeraCrypt 提供 Windows、macOS、Linux 的官方桌面发行版。 |
 
-可选择 KDF 并不等于所有组合都已完成互操作验证，尤其是 Argon2id 和少见组合。请查阅
+可选择算法和 KDF 并不等于所有组合都已完成互操作验证，尤其是 Argon2id 和少见组合。
+1.1.0 源代码改动均明确标为**待编译/待验证**。请查阅
 [`docs/COMPATIBILITY_MATRIX.md`](docs/COMPATIBILITY_MATRIX.md) 了解已记录的测试状态。若需要
-系统加密、分区支持、完整算法/级联选择或桌面级验证，应使用桌面 VeraCrypt。
+系统加密、分区支持或桌面级验证，应使用桌面 VeraCrypt。
 
 ## 平台与构建环境
 

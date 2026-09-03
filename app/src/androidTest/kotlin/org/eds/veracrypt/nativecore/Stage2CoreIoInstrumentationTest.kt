@@ -41,7 +41,7 @@ class Stage2CoreIoInstrumentationTest {
 
     @Test
     fun serialBatchAlignedAndUnalignedRoundTripsAcrossCiphers() {
-        listOf(CipherHint.AES, CipherHint.SERPENT, CipherHint.TWOFISH).forEach { cipher ->
+        CipherHint.entries.filter { it.isCreatable }.forEach { cipher ->
             withNormalSession(cipher) { session ->
                 listOf(0L, 1L, 511L, 512L, 513L).forEach { offset ->
                     listOf(0, 1, 511, 512, 513, 4096, 256 * 1024 - 1, 256 * 1024, 256 * 1024 + 1).forEach { length ->

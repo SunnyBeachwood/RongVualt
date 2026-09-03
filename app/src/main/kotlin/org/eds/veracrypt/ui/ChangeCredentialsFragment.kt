@@ -4,9 +4,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import com.sovworks.eds.android.R
 import com.sovworks.eds.android.databinding.FragmentChangeCredentialsBinding
@@ -45,8 +47,29 @@ class ChangeCredentialsFragment : SensitiveFragment() {
         val session = UnlockedVolumeService.volumes.findForContainer(entryId)?.session
         if (session == null || !session.canModifyContainer || FileTransferManager.hasActiveForVolume(session.id)) return navigateBack()
         binding!!.containerName.text = entry.displayName
-        binding!!.kdf.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, KdfHint.entries.map(KdfHint::name))
-        binding!!.kdf.setSelection(KdfHint.entries.indexOf(KdfHint.AUTO), false)
+        binding!!.kdf.adapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_spinner_dropdown_item,
+            creatableKdfHints.map { it.label(requireContext()) },
+        )
+        val currentKdf = (session as? ManagedVolumeSession)?.let { nativeSession ->
+            runCatching { VcCore.volumeInfo(nativeSession.nativeHandle).resolvedKdfHint() }.getOrNull()
+        }
+        val currentKdfPosition = currentKdf?.let { creatableKdfHints.indexOf(it) }?.takeIf { it >= 0 } ?: 0
+        binding!!.kdf.setSelection(currentKdfPosition, false)
+        binding!!.let { screen ->
+            screen.kdf.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    renderKdfParameters(screen)
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
+            screen.pim.doAfterTextChanged {
+                if (parsePim(it?.toString()) != null) screen.pim.error = null
+                renderKdfParameters(screen)
+            }
+            renderKdfParameters(screen)
+        }
         keyfiles.bind(binding!!.keyfileList, binding!!.selectKeyfiles, binding!!.selectKeyfileDirectory, binding!!.generateKeyfile) {
             binding?.status?.text = it
         }
@@ -59,6 +82,12 @@ class ChangeCredentialsFragment : SensitiveFragment() {
 
     private fun submit(entryId: java.util.UUID, session: ManagedVolumeSession) {
         val screen = binding ?: return
+        val pim = parsePim(screen.pim.text?.toString())
+        if (pim == null) {
+            screen.pim.error = getString(R.string.vc_invalid_pim)
+            screen.pim.requestFocus()
+            return
+        }
         val password = screen.password.text?.toString()?.toCharArray() ?: CharArray(0)
         val confirmation = screen.passwordConfirm.text?.toString()?.toCharArray() ?: CharArray(0)
         screen.password.text?.clear(); screen.passwordConfirm.text?.clear()
@@ -68,8 +97,9 @@ class ChangeCredentialsFragment : SensitiveFragment() {
             return
         }
         confirmation.fill('\u0000')
-        val credentials = VolumeCredentials(SecretPassword(password), screen.pim.text?.toString()?.toIntOrNull() ?: 0,
-            keyfiles.snapshot(), KdfHint.valueOf(screen.kdf.selectedItem as String))
+        val credentials = VolumeCredentials(
+            SecretPassword(password), pim, keyfiles.snapshot(), creatableKdfHints[screen.kdf.selectedItemPosition],
+        )
         password.fill('\u0000')
         val saved = if (session.volumeKind != VolumeKind.HIDDEN && screen.saveWithBiometric.isChecked && credentials.keyfiles.isEmpty()) {
             SavedUnlockCredential.capture(credentials, VolumeOpenOptions(
@@ -101,6 +131,13 @@ class ChangeCredentialsFragment : SensitiveFragment() {
                 screen.changeCredentials.isEnabled = true
             }
         }
+    }
+
+    private fun renderKdfParameters(screen: FragmentChangeCredentialsBinding) {
+        val kdf = creatableKdfHints.getOrNull(screen.kdf.selectedItemPosition) ?: KdfHint.PBKDF2_HMAC_SHA512
+        val pim = parsePim(screen.pim.text?.toString())
+        screen.kdfParameters.text = pim?.let { kdf.parametersDescription(requireContext(), it) }.orEmpty()
+        screen.kdfParameters.isVisible = kdf == KdfHint.ARGON2ID && pim != null
     }
 
     private fun navigateBack() { parentFragmentManager.popBackStack() }

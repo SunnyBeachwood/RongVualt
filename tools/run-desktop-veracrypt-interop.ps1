@@ -6,8 +6,12 @@ param(
     [string]$Format = 'C:\Program Files\VeraCrypt\VeraCrypt Format.exe',
     [ValidatePattern('^[A-Za-z]$')]
     [string]$DriveLetter = 'D',
-    [ValidateSet('AES', 'Serpent', 'Twofish')]
+    [ValidateSet('AES', 'Serpent', 'Twofish', 'Camellia', 'AES-Twofish', 'AES-Twofish-Serpent', 'Serpent-AES', 'Serpent-Twofish-AES', 'Twofish-Serpent')]
     [string]$Cipher = 'AES',
+    [ValidateSet('SHA-512', 'SHA-256', 'BLAKE2s-256', 'Whirlpool', 'Streebog', 'Argon2id')]
+    [string]$Kdf = 'SHA-512',
+    [ValidateRange(0, 2147468)]
+    [int]$Pim = 1,
     [string]$Container,
     [string]$AndroidSerial = '192.168.1.101:44315'
 )
@@ -25,7 +29,7 @@ if ((Split-Path -Leaf $Container) -notlike 'EDS-TEST-*') { throw 'Only explicitl
 
 $driveRoot = "$DriveLetter`:\"
 function Invoke-VeraCryptMount {
-    $process = Start-Process -FilePath $VeraCrypt -ArgumentList @('/v', $Container, '/l', $DriveLetter, '/a', '/p', $password, '/pim', '1', '/hash', 'sha512', '/q', '/h', 'n', '/c', 'n') -Wait -PassThru
+    $process = Start-Process -FilePath $VeraCrypt -ArgumentList @('/v', $Container, '/l', $DriveLetter, '/a', '/p', $password, '/pim', $Pim, '/hash', $Kdf, '/q', '/h', 'n', '/c', 'n') -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "VeraCrypt mount command failed (exit=$($process.ExitCode))." }
     Start-Sleep -Seconds 2
     if (!(Test-Path -LiteralPath $driveRoot)) { throw "VeraCrypt did not mount $Container as $driveRoot." }
@@ -46,13 +50,13 @@ switch ($Phase) {
         if (Test-Path -LiteralPath $Container) { throw 'Refusing to overwrite an existing container.' }
         $parent = Split-Path -Parent $Container
         if (!(Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-        $process = Start-Process -FilePath $Format -ArgumentList @('/create', $Container, '/password', $password, '/pim', '1', '/hash', 'sha512', '/encryption', $Cipher, '/filesystem', 'ExFAT', '/size', '64M', '/force', '/silent') -Wait -PassThru
+        $process = Start-Process -FilePath $Format -ArgumentList @('/create', $Container, '/password', $password, '/pim', $Pim, '/hash', $Kdf, '/encryption', $Cipher, '/filesystem', 'ExFAT', '/size', '64M', '/force', '/silent') -Wait -PassThru
         if (!(Test-Path -LiteralPath $Container)) { throw "VeraCrypt Format did not create the requested container (exit=$($process.ExitCode))." }
         Invoke-VeraCryptMount
         try { [IO.File]::WriteAllBytes((Join-Path $driveRoot 'desktop-origin.bin'), $desktopPayload) } finally { Dismount-VeraCrypt }
         & $adb -s $AndroidSerial shell mkdir -p (Android-ExternalInteropDirectory)
         & $adb -s $AndroidSerial push $Container ((Android-ExternalInteropDirectory) + '/EDS-TEST-desktop-to-android.hc')
-        Write-Output "Desktop-create complete for $Cipher. Next run Android desktopCreatedContainerOpensAndAcceptsAndroidMarker with -e vc.cipher=$Cipher."
+        Write-Output "Desktop-create complete for $Cipher / $Kdf / PIM $Pim. Next run Android desktopCreatedContainerOpensAndAcceptsAndroidMarker with -e vc.cipher=$Cipher -e vc.kdf=$Kdf -e vc.pim=$Pim."
     }
     'desktop-verify' {
         & $adb -s $AndroidSerial pull ((Android-ExternalInteropDirectory) + '/EDS-TEST-desktop-to-android.hc') $Container

@@ -6,6 +6,8 @@
 
 namespace vc_core {
 
+constexpr std::int32_t kVeraCryptMaximumPim = 2147468;
+
 class SecureBytes final {
 public:
     SecureBytes() = default;

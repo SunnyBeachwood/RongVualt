@@ -1,7 +1,6 @@
 #include "vc_request.h"
 
 #include <algorithm>
-#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -75,7 +74,7 @@ bool IsKnownKdf(std::uint8_t value) { return value <= static_cast<std::uint8_t>(
 bool IsCreateFileSystem(std::uint8_t value) { return value == static_cast<std::uint8_t>(CreateFileSystem::kFat) || value == static_cast<std::uint8_t>(CreateFileSystem::kExFat); }
 
 std::int32_t ToSigned(std::uint32_t value) {
-    if (value > static_cast<std::uint32_t>(std::numeric_limits<std::int32_t>::max())) {
+    if (value > static_cast<std::uint32_t>(kVeraCryptMaximumPim)) {
         throw std::invalid_argument("PIM is outside the supported range");
     }
     return static_cast<std::int32_t>(value);

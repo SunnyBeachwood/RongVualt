@@ -45,7 +45,7 @@ bool HasEnoughAvailableMemory(std::uint32_t required_kib) {
 }  // namespace
 
 std::uint32_t VeraCryptPbkdf2Iterations(KdfHint kdf, std::int32_t pim) {
-    if (pim < 0) throw std::invalid_argument("PIM cannot be negative");
+    if (pim < 0 || pim > kVeraCryptMaximumPim) throw std::invalid_argument("PIM is outside the supported range");
     switch (kdf) {
         case KdfHint::kPbkdf2HmacSha512:
         case KdfHint::kPbkdf2HmacSha256:
@@ -59,7 +59,7 @@ std::uint32_t VeraCryptPbkdf2Iterations(KdfHint kdf, std::int32_t pim) {
 }
 
 Argon2Parameters VeraCryptArgon2Parameters(std::int32_t pim) {
-    if (pim < 0) throw std::invalid_argument("PIM cannot be negative");
+    if (pim < 0 || pim > kVeraCryptMaximumPim) throw std::invalid_argument("PIM is outside the supported range");
     const std::int32_t effective_pim = pim == 0 ? 12 : pim;
     const std::int64_t requested_mib = 64LL + (static_cast<std::int64_t>(effective_pim) - 1LL) * 32LL;
     const std::uint32_t memory_mib = static_cast<std::uint32_t>(std::min<std::int64_t>(requested_mib, 1024));

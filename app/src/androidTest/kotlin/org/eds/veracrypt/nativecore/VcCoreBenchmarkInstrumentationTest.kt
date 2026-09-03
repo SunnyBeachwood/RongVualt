@@ -308,7 +308,15 @@ class VcCoreBenchmarkInstrumentationTest {
         "AES" -> CipherHint.AES
         "SERPENT" -> CipherHint.SERPENT
         "TWOFISH" -> CipherHint.TWOFISH
-        else -> throw IllegalArgumentException("vc.benchmark.cipher must be AES, SERPENT, or TWOFISH")
+        "CAMELLIA" -> CipherHint.CAMELLIA
+        "AES-TWOFISH" -> CipherHint.TWOFISH_AES
+        "AES-TWOFISH-SERPENT" -> CipherHint.SERPENT_TWOFISH_AES
+        "SERPENT-AES" -> CipherHint.AES_SERPENT
+        "SERPENT-TWOFISH-AES" -> CipherHint.AES_TWOFISH_SERPENT
+        "TWOFISH-SERPENT" -> CipherHint.SERPENT_TWOFISH
+        else -> throw IllegalArgumentException(
+            "vc.benchmark.cipher must be one of the 9 VeraCrypt creation suites",
+        )
     }
 
     private fun benchmarkVolumeBytes(): Long {

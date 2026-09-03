@@ -79,6 +79,31 @@
     <string name="vc_creation_passwords_do_not_match">The passwords do not match.</string>
     <string name="vc_pim">PIM</string>
     <string name="vc_kdf">Key derivation function</string>
+    <string name="vc_invalid_pim">Enter a PIM from 0 to 2147468.</string>
+    <string name="vc_argon2_parameters">Argon2id: %1$d MiB memory, %2$d iterations</string>
+    <string name="vc_cipher_auto">Automatic</string>
+    <string name="vc_cipher_aes">AES</string>
+    <string name="vc_cipher_serpent">Serpent</string>
+    <string name="vc_cipher_twofish">Twofish</string>
+    <string name="vc_cipher_camellia">Camellia</string>
+    <string name="vc_cipher_kuznyechik">Kuznyechik</string>
+    <string name="vc_cipher_aes_twofish">AES-Twofish</string>
+    <string name="vc_cipher_aes_twofish_serpent">AES-Twofish-Serpent</string>
+    <string name="vc_cipher_serpent_aes">Serpent-AES</string>
+    <string name="vc_cipher_serpent_twofish_aes">Serpent-Twofish-AES</string>
+    <string name="vc_cipher_twofish_serpent">Twofish-Serpent</string>
+    <string name="vc_cipher_camellia_kuznyechik">Camellia-Kuznyechik</string>
+    <string name="vc_cipher_kuznyechik_twofish">Kuznyechik-Twofish</string>
+    <string name="vc_cipher_camellia_serpent">Camellia-Serpent</string>
+    <string name="vc_cipher_kuznyechik_aes">Kuznyechik-AES</string>
+    <string name="vc_cipher_kuznyechik_serpent_camellia">Kuznyechik-Serpent-Camellia</string>
+    <string name="vc_kdf_auto">Automatic</string>
+    <string name="vc_kdf_pbkdf2_sha512">PBKDF2-HMAC-SHA-512</string>
+    <string name="vc_kdf_pbkdf2_sha256">PBKDF2-HMAC-SHA-256</string>
+    <string name="vc_kdf_pbkdf2_blake2s">PBKDF2-HMAC-BLAKE2s-256</string>
+    <string name="vc_kdf_pbkdf2_whirlpool">PBKDF2-HMAC-Whirlpool</string>
+    <string name="vc_kdf_pbkdf2_streebog">PBKDF2-HMAC-Streebog</string>
+    <string name="vc_kdf_argon2id">Argon2id</string>
     <string name="vc_open_hidden_volume">Open hidden volume</string>
     <string name="vc_open_read_only">Open read-only</string>
     <string name="vc_opening_volume">Opening volume</string>
@@ -169,13 +194,13 @@ Normal and hidden volumes
 Normal volumes support FAT/exFAT read and write. NTFS is read-only. Hidden-volume protection should be enabled when writing to an outer volume. Do not write casually to an outer volume while a hidden volume matters.
 
 Passwords and security
-PIM and KDF settings must match the container. Keyfiles are never saved as biometric credentials. Saved credentials are encrypted by Android Keystore. Back up volume headers and remember that forgotten passwords cannot be recovered.
+PIM must be between 0 and 2147468 and match the container. Choose one of the six KDF hints; Argon2id shows the PIM-derived memory and iteration estimate. Hidden-volume protection auto-detects its KDF to preserve the native request v2 layout. Keyfiles are never saved as biometric credentials. Saved credentials are encrypted by Android Keystore. Back up volume headers and remember that forgotten passwords cannot be recovered.
 
 Compatible formats
-RongVault reads VeraCrypt-compatible containers using AES, Serpent, Twofish and supported cascades/KDFs. It is an independent project and is not affiliated with VeraCrypt.</string>
+RongVault 1.1.0 registers all 15 VeraCrypt non-system XTS suites for opening and automatic detection, and exposes the nine Windows creation suites. It supports PBKDF2-HMAC-SHA-512 (default), SHA-256, BLAKE2s-256, Whirlpool, Streebog, and Argon2id KDF hints. The new algorithm and KDF paths remain pending build and compatibility verification. It is an independent project and is not affiliated with VeraCrypt.</string>
     <string name="rv_about_body">RongVault
 
-Version 0.1.0-dev
+Version 1.1.0
 
 RongVault provides offline access to VeraCrypt-compatible file containers on Android. It is an independent project and is not affiliated with or endorsed by VeraCrypt.
 

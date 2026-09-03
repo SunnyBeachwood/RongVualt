@@ -132,13 +132,46 @@ std::vector<KdfHint> KdfCandidates(KdfHint hint) {
 }
 
 std::vector<CipherHint> CipherCandidates(CipherHint hint) {
-    if (hint == CipherHint::kAuto) return {CipherHint::kAes, CipherHint::kSerpent, CipherHint::kTwofish};
-    if (hint == CipherHint::kAes || hint == CipherHint::kSerpent || hint == CipherHint::kTwofish) return {hint};
+    if (hint == CipherHint::kAuto) {
+        return {
+            CipherHint::kAes,
+            CipherHint::kSerpent,
+            CipherHint::kTwofish,
+            CipherHint::kCamellia,
+            CipherHint::kKuznyechik,
+            CipherHint::kTwofishAes,
+            CipherHint::kSerpentTwofishAes,
+            CipherHint::kAesSerpent,
+            CipherHint::kAesTwofishSerpent,
+            CipherHint::kSerpentTwofish,
+            CipherHint::kKuznyechikCamellia,
+            CipherHint::kTwofishKuznyechik,
+            CipherHint::kSerpentCamellia,
+            CipherHint::kAesKuznyechik,
+            CipherHint::kCamelliaSerpentKuznyechik,
+        };
+    }
+    const auto numeric_hint = static_cast<std::uint8_t>(hint);
+    if (numeric_hint >= static_cast<std::uint8_t>(CipherHint::kAes) &&
+        numeric_hint <= static_cast<std::uint8_t>(CipherHint::kCamelliaSerpentKuznyechik)) return {hint};
     throw CoreException(CoreError::kUnsupportedAlgorithm);
 }
 
-bool IsFirstReleaseCipher(CipherHint hint) {
-    return hint == CipherHint::kAes || hint == CipherHint::kSerpent || hint == CipherHint::kTwofish;
+bool IsCreatableCipher(CipherHint hint) {
+    switch (hint) {
+        case CipherHint::kAes:
+        case CipherHint::kSerpent:
+        case CipherHint::kTwofish:
+        case CipherHint::kCamellia:
+        case CipherHint::kTwofishAes:
+        case CipherHint::kSerpentTwofishAes:
+        case CipherHint::kAesSerpent:
+        case CipherHint::kAesTwofishSerpent:
+        case CipherHint::kSerpentTwofish:
+            return true;
+        default:
+            return false;
+    }
 }
 
 void VeraCryptXtsTransform(
@@ -694,6 +727,7 @@ OpenedVolume OpenVeraCryptVolume(
                 if (error.error() == CoreError::kCancelled) throw;
                 if (error.error() == CoreError::kUnsupportedAlgorithm) saw_unsupported_header = true;
                 else if (error.error() == CoreError::kCorruptHeader) saw_corrupt_header = true;
+                else if (error.error() == CoreError::kInsufficientMemory) saw_insufficient_memory = true;
                 else if (error.error() != CoreError::kInvalidCredentialsOrFormat) throw;
                 completed += static_cast<std::uint32_t>(ciphers.size());
             } catch (const std::bad_alloc&) {
@@ -719,7 +753,7 @@ std::shared_ptr<NativeVolumeSession> CreateNormalVeraCryptVolume(
         const CreateProgressCallback& progress) {
     if (!container.writable()) throw CoreException(CoreError::kReadOnlySource);
     if (request.hidden_volume) throw std::invalid_argument("Hidden volumes require the two-stage creation flow");
-    if (!IsFirstReleaseCipher(request.cipher) || request.kdf == KdfHint::kAuto) {
+    if (!IsCreatableCipher(request.cipher) || request.kdf == KdfHint::kAuto) {
         throw CoreException(CoreError::kUnsupportedAlgorithm);
     }
     if (request.container_size < kHeaderGroupBytes * 2 + kMinimumCreatedDataBytes ||
@@ -1289,7 +1323,7 @@ HiddenVolumeCapacity NativeVolumeSession::AnalyzeHiddenVolumeCapacity() {
 std::shared_ptr<NativeVolumeSession> NativeVolumeSession::CreateHiddenVolume(
         const CreateRequest& request, const std::vector<FdRandomAccess>& keyfiles, const CreateProgressCallback& progress) {
     if (!request.hidden_volume) throw std::invalid_argument("Hidden creation requires hidden-volume options");
-    if (!IsFirstReleaseCipher(request.cipher) || request.kdf == KdfHint::kAuto) {
+    if (!IsCreatableCipher(request.cipher) || request.kdf == KdfHint::kAuto) {
         throw CoreException(CoreError::kUnsupportedAlgorithm);
     }
     if (request.container_size < kMinimumCreatedDataBytes ||

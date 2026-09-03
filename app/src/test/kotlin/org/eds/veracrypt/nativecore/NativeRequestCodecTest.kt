@@ -16,6 +16,41 @@ import org.junit.Test
 
 class NativeRequestCodecTest {
     @Test
+    fun cipherAndKdfCodesRemainStableForEveryProtocolValue() {
+        VolumeCredentials(password = SecretPassword("pass".toCharArray())).use { credentials ->
+            CipherHint.entries.forEach { cipher ->
+                NativeRequestCodec.encodeOpen(
+                    VolumeOpenOptions(cipherHint = cipher), credentials,
+                ).use { request ->
+                    request.useForJni { bytes ->
+                        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
+                        buffer.position(12)
+                        check(buffer.get().toInt() == cipher.ordinal) {
+                            "Cipher code changed for ${cipher.name}"
+                        }
+                    }
+                }
+            }
+        }
+        KdfHint.entries.forEach { kdf ->
+            VolumeCredentials(
+                password = SecretPassword("pass".toCharArray()),
+                kdfHint = kdf,
+            ).use { credentials ->
+                NativeRequestCodec.encodeOpen(VolumeOpenOptions(), credentials).use { request ->
+                    request.useForJni { bytes ->
+                        val buffer = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
+                        buffer.position(13)
+                        check(buffer.get().toInt() == kdf.ordinal) {
+                            "KDF code changed for ${kdf.name}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun automaticOpenRequestSetsTheAutoVolumeFlag() {
         val credentials = VolumeCredentials(password = SecretPassword("pass".toCharArray()))
         NativeRequestCodec.encodeOpen(VolumeOpenOptions(target = VolumeOpenTarget.AUTO), credentials).use { request ->

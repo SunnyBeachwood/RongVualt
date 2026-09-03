@@ -6,9 +6,10 @@ import android.provider.DocumentsContract
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import com.sovworks.eds.android.R
 import com.sovworks.eds.android.databinding.FragmentCreateHiddenVolumeBinding
@@ -16,7 +17,6 @@ import kotlinx.coroutines.launch
 import org.eds.veracrypt.VeraCryptApplication
 import org.eds.veracrypt.catalog.ContainerCatalogEntry
 import org.eds.veracrypt.documents.UnlockedVolumeService
-import org.eds.veracrypt.domain.CipherHint
 import org.eds.veracrypt.domain.KdfHint
 import org.eds.veracrypt.domain.SecretPassword
 import org.eds.veracrypt.domain.VolumeCreateOptions
@@ -42,11 +42,29 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
             return
         }
         binding!!.containerName.text = entry.displayName
-        binding!!.cipher.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item,
-            listOf(CipherHint.AES, CipherHint.SERPENT, CipherHint.TWOFISH).map(CipherHint::name))
+        binding!!.cipher.adapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_spinner_dropdown_item,
+            creatableCipherHints.map { it.label(requireContext()) },
+        )
+        binding!!.kdf.adapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_spinner_dropdown_item,
+            creatableKdfHints.map { it.label(requireContext()) },
+        )
         binding!!.fileSystem.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item,
             listOf(VolumeFileSystem.EXFAT, VolumeFileSystem.FAT).map(VolumeFileSystem::name))
         binding!!.let { screen ->
+            screen.kdf.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    renderKdfParameters(screen)
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
+            screen.pim.doAfterTextChanged {
+                if (parsePim(it?.toString()) != null) screen.pim.error = null
+                renderKdfParameters(screen)
+            }
+            renderKdfParameters(screen)
             keyfiles.bind(screen.keyfileList, screen.selectKeyfiles, screen.selectKeyfileDirectory, screen.generateKeyfile) {
                 message -> screen.createStatus.text = message
             }
@@ -91,6 +109,12 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
             screen.createStatus.text = getString(R.string.vc_invalid_size)
             return
         }
+        val pim = parsePim(screen.pim.text?.toString())
+        if (pim == null) {
+            screen.pim.error = getString(R.string.vc_invalid_pim)
+            screen.pim.requestFocus()
+            return
+        }
         val outer = UnlockedVolumeService.volumes.findForContainer(entry.id)?.session ?: run {
             screen.createStatus.text = getString(R.string.vc_hidden_requires_outer)
             return
@@ -110,15 +134,16 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
         confirmationChars.fill('\u0000')
         val credentials = VolumeCredentials(
             SecretPassword(passwordChars),
-            screen.pim.text?.toString()?.toIntOrNull() ?: 0,
+            pim,
             keyfiles.snapshot(),
+            creatableKdfHints[screen.kdf.selectedItemPosition],
         )
         passwordChars.fill('\u0000')
         val options = VolumeCreateOptions(
             sizeBytes = sizeMiB * MIB,
             volumeKind = VolumeKind.HIDDEN,
-            cipher = CipherHint.valueOf(screen.cipher.selectedItem as String),
-            kdf = KdfHint.PBKDF2_HMAC_SHA512,
+            cipher = creatableCipherHints[screen.cipher.selectedItemPosition],
+            kdf = creatableKdfHints[screen.kdf.selectedItemPosition],
             pim = credentials.pim,
             fileSystem = VolumeFileSystem.valueOf(screen.fileSystem.selectedItem as String),
         )
@@ -160,6 +185,13 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
     }
 
     private val app: VeraCryptApplication get() = requireActivity().application as VeraCryptApplication
+
+    private fun renderKdfParameters(screen: FragmentCreateHiddenVolumeBinding) {
+        val kdf = creatableKdfHints.getOrNull(screen.kdf.selectedItemPosition) ?: KdfHint.PBKDF2_HMAC_SHA512
+        val pim = parsePim(screen.pim.text?.toString())
+        screen.kdfParameters.text = pim?.let { kdf.parametersDescription(requireContext(), it) }.orEmpty()
+        screen.kdfParameters.isVisible = kdf == KdfHint.ARGON2ID && pim != null
+    }
 
     private fun renderProgress(
         progress: android.widget.ProgressBar,

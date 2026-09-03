@@ -3,6 +3,14 @@
 Status terms: **planned** means no compatibility claim; **verified** requires
 both the listed VeraCrypt test vector and a desktop round trip.
 
+The RongVault 1.1.0 algorithm/KDF expansion is source-complete but deliberately
+remains **planned (待编译/待验证)** throughout this matrix until the independent
+build and verification phase is run.
+
+The existing `CipherHint` names and numeric values, native request v2 framing,
+and saved credential record field order are unchanged; this matrix tracks only
+the newly exposed algorithms, KDFs, and capability coverage.
+
 ## Test corpus provenance
 
 | Item | Required value | Recorded value |
@@ -23,25 +31,39 @@ before generating any compatibility fixture.
 ## Volume-header recognition
 
 The source-pinned 1.26.29 non-system XTS suite registry is: AES, Serpent,
-Twofish, Camellia, Kuznyechik, Twofish-AES, Serpent-Twofish-AES,
-AES-Serpent, AES-Twofish-Serpent, Serpent-Twofish, Kuznyechik-Camellia,
-Twofish-Kuznyechik, Serpent-Camellia, AES-Kuznyechik, and
-Camellia-Serpent-Kuznyechik. Upstream creation is enabled only for AES,
-Serpent, Twofish, Twofish-AES, Serpent-Twofish-AES, AES-Serpent,
-AES-Twofish-Serpent, and Serpent-Twofish. Every other listed suite must be
-opened when present but is not a creation choice.
+Twofish, Camellia, Kuznyechik, AES-Twofish, AES-Twofish-Serpent,
+Serpent-AES, Serpent-Twofish-AES, Twofish-Serpent, Camellia-Kuznyechik,
+Kuznyechik-Twofish, Camellia-Serpent, Kuznyechik-AES, and
+Kuznyechik-Serpent-Camellia. The native request values retain the existing
+on-disk enum order; only the user-facing labels follow VeraCrypt's official
+outer-to-inner names. Upstream creation is enabled only for the first four
+single-cipher choices and the five cascades AES-Twofish, AES-Twofish-Serpent,
+Serpent-AES, Serpent-Twofish-AES, and Twofish-Serpent. The six Kuznyechik
+combinations remain open-only choices.
 
-The KDF recognition matrix includes PBKDF2-HMAC-SHA-512, -SHA-256,
--BLAKE2s, -Whirlpool, -Streebog, and Argon2id. Creation defaults to
-PBKDF2-HMAC-SHA-512 but exposes every listed KDF; Argon2id must fail with an
-explicit memory error rather than silently changing its parameters.
+The KDF recognition matrix includes PBKDF2-HMAC-SHA-512, PBKDF2-HMAC-SHA-256,
+PBKDF2-HMAC-BLAKE2s-256, PBKDF2-HMAC-Whirlpool, PBKDF2-HMAC-Streebog, and
+Argon2id. Creation defaults to PBKDF2-HMAC-SHA-512 but exposes every listed
+KDF; Argon2id must fail with an explicit memory error rather than silently
+changing its parameters.
 
-| Cipher / cascade | PBKDF2-HMAC SHA-512 | Argon2id | PIM | Keyfiles | Primary / backup header | Status |
-| --- | --- | --- | --- | --- | --- | --- |
-| AES | planned | planned | planned | planned | planned | planned |
-| Serpent | planned | planned | planned | planned | planned | planned |
-| Twofish | planned | planned | planned | planned | planned | planned |
-| Supported upstream cascades | planned | planned | planned | planned | planned | planned |
+| Cipher / cascade | PBKDF2-HMAC-SHA-512 | PBKDF2-HMAC-SHA-256 | PBKDF2-HMAC-BLAKE2s-256 | PBKDF2-HMAC-Whirlpool | PBKDF2-HMAC-Streebog | Argon2id | PIM | Keyfiles | Primary / backup header | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| AES | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Serpent | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Twofish | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Camellia | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Kuznyechik | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned (open-only) |
+| AES-Twofish | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| AES-Twofish-Serpent | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Serpent-AES | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Serpent-Twofish-AES | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Twofish-Serpent | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned |
+| Camellia-Kuznyechik | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned (open-only) |
+| Kuznyechik-Twofish | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned (open-only) |
+| Camellia-Serpent | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned (open-only) |
+| Kuznyechik-AES | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned (open-only) |
+| Kuznyechik-Serpent-Camellia | planned | planned | planned | planned | planned | planned | planned | planned | planned | planned (open-only) |
 
 The implementation must derive and validate VeraCrypt's Argon2 192-byte
 output exactly. It must not silently substitute a weaker KDF or reduced memory

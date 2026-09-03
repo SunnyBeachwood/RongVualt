@@ -78,6 +78,31 @@
     <string name="vc_creation_passwords_do_not_match">两次输入的密码不一致。</string>
     <string name="vc_pim">PIM</string>
     <string name="vc_kdf">密钥派生函数</string>
+    <string name="vc_invalid_pim">请输入 0 到 2147468 之间的 PIM。</string>
+    <string name="vc_argon2_parameters">Argon2id：%1$d MiB 内存，%2$d 次迭代</string>
+    <string name="vc_cipher_auto">自动检测</string>
+    <string name="vc_cipher_aes">AES</string>
+    <string name="vc_cipher_serpent">Serpent</string>
+    <string name="vc_cipher_twofish">Twofish</string>
+    <string name="vc_cipher_camellia">Camellia</string>
+    <string name="vc_cipher_kuznyechik">Kuznyechik</string>
+    <string name="vc_cipher_aes_twofish">AES-Twofish</string>
+    <string name="vc_cipher_aes_twofish_serpent">AES-Twofish-Serpent</string>
+    <string name="vc_cipher_serpent_aes">Serpent-AES</string>
+    <string name="vc_cipher_serpent_twofish_aes">Serpent-Twofish-AES</string>
+    <string name="vc_cipher_twofish_serpent">Twofish-Serpent</string>
+    <string name="vc_cipher_camellia_kuznyechik">Camellia-Kuznyechik</string>
+    <string name="vc_cipher_kuznyechik_twofish">Kuznyechik-Twofish</string>
+    <string name="vc_cipher_camellia_serpent">Camellia-Serpent</string>
+    <string name="vc_cipher_kuznyechik_aes">Kuznyechik-AES</string>
+    <string name="vc_cipher_kuznyechik_serpent_camellia">Kuznyechik-Serpent-Camellia</string>
+    <string name="vc_kdf_auto">自动检测</string>
+    <string name="vc_kdf_pbkdf2_sha512">PBKDF2-HMAC-SHA-512</string>
+    <string name="vc_kdf_pbkdf2_sha256">PBKDF2-HMAC-SHA-256</string>
+    <string name="vc_kdf_pbkdf2_blake2s">PBKDF2-HMAC-BLAKE2s-256</string>
+    <string name="vc_kdf_pbkdf2_whirlpool">PBKDF2-HMAC-Whirlpool</string>
+    <string name="vc_kdf_pbkdf2_streebog">PBKDF2-HMAC-Streebog</string>
+    <string name="vc_kdf_argon2id">Argon2id</string>
     <string name="vc_open_hidden_volume">打开隐藏卷</string>
     <string name="vc_open_read_only">只读打开</string>
     <string name="vc_opening_volume">正在打开卷</string>
@@ -161,13 +186,13 @@
 FAT/exFAT 支持读写，NTFS 仅支持只读。向外层卷写入时应启用隐藏卷保护。隐藏卷存在时，不要随意写入外层卷。
 
 密码与安全
-PIM 和 KDF 必须与容器匹配。密钥文件不会保存为生物识别凭据。保存的凭据由 Android Keystore 加密。请备份卷头；忘记密码无法恢复。
+PIM 范围为 0 到 2147468，且必须与容器匹配。支持选择 6 种 KDF；Argon2id 会显示由 PIM 推导的内存量和迭代次数估算。隐藏卷保护会自动识别 KDF，以保持 native request v2 布局兼容。密钥文件不会保存为生物识别凭据。保存的凭据由 Android Keystore 加密。请备份卷头；忘记密码无法恢复。
 
 兼容格式
-容匣读取兼容 VeraCrypt 的文件容器格式，支持 AES、Serpent、Twofish 及支持的级联和 KDF。容匣是独立项目，与 VeraCrypt 没有官方关联或认可关系。</string>
+容匣 1.1.0 注册了全部 15 种 VeraCrypt 非系统 XTS 算法用于打开和自动识别，并开放 Windows 版的 9 种创建算法。支持 PBKDF2-HMAC-SHA-512（默认）、SHA-256、BLAKE2s-256、Whirlpool、Streebog 和 Argon2id KDF。新增算法和 KDF 路径仍处于待编译、待验证状态。容匣是独立项目，与 VeraCrypt 没有官方关联或认可关系。</string>
     <string name="rv_about_body">容匣 RongVault
 
-版本 0.1.0-dev
+版本 1.1.0
 
 容匣在 Android 上离线访问兼容 VeraCrypt 的文件容器。容匣是独立项目，与 VeraCrypt 没有关联，也未获其认可。
 

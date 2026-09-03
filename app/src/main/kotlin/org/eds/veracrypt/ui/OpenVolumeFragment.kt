@@ -4,9 +4,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.core.view.isVisible
-import androidx.fragment.app.Fragment
+import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.sovworks.eds.android.R
@@ -18,7 +19,6 @@ import org.eds.veracrypt.VeraCryptApplication
 import org.eds.veracrypt.credentials.BiometricCredentialAuthorizer
 import org.eds.veracrypt.credentials.SavedUnlockCredential
 import org.eds.veracrypt.documents.UnlockedVolumeService
-import org.eds.veracrypt.domain.CipherHint
 import org.eds.veracrypt.domain.KdfHint
 import org.eds.veracrypt.domain.SecretPassword
 import org.eds.veracrypt.domain.VolumeAccessMode
@@ -57,10 +57,25 @@ class OpenVolumeFragment : SensitiveFragment() {
         }
         binding!!.containerName.text = entry.displayName
         binding!!.cipher.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item,
-            listOf(CipherHint.AUTO, CipherHint.AES, CipherHint.SERPENT, CipherHint.TWOFISH).map(CipherHint::name))
+            openCipherHints.map { it.label(requireContext()) })
         binding!!.kdf.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item,
-            KdfHint.entries.map(KdfHint::name))
+            openKdfHints.map { it.label(requireContext()) })
         binding!!.let { screen ->
+            screen.kdf.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                    renderKdfParameters(screen)
+                }
+
+                override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            }
+            screen.pim.doAfterTextChanged {
+                if (parsePim(it?.toString()) != null) screen.pim.error = null
+                renderKdfParameters(screen)
+            }
+            screen.hiddenPim.doAfterTextChanged {
+                if (parsePim(it?.toString()) != null) screen.hiddenPim.error = null
+            }
+            renderKdfParameters(screen)
             keyfiles.bind(screen.keyfileList, screen.selectKeyfiles, screen.selectKeyfileDirectory, screen.generateKeyfile) {
                 screen.openStatus.text = it
             }
@@ -83,15 +98,30 @@ class OpenVolumeFragment : SensitiveFragment() {
     private fun beginManualUnlock(entry: org.eds.veracrypt.catalog.ContainerCatalogEntry) {
         val screen = binding ?: return
         screen.passwordLayout.error = null
+        val pim = parsePim(screen.pim.text?.toString())
+        if (pim == null) {
+            screen.pim.error = getString(R.string.vc_invalid_pim)
+            screen.pim.requestFocus()
+            return
+        }
+        val protectionPim = if (screen.protectHiddenVolume.isChecked) {
+            parsePim(screen.hiddenPim.text?.toString())
+        } else {
+            null
+        }
+        if (screen.protectHiddenVolume.isChecked && protectionPim == null) {
+            screen.hiddenPim.error = getString(R.string.vc_invalid_pim)
+            screen.hiddenPim.requestFocus()
+            return
+        }
         val passwordChars = screen.password.text?.toString()?.toCharArray() ?: CharArray(0)
         screen.password.text?.clear()
         val credentials = VolumeCredentials(SecretPassword(passwordChars),
-            screen.pim.text?.toString()?.toIntOrNull() ?: 0, keyfiles.snapshot(),
-            KdfHint.valueOf(screen.kdf.selectedItem as String))
+            pim, keyfiles.snapshot(), openKdfHints[screen.kdf.selectedItemPosition])
         passwordChars.fill('\u0000')
-        val protection = readProtectionCredentials()
+        val protection = protectionPim?.let(::readProtectionCredentials)
         val options = VolumeOpenOptions(
-            cipherHint = CipherHint.valueOf(screen.cipher.selectedItem as String),
+            cipherHint = openCipherHints[screen.cipher.selectedItemPosition],
             target = VolumeOpenTarget.AUTO,
             accessMode = VolumeAccessMode.AUTOMATIC,
             hiddenVolumeProtection = protection,
@@ -224,13 +254,21 @@ class OpenVolumeFragment : SensitiveFragment() {
         }
     }
 
-    private fun readProtectionCredentials(): VolumeCredentials? {
-        val screen = binding ?: return null
-        if (!screen.protectHiddenVolume.isChecked) return null
+    private fun readProtectionCredentials(pim: Int): VolumeCredentials {
+        val screen = binding ?: error("Open volume view is no longer available")
         val chars = screen.hiddenPassword.text?.toString()?.toCharArray() ?: CharArray(0)
         screen.hiddenPassword.text?.clear()
-        return try { VolumeCredentials(SecretPassword(chars), screen.hiddenPim.text?.toString()?.toIntOrNull() ?: 0,
-            protectionKeyfiles.snapshot()) } finally { chars.fill('\u0000') }
+        // Native request v2 has one KDF byte for the primary credential only;
+        // hidden-volume protection deliberately remains AUTO so all six
+        // VeraCrypt KDFs are probed without changing the persisted layout.
+        return try { VolumeCredentials(SecretPassword(chars), pim, protectionKeyfiles.snapshot()) } finally { chars.fill('\u0000') }
+    }
+
+    private fun renderKdfParameters(screen: FragmentOpenVolumeBinding) {
+        val kdf = openKdfHints.getOrNull(screen.kdf.selectedItemPosition) ?: KdfHint.AUTO
+        val pim = parsePim(screen.pim.text?.toString())
+        screen.kdfParameters.text = pim?.let { kdf.parametersDescription(requireContext(), it) }.orEmpty()
+        screen.kdfParameters.isVisible = kdf == KdfHint.ARGON2ID && pim != null
     }
 
     private fun renderUnlockStage(screen: FragmentOpenVolumeBinding, stage: VolumeUnlockStage) {

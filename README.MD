@@ -30,8 +30,10 @@ entire container onto device storage.
   to the outer volume.
 - Password, PIM, and key-file authentication, with optional Android Keystore and
   biometric protection for saved outer-volume credentials.
-- VeraCrypt non-system containers using the AES, Serpent, or Twofish single-cipher
-  XTS suite; both primary and backup volume headers are recognized.
+- VeraCrypt non-system containers using all 15 VeraCrypt 1.26.29 XTS suites for
+  opening and automatic detection; the nine Windows creation suites are exposed
+  for new normal and hidden volumes. The 1.1.0 additions remain pending build
+  and compatibility verification.
 - FAT and exFAT read/write operations: create, rename, delete, copy, move, and
   import/export. NTFS is read-only.
 - An Android `DocumentsProvider` for unlocked volumes and a foreground service
@@ -46,23 +48,28 @@ entire container onto device storage.
 
 RongVault uses the VeraCrypt non-system-container design: XTS mode for encrypted
 data, a password/PIM/keyfile-protected volume header, and a selected password
-derivation function (KDF). The current first-release scope is deliberately
-narrower than desktop VeraCrypt:
+derivation function (KDF). RongVault 1.1.0 adds the complete reader registry,
+nine Windows creation suites, five PBKDF2 variants, and Argon2id; these additions
+are source-complete but remain pending compilation and verification:
 
-| Area | RongVault 1.0.2 scope | Desktop VeraCrypt comparison |
+The `CipherHint` names and numeric values, native request v2 framing, and saved
+credential record field order remain unchanged for existing data. Only the
+user-facing algorithm labels and supported capability lists are expanded.
+
+| Area | RongVault 1.1.0 code scope (pending build/verification) | Desktop VeraCrypt comparison |
 | --- | --- | --- |
-| Data-cipher suites | **AES, Serpent, and Twofish single-cipher XTS** containers can be opened and created. | VeraCrypt also offers Camellia, Kuznyechik, and multi-cipher cascades. These cascades and additional ciphers are not supported by RongVault's first release. |
-| KDF choices | The open/change-credentials flow exposes PBKDF2-HMAC-SHA-512, SHA-256, BLAKE2s, Whirlpool, Streebog, and Argon2id. New volumes created in the current UI use PBKDF2-HMAC-SHA-512. | VeraCrypt has broader, desktop-tested configuration coverage. Each RongVault KDF/cipher combination must be considered compatibility-dependent until it is marked verified in the matrix. |
+| Data-cipher suites | All 15 VeraCrypt non-system XTS suites are registered for open/auto-detection. New normal and hidden volumes expose the nine Windows creation suites: AES, Serpent, Twofish, Camellia, AES-Twofish, AES-Twofish-Serpent, Serpent-AES, Serpent-Twofish-AES, and Twofish-Serpent. | VeraCrypt also supports system encryption and additional platform-specific layouts. Every RongVault suite remains unverified until the matrix is updated. |
+| KDF choices | Open, create, hidden-volume protection, and credential-change code paths carry the six KDF hints: PBKDF2-HMAC-SHA-512 (default), SHA-256, BLAKE2s-256, Whirlpool, Streebog, and Argon2id. Hidden-volume protection keeps KDF auto-detection to preserve the native v2 layout; Argon2id shows its PIM-derived memory and iteration values. | VeraCrypt has broader, desktop-tested configuration coverage. Each RongVault KDF/cipher combination must be considered compatibility-dependent until it is marked verified in the matrix. |
 | Volume type | Non-system file containers; standard and hidden volumes. | VeraCrypt additionally supports system encryption and can work with partitions and whole disks. |
 | Filesystems | FAT and exFAT read/write; NTFS read-only. | VeraCrypt mounts volumes through desktop operating-system drivers and has a different host-filesystem integration model. |
 | Platform | Android 15+ on `arm64-v8a`, using SAF and a `DocumentsProvider`. | VeraCrypt has official desktop releases for Windows, macOS, and Linux. |
 
-The selectable KDF list is not a blanket interoperability guarantee, especially
-for Argon2id and less-common combinations. See the
+The selectable cipher and KDF lists are not a blanket interoperability guarantee,
+especially for Argon2id and less-common combinations. The 1.1.0 source changes
+are intentionally marked **待编译/待验证 (pending build/verification)**. See the
 [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for the recorded test
 status. RongVault is not a replacement for desktop VeraCrypt when system
-encryption, partitions, full cipher/cascade selection, or desktop-level testing
-is required.
+encryption, partitions, or desktop-level testing is required.
 
 ## Platform and build requirements
 

@@ -52,10 +52,10 @@ reads with 20 cache hits and 4,076 cache misses. The displayed random median
 is calculated from the five elapsed times, rather than the representative
 trial selected by the benchmark's write-time median log record.
 
-Twofish, supported cascades, and hidden-volume throughput remain pending.
-Cascades currently have byte-level native
-parallel-XTS regressions, but are not exposed through the first-release
-creation UI and therefore do not yet have a comparable end-to-end device row.
+Twofish, the five Windows-supported cascades, the six open-only Kuznyechik
+combinations, and hidden-volume throughput remain pending. The 1.1.0 source
+changes expose the supported cascades in the creation UI, but no end-to-end
+device row is claimed until the independent build and verification phase.
 
 ## 2026-07-29: AES sustained read/write stability
 

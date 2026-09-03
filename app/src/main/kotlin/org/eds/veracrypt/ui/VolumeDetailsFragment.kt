@@ -144,8 +144,8 @@ class VolumeDetailsFragment : Fragment() {
             fileSystem = managed.fileSystem,
             logicalSizeBytes = info.logicalSize,
             sectorSizeBytes = info.sectorSize,
-            cipherName = info.resolvedCipherHint().name,
-            kdfName = info.resolvedKdfHint().name,
+            cipherName = info.resolvedCipherHint().label(requireContext()),
+            kdfName = info.resolvedKdfHint().label(requireContext()),
             usedBackupHeader = info.usedBackupHeader,
         )
         screen.detailsContent.isVisible = true

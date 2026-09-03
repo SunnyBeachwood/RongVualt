@@ -35,8 +35,8 @@ android {
         applicationId providers.gradleProperty('EDS_APPLICATION_ID').orElse('app.rongvault').get()
         minSdk 35
         targetSdk 37
-        versionCode 5
-        versionName '1.0.4'
+        versionCode 6
+        versionName '1.1.0'
         buildConfigField 'String', 'RONGVAULT_SOURCE_URL', '"' + sourceUrl.replace('"', '\\"') + '"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 

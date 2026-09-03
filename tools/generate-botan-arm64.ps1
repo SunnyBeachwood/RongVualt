@@ -35,7 +35,7 @@ try {
 
     $modules = @(
         'aes', 'aes_armv8', 'serpent', 'twofish', 'camellia', 'kuznyechik', 'cascade', 'xts', 'cpuid', 'cpuid_aarch64',
-        'sha2_32', 'sha2_32_armv8', 'sha2_64', 'sha2_64_armv8', 'sha3', 'blake2', 'whirlpool', 'streebog',
+        'sha2_32', 'sha2_32_armv8', 'sha2_64', 'sha2_64_armv8', 'sha3', 'blake2', 'blake2s', 'whirlpool', 'streebog',
         'pbkdf2', 'hmac', 'argon2', 'auto_rng', 'system_rng'
     ) -join ','
     Push-Location $source.FullName
@@ -52,7 +52,15 @@ try {
     $header = Get-ChildItem -LiteralPath $source.FullName -Recurse -Filter botan_all.h | Select-Object -First 1
     if ($null -eq $cpp -or $null -eq $header) { throw 'Botan did not produce an amalgamation.' }
     $generated = (Get-Content -LiteralPath $cpp.FullName -Raw) + "`n" + (Get-Content -LiteralPath $header.FullName -Raw)
-    foreach ($marker in @('BOTAN_HAS_CPUID', 'BOTAN_HAS_AES_ARMV8', 'BOTAN_HAS_SHA2_32_ARMV8', 'BOTAN_HAS_SHA2_64_ARMV8')) {
+    foreach ($marker in @(
+        'BOTAN_HAS_CPUID', 'BOTAN_HAS_CPUID_DETECTION', 'BOTAN_HAS_AES_ARMV8',
+        'BOTAN_HAS_AES', 'BOTAN_HAS_SERPENT', 'BOTAN_HAS_TWOFISH', 'BOTAN_HAS_CAMELLIA',
+        'BOTAN_HAS_KUZNYECHIK', 'BOTAN_HAS_CASCADE', 'BOTAN_HAS_MODE_XTS',
+        'BOTAN_HAS_BLAKE2S', 'BOTAN_HAS_BLAKE2B', 'BOTAN_HAS_HMAC',
+        'BOTAN_HAS_PBKDF2', 'BOTAN_HAS_ARGON2', 'BOTAN_HAS_WHIRLPOOL', 'BOTAN_HAS_STREEBOG',
+        'BOTAN_HAS_SHA2_32', 'BOTAN_HAS_SHA2_64',
+        'BOTAN_HAS_SHA2_32_ARMV8', 'BOTAN_HAS_SHA2_64_ARMV8'
+    )) {
         if ($generated -notmatch "(?m)^#define\s+$marker\b") {
             throw "Generated Botan amalgamation lacks required arm64 implementation marker $marker."
         }

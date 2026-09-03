@@ -9,10 +9,12 @@ with or endorsed by VeraCrypt.
 ## Project README
 
 RongVault supports standard and hidden volumes, automatic volume-type detection,
-password/PIM authentication, biometric unlocking for eligible saved credentials,
-and browsing through the built-in Android file manager. FAT and exFAT volumes
-support read/write operations; NTFS is read-only. The application does not
-decrypt a complete container onto plaintext storage.
+password/PIM authentication, all 15 VeraCrypt non-system XTS suites for opening,
+the nine Windows creation suites, six KDF hints, biometric unlocking for eligible
+saved credentials, and browsing through the built-in Android file manager. The
+1.1.0 algorithm/KDF expansion is pending build and compatibility verification.
+FAT and exFAT volumes support read/write operations; NTFS is read-only. The
+application does not decrypt a complete container onto plaintext storage.
 
 The complete project README, compatibility notes, build instructions, and
 security limitations are available in the source repository:

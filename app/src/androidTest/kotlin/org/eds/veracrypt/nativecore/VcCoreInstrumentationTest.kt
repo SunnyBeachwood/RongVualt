@@ -80,8 +80,8 @@ class VcCoreInstrumentationTest {
     }
 
     /**
-     * Exercises the >=128 KiB runtime-sized worker path for the single ciphers and a
-     * three-cipher cascade. A byte-for-byte round trip proves that splitting
+     * Exercises the >=128 KiB runtime-sized worker path for all nine Windows
+     * creation suites. A byte-for-byte round trip proves that splitting
      * independent XTS data units did not alter the VeraCrypt tweak numbering
      * or cascade order.
      */
@@ -96,7 +96,7 @@ class VcCoreInstrumentationTest {
         UnlockedVolumeService.bind(context)
         UnlockedVolumeService.beginLongRunningOperation()
         try {
-            listOf(CipherHint.AES, CipherHint.SERPENT, CipherHint.TWOFISH).forEach { cipher ->
+            CipherHint.entries.filter { it.isCreatable }.forEach { cipher ->
                 val container = File(context.cacheDir, "EDS-TEST-parallel-xts-${cipher.name}.hc")
                 var descriptor: ParcelFileDescriptor? = null
                 var session = 0L
@@ -341,6 +341,76 @@ class VcCoreInstrumentationTest {
         } finally {
             descriptor?.close()
             credentials.close()
+        }
+    }
+
+    @Test
+    fun argon2idCreatedVolumeReopensWithTheSelectedKdf() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        context.startActivity(Intent(context, ContainerCatalogActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+        UnlockedVolumeService.bind(context)
+        UnlockedVolumeService.beginLongRunningOperation()
+        val container = File(context.cacheDir, "EDS-TEST-argon2id-reopen.hc")
+        val payload = ByteArray(4096) { index -> (index * 37 + 11).toByte() }
+        var descriptor: ParcelFileDescriptor? = null
+        var session = 0L
+        try {
+            descriptor = ParcelFileDescriptor.open(
+                container,
+                ParcelFileDescriptor.MODE_CREATE or ParcelFileDescriptor.MODE_READ_WRITE or ParcelFileDescriptor.MODE_TRUNCATE,
+            )
+            VolumeCredentials(
+                password = SecretPassword("argon2id-test".toCharArray()),
+                pim = 1,
+                kdfHint = KdfHint.ARGON2ID,
+            ).use { credentials ->
+                val options = VolumeCreateOptions(
+                    sizeBytes = 16L * 1024 * 1024,
+                    volumeKind = VolumeKind.NORMAL,
+                    cipher = CipherHint.AES,
+                    kdf = KdfHint.ARGON2ID,
+                    pim = 1,
+                    fileSystem = VolumeFileSystem.EXFAT,
+                )
+                NativeRequestCodec.encodeCreate(options, credentials).use { request ->
+                    session = request.useForJni { bytes ->
+                        VcCore.nativeCreateNormal(descriptor!!.fd, bytes, intArrayOf(), NativeCreateProgress.inert())
+                    }
+                }
+            }
+            assertEquals(2, VcCore.nativeMountFileSystem(session))
+            assertEquals(payload.size, VcCore.nativeWrite(session, 0, payload, 0, payload.size))
+            VcCore.nativeFlush(session)
+            VcCore.nativeClose(session)
+            session = 0L
+            descriptor?.close()
+            descriptor = null
+
+            descriptor = ParcelFileDescriptor.open(container, ParcelFileDescriptor.MODE_READ_WRITE)
+            VolumeCredentials(
+                password = SecretPassword("argon2id-test".toCharArray()),
+                pim = 1,
+                kdfHint = KdfHint.ARGON2ID,
+            ).use { credentials ->
+                NativeRequestCodec.encodeOpen(
+                    VolumeOpenOptions(cipherHint = CipherHint.AES, accessMode = VolumeAccessMode.READ_WRITE),
+                    credentials,
+                ).use { request ->
+                    session = request.useForJni { bytes ->
+                        VcCore.nativeOpen(descriptor!!.fd, true, bytes, intArrayOf())
+                    }
+                }
+            }
+            assertEquals(2, VcCore.nativeMountFileSystem(session))
+            val actual = ByteArray(payload.size)
+            assertEquals(actual.size, VcCore.nativeRead(session, 0, actual, 0, actual.size))
+            assertArrayEquals(payload, actual)
+        } finally {
+            if (session != 0L) VcCore.nativeClose(session)
+            descriptor?.close()
+            UnlockedVolumeService.endLongRunningOperation()
+            assertTrue(container.delete() || !container.exists())
         }
     }
 
