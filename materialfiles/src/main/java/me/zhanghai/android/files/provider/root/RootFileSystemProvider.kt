@@ -14,7 +14,10 @@ import me.zhanghai.android.files.provider.remote.RemoteInterface
 import java.net.URI
 
 open class RootFileSystemProvider(scheme: String) : RemoteFileSystemProvider(
-    RemoteInterface { RootFileService.getRemoteFileSystemProviderInterface(scheme) }
+    RemoteInterface(
+        { RootFileService.getRemoteFileSystemProviderInterface(scheme) },
+        remoteFailure = { RootAccessErrors.disconnected(it) },
+    )
 ) {
     override fun getScheme(): String {
         throw AssertionError()

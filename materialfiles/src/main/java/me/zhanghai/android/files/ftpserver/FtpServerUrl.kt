@@ -19,13 +19,15 @@ import java.net.InetAddress
 object FtpServerUrl {
     fun getUrl(): String? {
         val localAddress = InetAddress::class.getLocalAddress() ?: return null
-        val username = if (!Settings.FTP_SERVER_ANONYMOUS_LOGIN.valueCompat) {
-            Settings.FTP_SERVER_USERNAME.valueCompat
+        val running = FtpServerService.connectionSnapshot()
+        val anonymous = running?.anonymous ?: Settings.FTP_SERVER_ANONYMOUS_LOGIN.valueCompat
+        val username = if (!anonymous) {
+            running?.username ?: Settings.FTP_SERVER_USERNAME.valueCompat
         } else {
             null
         }
         val host = localAddress.hostAddress
-        val port = Settings.FTP_SERVER_PORT.valueCompat
+        val port = running?.port ?: Settings.FTP_SERVER_PORT.valueCompat
         return "ftp://${if (username != null) "$username@" else ""}$host:$port/"
     }
 

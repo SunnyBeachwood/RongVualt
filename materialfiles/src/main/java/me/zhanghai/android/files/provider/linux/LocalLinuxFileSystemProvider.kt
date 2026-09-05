@@ -15,6 +15,7 @@ import java8.nio.file.DirectoryStream
 import java8.nio.file.FileStore
 import java8.nio.file.FileSystem
 import java8.nio.file.FileSystemAlreadyExistsException
+import java8.nio.file.FileSystemException
 import java8.nio.file.LinkOption
 import java8.nio.file.OpenOption
 import java8.nio.file.Path
@@ -83,6 +84,26 @@ class LocalLinuxFileSystemProvider(provider: LinuxFileSystemProvider) : FileSyst
         val fileBytes = file.toByteString()
         val openOptions = options.toOpenOptions()
         val flags = openOptions.toLinuxFlags()
+        if (openOptions.write) {
+            // Root browsing deliberately does not turn the file manager into
+            // a block-device or kernel-interface writer.  lstat() keeps this
+            // guard from following a symlink before the descriptor is opened;
+            // a missing path is still allowed when CREATE is requested.
+            val existingStat = try {
+                Syscall.lstat(fileBytes)
+            } catch (e: SyscallException) {
+                if (e.errno == OsConstants.ENOENT) {
+                    null
+                } else {
+                    throw e.toFileSystemException(fileBytes.toString())
+                }
+            }
+            if (existingStat != null && !OsConstants.S_ISREG(existingStat.st_mode)) {
+                throw FileSystemException(
+                    fileBytes.toString(), null, "Writing non-regular files is disabled"
+                )
+            }
+        }
         val mode = (PosixFileMode.fromAttributes(attributes) ?: PosixFileMode.CREATE_FILE_DEFAULT)
             .toInt()
         val fd = try {

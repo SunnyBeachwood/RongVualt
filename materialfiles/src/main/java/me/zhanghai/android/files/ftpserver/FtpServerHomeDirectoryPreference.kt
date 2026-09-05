@@ -9,12 +9,15 @@ import android.content.Context
 import android.util.AttributeSet
 import androidx.annotation.AttrRes
 import androidx.annotation.StyleRes
+import androidx.lifecycle.Observer
 import java8.nio.file.Path
 import me.zhanghai.android.files.settings.PathPreference
-import me.zhanghai.android.files.settings.Settings
-import me.zhanghai.android.files.util.valueCompat
 
 class FtpServerHomeDirectoryPreference : PathPreference {
+    private val rootObserver = Observer<FtpShareRootSnapshot> { snapshot ->
+        if (path != snapshot.path) path = snapshot.path
+    }
+
     constructor(context: Context) : super(context)
 
     constructor(context: Context, attrs: AttributeSet?) : super(context, attrs)
@@ -31,8 +34,18 @@ class FtpServerHomeDirectoryPreference : PathPreference {
     ) : super(context, attrs, defStyleAttr, defStyleRes)
 
     override var persistedPath: Path
-        get() = Settings.FTP_SERVER_HOME_DIRECTORY.valueCompat
+        get() = FtpShareRootStore.current().path
         set(value) {
-            Settings.FTP_SERVER_HOME_DIRECTORY.putValue(value)
+            FtpShareRootStore.select(value)
         }
+
+    override fun onAttached() {
+        super.onAttached()
+        FtpShareRootStore.selection.observeForever(rootObserver)
+    }
+
+    override fun onDetached() {
+        FtpShareRootStore.selection.removeObserver(rootObserver)
+        super.onDetached()
+    }
 }

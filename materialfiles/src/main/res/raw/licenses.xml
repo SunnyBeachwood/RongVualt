@@ -237,4 +237,60 @@
         <copyright>Copyright 2003 The Apache Software Foundation</copyright>
         <license>Apache Software License 2.0</license>
     </notice>
+
+    <notice>
+        <name>Apache MINA</name>
+        <url>https://mina.apache.org/</url>
+        <copyright>Copyright 2002 The Apache Software Foundation</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>libsu</name>
+        <url>https://github.com/topjohnwu/libsu</url>
+        <copyright>Copyright 2017 topjohnwu and libsu contributors</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>ZipXtract</name>
+        <url>https://github.com/WirelessAlien/ZipXtract</url>
+        <copyright>Copyright 2023 WirelessAlien</copyright>
+        <license>GNU General Public License 3.0</license>
+    </notice>
+
+    <notice>
+        <name>Zip4j</name>
+        <url>https://github.com/srikanth-lingala/zip4j</url>
+        <copyright>Copyright 2010 Srikanth Reddy Lingala</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>7-Zip-JBinding-4Android</name>
+        <url>https://github.com/omicronapps/7-Zip-JBinding-4Android</url>
+        <copyright>Copyright 2007-2016 Igor Pavlov and 7-Zip-JBinding contributors</copyright>
+        <license>GNU Lesser General Public License 2.1</license>
+    </notice>
+
+    <notice>
+        <name>Apache Commons Compress</name>
+        <url>https://commons.apache.org/proper/commons-compress/</url>
+        <copyright>Copyright The Apache Software Foundation</copyright>
+        <license>Apache Software License 2.0</license>
+    </notice>
+
+    <notice>
+        <name>Brotli decoder</name>
+        <url>https://github.com/google/brotli</url>
+        <copyright>Copyright 2009, 2010, 2013-2016 Brotli Authors</copyright>
+        <license>MIT License</license>
+    </notice>
+
+    <notice>
+        <name>XZ for Java</name>
+        <url>https://tukaani.org/xz/java.html</url>
+        <copyright>Copyright 2007-2024 Tukaani Project</copyright>
+        <license>Public Domain / 0BSD</license>
+    </notice>
 </notices>

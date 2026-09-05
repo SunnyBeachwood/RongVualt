@@ -50,6 +50,7 @@ import me.zhanghai.android.files.provider.document.isDocumentPath
 import me.zhanghai.android.files.provider.document.resolver.DocumentResolver
 import me.zhanghai.android.files.provider.linux.isLinuxPath
 import me.zhanghai.android.files.provider.linux.syscall.SyscallException
+import me.zhanghai.android.files.provider.root.shouldUseRoot
 import me.zhanghai.android.files.util.hasBits
 import me.zhanghai.android.files.util.withoutPenaltyDeathOnNetwork
 import java.io.FileNotFoundException
@@ -235,7 +236,10 @@ class FileProvider : ContentProvider() {
     }
 
     private fun Path.canOpenDirectly(mode: Int): Boolean {
-        if (!isLinuxPath) {
+        // A direct descriptor uses the app UID. Keep it only for ordinary
+        // local paths; RootStrategy.ALWAYS/AUTOMATIC must cross the libsu
+        // provider boundary even when the app can currently read the file.
+        if (!isLinuxPath || shouldUseRoot(this)) {
             return false
         }
         val file = toFile()

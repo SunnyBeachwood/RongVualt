@@ -25,8 +25,10 @@ import me.zhanghai.android.files.provider.document.resolver.DocumentResolver
 import me.zhanghai.android.files.provider.linux.isLinuxPath
 import me.zhanghai.android.files.provider.root.isRunningAsRoot
 import me.zhanghai.android.files.provider.root.rootContext
+import me.zhanghai.android.files.provider.root.shouldUseRoot
 import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.valueCompat
+import org.eds.zipxtract.core.ArchivePathPolicy
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.IOException
@@ -43,11 +45,18 @@ object ArchiveReader {
         val entries = mutableMapOf<Path, ReadArchive.Entry>()
         val rawEntries = readEntries(file, passwords)
         for (entry in rawEntries) {
-            var path = rootPath.resolve(entry.name)
-            // Normalize an absolute path to prevent path traversal attack.
+            // Apply the same policy as the ZipXtract engine before resolving
+            // the virtual path. Resolving then normalizing `..` would move an
+            // entry outside the archive root and could address the wrong path
+            // in a later copy job.
+            val safeName = try {
+                ArchivePathPolicy.normalizeEntryName(entry.name)
+            } catch (error: IllegalArgumentException) {
+                throw IOException("Unsafe archive entry name: ${entry.name}", error)
+            }
+            var path = rootPath.resolve(safeName)
             if (!path.isAbsolute) {
-                // TODO: Will this actually happen?
-                throw AssertionError("Path must be absolute: $path")
+                throw IOException("Archive path is not absolute: $path")
             }
             if (path.nameCount > 0) {
                 path = path.normalize()
@@ -143,10 +152,17 @@ object ArchiveReader {
         // unlike the sequential fallback it retains the seek support required
         // by 7z archives.
         val channel = when {
-            file.isLinuxPath ->
+            file.isLinuxPath && !shouldUseRoot(file) ->
                 CacheSizeSeekableByteChannel(
                     FileChannels.from(FileInputStream(file.toString()).channel)
                 )
+            file.isLinuxPath -> {
+                // A RootablePath must cross the provider boundary; opening it
+                // with FileInputStream would silently use the app UID. Do not
+                // swallow a Root denial/timeout and retry through a weaker
+                // path, so callers receive the explicit provider error.
+                CacheSizeSeekableByteChannel(file.newByteChannel())
+            }
             file.isDocumentPath -> {
                 var input: ParcelFileDescriptor.AutoCloseInputStream? = null
                 try {
@@ -185,7 +201,11 @@ object ArchiveReader {
                 }
             }
         }
-        val inputStream = if (file.isLinuxPath) FileInputStream(file.toString()) else file.newInputStream()
+        val inputStream = if (file.isLinuxPath && !shouldUseRoot(file)) {
+            FileInputStream(file.toString())
+        } else {
+            file.newInputStream()
+        }
         var successful = false
         try {
             val archive = ReadArchive(inputStream, passwords)

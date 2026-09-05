@@ -55,6 +55,7 @@ class FtpServerUrlPreference : Preference {
         Settings.FTP_SERVER_ANONYMOUS_LOGIN.observeForever(observer)
         Settings.FTP_SERVER_USERNAME.observeForever(observer)
         Settings.FTP_SERVER_PORT.observeForever(observer)
+        FtpServerService.stateLiveData.observeForever(observer)
         receiver.register()
     }
 
@@ -64,6 +65,7 @@ class FtpServerUrlPreference : Preference {
         Settings.FTP_SERVER_ANONYMOUS_LOGIN.removeObserver(observer)
         Settings.FTP_SERVER_USERNAME.removeObserver(observer)
         Settings.FTP_SERVER_PORT.removeObserver(observer)
+        FtpServerService.stateLiveData.removeObserver(observer)
         receiver.unregister()
     }
 
@@ -89,8 +91,11 @@ class FtpServerUrlPreference : Preference {
                             clipboardManager.copyText(url, context)
                             true
                         }
-                    if (!Settings.FTP_SERVER_ANONYMOUS_LOGIN.valueCompat) {
-                        val password = Settings.FTP_SERVER_PASSWORD.valueCompat
+                    val running = FtpServerService.connectionSnapshot()
+                    val anonymous = running?.anonymous
+                        ?: Settings.FTP_SERVER_ANONYMOUS_LOGIN.valueCompat
+                    if (!anonymous) {
+                        val password = running?.password ?: Settings.FTP_SERVER_PASSWORD.valueCompat
                         if (password.isNotEmpty()) {
                             add(
                                 Menu.NONE, Menu.NONE, Menu.NONE,

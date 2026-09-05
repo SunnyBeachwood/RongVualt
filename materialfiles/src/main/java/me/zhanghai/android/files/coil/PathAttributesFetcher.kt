@@ -26,6 +26,7 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.compat.use
 import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.file.asMimeType
+import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.file.isApk
 import me.zhanghai.android.files.file.isImage
 import me.zhanghai.android.files.file.isMedia
@@ -41,6 +42,7 @@ import me.zhanghai.android.files.provider.document.isDocumentPath
 import me.zhanghai.android.files.provider.document.resolver.DocumentResolver
 import me.zhanghai.android.files.provider.ftp.isFtpPath
 import me.zhanghai.android.files.provider.linux.isLinuxPath
+import me.zhanghai.android.files.provider.root.shouldUseRoot
 import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.getDimensionPixelSize
 import me.zhanghai.android.files.util.getPackageArchiveInfoCompat
@@ -52,7 +54,6 @@ import me.zhanghai.android.files.util.valueCompat
 import okio.buffer
 import okio.source
 import java.io.Closeable
-import java.io.FileInputStream
 import java.io.InputStream
 import java.io.IOException
 import me.zhanghai.android.files.util.setDataSource as appSetDataSource
@@ -194,10 +195,10 @@ class PathAttributesFetcher(
         null
     }
 
-    // Android 16/Oplus blocks the hidden NioUtils reflection used by the
-    // legacy Linux provider. Shared storage can be read safely without it.
+    // PathExtensions keeps the Android 16/Oplus public-stream workaround for
+    // ordinary files and dispatches RootablePath through libsu as needed.
     private fun Path.openImageInputStream(): InputStream =
-        if (isLinuxPath) FileInputStream(toString()) else newInputStream()
+        newInputStream()
 
     private fun calculateInSampleSize(
         width: Int,
@@ -238,8 +239,11 @@ class PathAttributesFetcher(
         private val pdfPageFetcherFactory = object : PdfPageFetcher.Factory<Path>() {
             override fun openParcelFileDescriptor(data: Path): ParcelFileDescriptor =
                 when {
-                    data.isLinuxPath ->
+                    data.isLinuxPath && !shouldUseRoot(data) ->
                         ParcelFileDescriptor.open(data.toFile(), ParcelFileDescriptor.MODE_READ_ONLY)
+                    data.isLinuxPath ->
+                        context.contentResolver.openFileDescriptor(data.fileProviderUri, "r")
+                            ?: throw IOException("Unable to open Root file descriptor")
                     data.isDocumentPath ->
                         DocumentResolver.openParcelFileDescriptor(data as DocumentResolver.Path, "r")
                     else -> throw IllegalArgumentException(data.toString())

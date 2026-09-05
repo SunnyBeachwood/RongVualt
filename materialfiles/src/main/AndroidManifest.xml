@@ -1,5 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
   <application>
     <activity android:name="me.zhanghai.android.files.filelist.FileListActivity" tools:ignore="UnusedAttribute" exported="false" xmlns:tools="http://schemas.android.com/tools">
       <!-- @see me.zhanghai.android.files.file.isSupportedArchive -->
@@ -51,12 +54,16 @@
          rejects services without an explicit type, so keep this aligned with the
          host's FOREGROUND_SERVICE_DATA_SYNC permission. -->
     <service android:name="me.zhanghai.android.files.filejob.FileJobService" android:foregroundServiceType="dataSync" exported="false" />
-    <!-- Android 14+ rejects startForeground() unless the service declares a
-         concrete type. FTP transfers are user-initiated data synchronization. -->
+    <!-- FTP is a user-enabled local listener whose lifetime is not bounded by
+         a single transfer. Android requires a concrete special-use subtype. -->
     <service
         android:name="me.zhanghai.android.files.ftpserver.FtpServerService"
-        android:foregroundServiceType="dataSync"
-        android:exported="false" />
+        android:foregroundServiceType="specialUse"
+        android:exported="false">
+      <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="User-enabled local FTP server for file access over the local network" />
+    </service>
     <service android:name="me.zhanghai.android.files.ftpserver.FtpServerTileService" android:label="@string/ftp_server_title" tools:ignore="NewApi" exported="false" xmlns:tools="http://schemas.android.com/tools">
     </service>
     <service android:name="androidx.appcompat.app.AppLocalesMetadataHolderService" android:enabled="false" exported="false">

@@ -12,8 +12,12 @@ import java.lang.ref.WeakReference
 
 class RemoteInterface<T : IInterface>(
     // @Throws(RemoteFileSystemException::class)
-    private val creator: () -> T
+    private val creator: () -> T,
+    private val remoteFailure: (Throwable) -> RemoteFileSystemException,
 ) {
+    /** Keeps the original one-argument constructor source-compatible. */
+    constructor(creator: () -> T) : this(creator, { RemoteFileSystemException(it) })
+
     private var value: T? = null
 
     private val lock = Any()
@@ -34,7 +38,7 @@ class RemoteInterface<T : IInterface>(
                 } catch (e: RemoteException) {
                     // RemoteException is thrown if remote has already died.
                     this.value = null
-                    throw RemoteFileSystemException(e)
+                    throw remoteFailure(e)
                 }
             }
             return value
@@ -43,7 +47,8 @@ class RemoteInterface<T : IInterface>(
 
     private fun binderDied() {
         synchronized(lock) {
-            value!!.asBinder().unlinkToDeath(deathRecipient, 0)
+            val current = value ?: return
+            current.asBinder().unlinkToDeath(deathRecipient, 0)
             value = null
         }
     }

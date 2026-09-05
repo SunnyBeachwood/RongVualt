@@ -15,7 +15,26 @@ interface RootablePath {
 }
 
 private val rootStrategy: RootStrategy
-    get() = RootStrategy.NEVER
+    get() = if (isRunningAsRoot) RootStrategy.NEVER else Settings.ROOT_STRATEGY.valueCompat
+
+/**
+ * Whether convenience stream helpers must go through the provider boundary.
+ *
+ * Local Linux streams intentionally use the public [java.io.FileInputStream]
+ * and [java.io.FileOutputStream] APIs on Android releases where desugared NIO
+ * can reach a blocked hidden API.  That shortcut is not valid for an
+ * app-process RootablePath: it would silently bypass libsu and perform the
+ * operation with the app UID.  Keep the decision in the same strategy
+ * dispatcher used by all other provider operations.
+ */
+internal fun shouldUseRoot(path: Path, isAttributeAccess: Boolean = false): Boolean {
+    val rootablePath = path as? RootablePath ?: return false
+    return when (rootStrategy) {
+        RootStrategy.NEVER -> false
+        RootStrategy.AUTOMATIC -> rootablePath.isRootRequired(isAttributeAccess)
+        RootStrategy.ALWAYS -> true
+    }
+}
 
 @Throws(IOException::class)
 fun <T, R> callRootable(

@@ -1,0 +1,1 @@
+Extract and create various archive formats like ZIP, RAR, 7z, and more

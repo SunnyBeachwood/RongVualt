@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation project(':zipxtract-core')
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
     implementation platform('org.jetbrains.kotlin:kotlin-bom:2.2.10')
     implementation 'org.jetbrains.kotlin:kotlin-stdlib'
@@ -102,15 +103,16 @@ dependencies {
     implementation 'me.zhanghai.android.appiconloader:appiconloader:1.5.0'
     implementation 'me.zhanghai.android.fastscroll:library:1.3.0'
     implementation 'me.zhanghai.android.foregroundcompat:library:1.0.2'
-    implementation 'me.zhanghai.android.libarchive:library:1.1.0'
+    // Keep the legacy archive browser on the same libarchive ABI as the
+    // ZipXtract compatibility core and its locked 1.1.6 JNI artifact.
+    implementation 'me.zhanghai.android.libarchive:library:1.1.6'
     implementation 'me.zhanghai.android.libselinux:library:2.1.0'
     implementation 'me.zhanghai.android.retrofile:library:1.1.1'
+    implementation 'com.github.topjohnwu.libsu:service:5.2.2'
     implementation 'me.zhanghai.android.systemuihelper:library:1.0.0'
     implementation 'net.sourceforge.streamsupport:android-retrostreams:1.7.4'
-    implementation 'org.apache.ftpserver:ftpserver-core:1.2.0'
-    implementation('org.apache.mina:mina-core') {
-        version { strictly '2.1.3' }
-    }
+    implementation 'org.apache.ftpserver:ftpserver-core:1.2.1'
+    implementation 'org.apache.mina:mina-core:2.2.4'
     implementation 'org.slf4j:slf4j-android:1.7.36'
     implementation('com.github.bitfireAT:dav4jvm:1.0.0') {
         // xpp3 declares an obsolete JUnit runtime dependency which conflicts

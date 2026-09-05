@@ -21,6 +21,14 @@ import org.eds.veracrypt.nativecore.NativeOpenFile
 import org.eds.veracrypt.nativecore.nativeFileOperation
 
 /**
+ * Internal hook used by [UnlockedVolumeManager] to revoke provider roots
+ * before an automatic or external session close reaches native cleanup.
+ */
+internal interface BeforeCloseAwareSession {
+    fun setBeforeCloseListener(listener: () -> Unit)
+}
+
+/**
  * Owns an opaque native handle and the resources that made it usable (the SAF
  * descriptor and the process-local writer lease).  No Android component owns
  * this directly; its repository owns a [CoroutineScope] and closes sessions
@@ -34,7 +42,7 @@ internal class ManagedVolumeSession(
     initialFileSystem: VolumeFileSystem? = null,
     override val canModifyContainer: Boolean = accessMode == VolumeAccessMode.READ_WRITE,
     private val onClose: () -> Unit,
-) : VolumeSession, NativeFileSystemAccess {
+) : VolumeSession, NativeFileSystemAccess, BeforeCloseAwareSession {
     override val id: UUID = UUID.randomUUID()
 
     private val mutableState = MutableStateFlow<VolumeSessionState>(VolumeSessionState.Open)
@@ -44,6 +52,7 @@ internal class ManagedVolumeSession(
     private val lock = Any()
     private var closeJob: Job? = null
     private var autoLockMillis: Long? = null
+    private var beforeCloseListener: (() -> Unit)? = null
     private var closed = false
     private var hiddenVolumeRiskTriggered = false
     private val dependents = mutableSetOf<ManagedVolumeSession>()
@@ -84,6 +93,16 @@ internal class ManagedVolumeSession(
         synchronized(lock) {
             if (!closed && autoLockMillis != null) scheduleAutoLockLocked()
         }
+    }
+
+    override fun setBeforeCloseListener(listener: () -> Unit) {
+        val invokeNow = synchronized(lock) {
+            if (closed) true else {
+                beforeCloseListener = listener
+                false
+            }
+        }
+        if (invokeNow) runCatching(listener)
     }
 
     override fun flush() {
@@ -157,15 +176,22 @@ internal class ManagedVolumeSession(
     }
 
     override fun close() {
+        val beforeClose: (() -> Unit)?
         val closingDependents = synchronized(lock) {
             if (closed) return
             closed = true
             closeJob?.cancel()
             mutableState.value = VolumeSessionState.Closing
+            beforeClose = beforeCloseListener
+            beforeCloseListener = null
             val result = dependents.toList()
             dependents.clear()
             result
         }
+        // Revoke DocumentsProvider and FTP roots before any native descriptor
+        // or proxy file is closed. A listener failure must not strand native
+        // resources, so continue with normal cleanup in all cases.
+        runCatching { beforeClose?.invoke() }
         // Let a child invoke its normal native close path. Its attempt to
         // close this parent is a no-op because the parent is already closing.
         closingDependents.forEach(ManagedVolumeSession::close)

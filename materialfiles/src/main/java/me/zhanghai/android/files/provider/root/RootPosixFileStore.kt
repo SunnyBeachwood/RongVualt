@@ -10,5 +10,8 @@ import me.zhanghai.android.files.provider.remote.RemoteInterface
 import me.zhanghai.android.files.provider.remote.RemotePosixFileStore
 
 class RootPosixFileStore(fileStore: PosixFileStore) : RemotePosixFileStore(
-    RemoteInterface { RootFileService.getRemotePosixFileStoreInterface(fileStore) }
+    RemoteInterface(
+        { RootFileService.getRemotePosixFileStoreInterface(fileStore) },
+        remoteFailure = { RootAccessErrors.disconnected(it) },
+    )
 )

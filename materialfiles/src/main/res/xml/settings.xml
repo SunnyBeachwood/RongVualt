@@ -62,6 +62,12 @@
             android:title="@string/settings_default_directory_title"
             app:useSimpleSummaryProvider="true" />
 
+        <me.zhanghai.android.files.settings.SecondaryDirectoryPreference
+            android:key="@string/pref_key_file_list_secondary_start_directory"
+            android:title="@string/file_list_secondary_start_directory_title"
+            android:summary="@string/file_list_secondary_start_directory_summary"
+            app:useSimpleSummaryProvider="true" />
+
         <me.zhanghai.android.files.settings.StoragesPreference
             android:title="@string/settings_storages_title"
             android:summary="@string/settings_storages_summary_empty" />
@@ -73,6 +79,14 @@
         <me.zhanghai.android.files.settings.BookmarkDirectoriesPreference
             android:title="@string/settings_bookmark_directories_title"
             android:summary="@string/settings_bookmark_directories_summary_empty" />
+
+        <me.zhanghai.android.files.settings.RootStrategyPreference
+            android:key="@string/pref_key_root_strategy"
+            android:title="@string/settings_root_strategy_title"
+            android:defaultValue="@string/pref_default_value_root_strategy"
+            android:entries="@array/settings_root_strategy_entries"
+            android:entryValues="@array/pref_entry_values_root_strategy"
+            app:useSimpleSummaryProvider="true" />
 
         <me.zhanghai.android.files.settings.CharsetPreference
             android:key="@string/pref_key_archive_file_name_encoding"

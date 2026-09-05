@@ -27,6 +27,14 @@
         <item name="colorOnSecondary">?colorOnPrimary</item>
         <item name="colorSecondaryVariant">?colorSecondary</item>
         <item name="colorSurface">@color/color_surface</item>
+        <!-- Semantic aliases keep the new dual-pane layout readable when an
+             existing installation explicitly opts out of Material 3. -->
+        <item name="colorSurfaceContainerLow">?colorSurface</item>
+        <item name="colorSurfaceContainerHigh">?colorSurface</item>
+        <item name="colorOutlineVariant">?android:colorControlHighlight</item>
+        <item name="colorOnSurfaceVariant">?colorOnSurface</item>
+        <item name="colorPrimaryContainer">?colorPrimary</item>
+        <item name="colorOnPrimaryContainer">?colorOnPrimary</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MaterialFiles.MediumComponent</item>
         <item name="buttonBarButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Dialog</item>
         <item name="materialCardViewStyle">@style/Widget.MaterialFiles.CardView</item>
@@ -78,6 +86,12 @@
         <item name="colorOnSecondary">?colorOnPrimary</item>
         <item name="colorSecondaryVariant">?colorSecondary</item>
         <item name="colorSurface">@color/color_surface_dark</item>
+        <item name="colorSurfaceContainerLow">?colorSurface</item>
+        <item name="colorSurfaceContainerHigh">?colorSurface</item>
+        <item name="colorOutlineVariant">?android:colorControlHighlight</item>
+        <item name="colorOnSurfaceVariant">?colorOnSurface</item>
+        <item name="colorPrimaryContainer">?colorPrimary</item>
+        <item name="colorOnPrimaryContainer">?colorOnPrimary</item>
         <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.MaterialFiles.MediumComponent</item>
         <item name="buttonBarButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Dialog</item>
         <item name="materialCardViewStyle">@style/Widget.MaterialFiles.CardView</item>

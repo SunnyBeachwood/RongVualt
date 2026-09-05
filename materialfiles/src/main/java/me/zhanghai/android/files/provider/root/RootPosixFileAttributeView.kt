@@ -12,7 +12,10 @@ import me.zhanghai.android.files.provider.remote.RemotePosixFileAttributeView
 open class RootPosixFileAttributeView(
     attributeView: PosixFileAttributeView
 ) : RemotePosixFileAttributeView(
-    RemoteInterface { RootFileService.getRemotePosixFileAttributeViewInterface(attributeView) }
+    RemoteInterface(
+        { RootFileService.getRemotePosixFileAttributeViewInterface(attributeView) },
+        remoteFailure = { RootAccessErrors.disconnected(it) },
+    )
 ) {
     override fun name(): String {
         throw AssertionError()

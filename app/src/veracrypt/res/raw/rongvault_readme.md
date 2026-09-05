@@ -32,14 +32,28 @@ entire container onto device storage.
   biometric protection for saved outer-volume credentials.
 - VeraCrypt non-system containers using all 15 VeraCrypt 1.26.29 XTS suites for
   opening and automatic detection; the nine Windows creation suites are exposed
-  for new normal and hidden volumes. The 1.1.0 additions remain pending build
+  for new normal and hidden volumes. The 1.2.0 additions remain pending build
   and compatibility verification.
 - FAT and exFAT read/write operations: create, rename, delete, copy, move, and
   import/export. NTFS is read-only.
 - An Android `DocumentsProvider` for unlocked volumes and a foreground service
   while volumes are unlocked or long file operations are running.
+- Material Files Root strategy (`NEVER`, `AUTOMATIC`, `ALWAYS`) for browsing and
+  editing mounted device paths when the user grants root. Read-only mounts,
+  AVB, and kernel policy still apply; block-device writes and remounting are
+  intentionally out of scope.
+- A local Apache FTP server that can share ordinary storage, a Root path, or one
+  directory in a currently unlocked volume. It listens on all interfaces with
+  port 2121 and read-only account access by default; anonymous login and writes
+  are explicit opt-ins. FTP data and credentials are not encrypted.
 - Built-in file manager with browsing, search, sorting, hidden-file display,
   creation, rename, deletion, and copy/move operations inside a volume.
+- RongVault 1.3.0 integrates ZipXtract into the same file manager: browse and
+  extract ZIP/JAR, 7z, RAR/RAR5, TAR and compressed streams; create ZIP/7z/TAR
+  archives; and update only unencrypted 7z archives on safe writable providers.
+  Extraction is streamed, traversal and archive links are rejected, and the
+  archive filesystem remains read-only. The upstream snapshot is pinned to
+  ZipXtract v7.1.1; build and fixture/device verification are still pending.
 - Markdown preview for `.md`, `.markdown`, and `.mkd` files, as well as standard
   Markdown MIME types. It is enabled by default and can be disabled in settings;
   the source remains available for editing.
@@ -48,7 +62,7 @@ entire container onto device storage.
 
 RongVault uses the VeraCrypt non-system-container design: XTS mode for encrypted
 data, a password/PIM/keyfile-protected volume header, and a selected password
-derivation function (KDF). RongVault 1.1.0 adds the complete reader registry,
+derivation function (KDF). RongVault 1.2.0 adds the complete reader registry,
 nine Windows creation suites, five PBKDF2 variants, and Argon2id; these additions
 are source-complete but remain pending compilation and verification:
 
@@ -56,7 +70,7 @@ The `CipherHint` names and numeric values, native request v2 framing, and saved
 credential record field order remain unchanged for existing data. Only the
 user-facing algorithm labels and supported capability lists are expanded.
 
-| Area | RongVault 1.1.0 code scope (pending build/verification) | Desktop VeraCrypt comparison |
+| Area | RongVault 1.2.0 code scope (pending build/verification) | Desktop VeraCrypt comparison |
 | --- | --- | --- |
 | Data-cipher suites | All 15 VeraCrypt non-system XTS suites are registered for open/auto-detection. New normal and hidden volumes expose the nine Windows creation suites: AES, Serpent, Twofish, Camellia, AES-Twofish, AES-Twofish-Serpent, Serpent-AES, Serpent-Twofish-AES, and Twofish-Serpent. | VeraCrypt also supports system encryption and additional platform-specific layouts. Every RongVault suite remains unverified until the matrix is updated. |
 | KDF choices | Open, create, hidden-volume protection, and credential-change code paths carry the six KDF hints: PBKDF2-HMAC-SHA-512 (default), SHA-256, BLAKE2s-256, Whirlpool, Streebog, and Argon2id. Hidden-volume protection keeps KDF auto-detection to preserve the native v2 layout; Argon2id shows its PIM-derived memory and iteration values. | VeraCrypt has broader, desktop-tested configuration coverage. Each RongVault KDF/cipher combination must be considered compatibility-dependent until it is marked verified in the matrix. |
@@ -65,11 +79,31 @@ user-facing algorithm labels and supported capability lists are expanded.
 | Platform | Android 15+ on `arm64-v8a`, using SAF and a `DocumentsProvider`. | VeraCrypt has official desktop releases for Windows, macOS, and Linux. |
 
 The selectable cipher and KDF lists are not a blanket interoperability guarantee,
-especially for Argon2id and less-common combinations. The 1.1.0 source changes
+especially for Argon2id and less-common combinations. The 1.2.0 source changes
 are intentionally marked **待编译/待验证 (pending build/verification)**. See the
 [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for the recorded test
 status. RongVault is not a replacement for desktop VeraCrypt when system
 encryption, partitions, or desktop-level testing is required.
+
+## Root access and FTP scope
+
+Root access is selected in the embedded file manager's settings. `AUTOMATIC`
+is the default and delegates only paths that Android denies; `ALWAYS` requests
+the libsu 5.2.2 root service for every mounted filesystem operation. A refused,
+timed-out, or revoked root session is reported as an error rather than silently
+falling back. Shizuku/Sui remains disabled. The `/` navigation entry can expose
+`/data`, `/system`, `/vendor`, `/product`, and other mounted paths when the
+device grants access, but no raw block-device writing or automatic remounting
+is performed.
+
+The FTP page captures an immutable share-root snapshot at startup. Ordinary and
+Root paths are persisted through the existing home-directory setting; an
+unlocked-volume directory is process-only and disappears when that volume is
+locked or the process is rebuilt. The server stops before an unlocked session is
+closed, touches the session during transfers for automatic-lock accounting, and
+rejects archives, remote FTP/SFTP/SMB/WebDAV paths, traversal, and symlink
+escapes. These Root, FTP, unlocked-volume sharing, and anonymous-write paths are
+**待编译/待验证 (pending build/verification)** in 1.2.0.
 
 ## Platform and build requirements
 
@@ -95,6 +129,12 @@ not used to create release packages.
 
 - Supports VeraCrypt 1.26.29-compatible **non-system file containers** only; it
   does not support system encryption, physical partitions, or whole disks.
+- Root browsing is limited to mounted filesystem paths. Read-only mounts, AVB,
+  kernel policy, and denied root requests remain effective; block devices and
+  remount operations are never exposed.
+- FTP is a plain, user-enabled local listener. It defaults to account login,
+  port 2121, read-only access, and all-interface binding; anonymous login and
+  anonymous writes require explicit settings and are not encrypted.
 - TrueCrypt, LUKS, EncFS, PKCS#11, EMV, cloud drives, network locations, and
   other non-random-access container sources are not supported.
 - NTFS volumes cannot be written to.
@@ -146,8 +186,11 @@ Material Design patterns from [Material Files](https://github.com/zhanghai/Mater
 - Create, copy, move, delete, and rename operations are bound to the volume
   session and its foreground-operation protection; normal volume operations do
   not use a host plaintext temporary directory.
-- Root/Shizuku access, network storage, the FTP server, APK installer, and
-  Material Files credential storage are not initialized or exposed by RongVault.
+- Root access is restored through libsu with the upstream RootablePath dispatch;
+  Shizuku/Sui remains disabled. The FTP page and service are restored with a
+  bounded provider filesystem view, immutable share-root snapshots, and
+  foreground special-use service handling. Network storage, APK installer, and
+  Material Files credential storage remain disabled.
 - The app integrates the Material Files Markdown viewer. It detects `.md`,
   `.markdown`, and `.mkd` filenames or Markdown MIME types, renders formatted
   previews with Markwon (including tables, strikethrough, task lists, and local

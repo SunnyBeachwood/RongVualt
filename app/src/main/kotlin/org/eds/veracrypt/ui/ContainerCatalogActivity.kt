@@ -27,6 +27,7 @@ import org.eds.veracrypt.credentials.AppAccessGate
 import org.eds.veracrypt.credentials.BiometricCredentialAuthorizer
 import org.eds.veracrypt.documents.FileTransferManager
 import org.eds.veracrypt.documents.UnlockedVolumeService
+import me.zhanghai.android.files.ftpserver.FtpServerService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class ContainerCatalogActivity : AppCompatActivity() {
@@ -178,6 +179,9 @@ class ContainerCatalogActivity : AppCompatActivity() {
                 Toast.makeText(this@ContainerCatalogActivity, R.string.vc_exit_app_transfer_timeout, Toast.LENGTH_LONG).show()
                 return@launch
             }
+            // A shared unlocked volume must release all FTP clients and
+            // provider handles before the native sessions are closed.
+            FtpServerService.stopAndWait(this@ContainerCatalogActivity)
             UnlockedVolumeService.volumes.close()
             // Closing each volume normally emits a roots notification. Emit one
             // final notification as well so DocumentsUI refreshes even when

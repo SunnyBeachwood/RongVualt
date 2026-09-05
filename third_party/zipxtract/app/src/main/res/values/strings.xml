@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~  Copyright (C) 2023  WirelessAlien <https://github.com/WirelessAlien>
+  ~
+  ~     This program is free software: you can redistribute it and/or modify
+  ~     it under the terms of the GNU General Public License as published by
+  ~     the Free Software Foundation, either version 3 of the License, or
+  ~     any later version.
+  ~
+  ~     This program is distributed in the hope that it will be useful,
+  ~     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~     GNU General Public License for more details.
+  ~
+  ~     You should have received a copy of the GNU General Public License
+  ~     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<resources>
+    <!-- App name -->
+    <string name="app_name" translatable="false">ZipXtract</string>
+
+    <!-- General strings -->
+    <string name="folder">Folder</string>
+    <string name="share">Share App Link</string>
+    <string name="share_url">https://play.google.com/store/apps/details?id=com.wirelessalien.zipxtract.ps</string>
+    <string name="show_donation" translatable="false">true</string>
+    <string name="share_file">Share</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="source_code">Source Code</string>
+    <string name="license">License</string>
+    <string name="report_an_issue">Report an Issue</string>
+    <string name="about">About</string>
+    <string name="grant_access">Grant Access</string>
+    <string name="storage_access_permission_text">This app requires access to your device storage for proper functionality. Please grant the necessary permissions.</string>
+    <string name="storage_access_title">Storage Access Needed</string>
+    <string name="storage_access_description">ZipXtract requires permission to access your device\'s storage to find, extract, and organize your files effectively.</string>
+    <string name="storage_safety_text">Your files are safe. This app has no internet permission, so data cannot be uploaded to external servers.</string>
+    <string name="sd_card">SD Card</string>
+    <string name="root_access">Root access</string>
+    <string name="root_access_summary">Enable root directory access</string>
+    <string name="internal_storage">Internal Storage</string>
+    <string name="root">Root</string>
+    <string name="directory_empty">Folder is empty</string>
+    <string name="paste">Paste</string>
+    <string name="storage">Storage</string>
+    <string name="invalid_value">Invalid input</string>
+    <string name="please_enter_value_between_0_and_22">Enter a value between 0 and 22</string>
+    <string name="archiving_started_in_background">Archiving started in background</string>
+    <string name="no_compression">No Compression</string>
+    <string name="remove">Remove</string>
+    <string name="preview_archive">Preview Archive</string>
+    <string name="add">Add</string>
+    <string name="directory_selection_disabled">Folder cannot be selected, select the files inside it.</string>
+    <string name="select_file">Select File…</string>
+    <string name="select_directory">Select Directory…</string>
+    <string name="output_path">Output path</string>
+    <string name="select">Select</string>
+    <string name="select_files">Add (%d)</string>
+    <string name="donate_desc">If you find ZipXtract useful, please consider supporting its development:</string>
+    <string name="file_list_is_fixed_for_this_operation">File list is fixed for this operation.</string>
+    <string name="no_match">No match</string>
+    <string name="refresh">Refresh</string>
+    <string name="refreshed">Refreshed</string>
+    <string name="storage_info_format">Available: %1$s / Total: %2$s</string>
+    <string name="available_storage_format">%1$s Available</string>
+    <string name="total_storage_format">Total: %1$s</string>
+    <string name="low_storage_warning">Warning: Low storage space! Available: %1$s</string>
+    <string name="low_storage_warning_dynamic">Low storage! %1$s available, Free up at least ~%2$s. Additional space maybe needed based on the archive format.</string>
+    <string name="rename_t">Rename</string>
+    <plurals name="folder_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+
+
+    <!-- Bottom navigation -->
+    <string name="archive">Archive</string>
+    <string name="home">Home</string>
+
+    <!-- Snackbar actions -->
+    <string name="open_folder">Open Folder</string>
+
+    <!-- Dialog strings (General dialogs and common strings of different dialog) -->
+    <string name="enter_name_of_archive_optional">Archive Name</string>
+    <string name="show_hide_selected_files">Show/Hide Selected Files</string>
+    <string name="background">Background</string>
+    <string name="open_with">Open With</string>
+    <string name="compress_with">Compress with:</string>
+    <string name="no_password">No Password</string>
+    <string name="confirm_delete">Delete Confirmation</string>
+    <string name="confirm_delete_message">Are you sure you want to delete this item?</string>
+    <string name="delete">Delete</string>
+    <string name="file_path">Path</string>
+    <string name="file_size">Size</string>
+    <string name="last_modified">Last Modified</string>
+    <string name="cancel">Cancel</string>
+    <string name="donate">Donate</string>
+    <string name="ok">OK</string>
+    <string name="please_wait">Please wait…</string>
+    <string name="enter_password">Enter Password</string>
+    <string name="extract">Extract</string>
+    <string name="file_info">File info</string>
+    <string name="multi_part_extract">Multi Part Extract:</string>
+    <string name="copy_text">Copy</string>
+    <string name="info_tip">Useful Tip</string>
+    <string name="info_tip_description">\u25CF Long-press files and folders or click file/folder icons to select them for archiving.\n\n\u25CF Click a file to display the extraction menu for choosing extraction options.\n\n\u25CF Files extracted using \"Open With\" menu of OS are stored in "Internal Storage/ZipXtract" by default. Modify this in app settings.\n\n\u25CF The default location for archiving or extracting archives (within the app) is the parent directory of the respective file(s). This can be changed in the app settings.</string>
+    <string name="crash_log">Crash Log</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="passwords_do_not_match">Password do not match</string>
+    <string name="wrong_password">Wrong password</string>
+    <string name="error_too_many_parts">This would generate %1$d parts</string>
+    <string name="file_already_exists">File already exists</string>
+    <string name="select_storage">Select Storage</string>
+    <string name="select_archive_type_title">Select archive type</string>
+    <string name="add_folder_confirmation_title">Add current folder?</string>
+    <string name="add_folder_confirmation_message">Do you want to add the folder \'%1$s\' to the archive?</string>
+    <string name="split_parts_number_req">Allow more than 100 split parts</string>
+    <string name="compare">Compare</string>
+    <string name="zstd_compression_level_format">ZSTD Compression Level: %d</string>
+
+    <!-- Menu items -->
+    <string name="move">Move to</string>
+    <string name="copy_to">Copy to</string>
+    <string name="action_settings">Settings</string>
+    <string name="select_all">Select All</string>
+    <string name="search">Search</string>
+    <string name="order">Order</string>
+    <string name="ascending">Ascending</string>
+    <string name="descending">Descending</string>
+    <string name="sort_by">Sort By</string>
+    <string name="name">Name</string>
+    <string name="size">Size</string>
+    <string name="time_of_creation">Modified</string>
+    <string name="extension">Extension</string>
+    <string name="close">Close</string>
+
+    <!-- Settings -->
+    <string name="extract_path">Extracted files folder</string>
+    <string name="archive_path">Archived files folder</string>
+    <string name="archive_path_summary">Modify the default extract folder. \nDefault is \"parent folder\"</string>
+    <string name="extract_path_summary">Modify the default extract folder. \nDefault is \"parent folder\" or Internal Storage/ZipXtract (for \"Open With\" menu extracted archive)</string>
+    <string name="fast_search">Fast Search</string>
+    <string name="fast_search_summary">Use Android\'s media index for faster search</string>
+    <string name="show_hidden_files">Show hidden files</string>
+    <string name="show_hidden_files_summary">Show files starting with a dot</string>
+
+    <!-- ZIP archive options -->
+    <string name="create_zip">Archive ZIP</string>
+    <string name="encryption_method">Encryption Method</string>
+    <string name="compression_level">Compression Level</string>
+    <string name="compression_method">Compression Method</string>
+    <string name="encryption_strength">Encryption Strength</string>
+    <string name="split_size_mb">Split Size</string>
+    <string name="split_zip">Split ZIP</string>
+    <string name="_ten">Default is 64kb</string>
+    <string name="settings_info_text">The default encryption method for files is AES, which provides a high level of security. However, please be aware that AES encryption can be time-consuming, particularly on lower-end devices.\n\nFor users with less powerful devices, an alternative like ZIP_STANDARD can be use. However, please note that this method does not offer the same level of security as AES.\n\nIf security is your primary concern, we strongly recommend using AES despite its longer processing time.</string>
+
+    <!-- TAR archive options -->
+    <string name="compress_tar">Archive TAR</string>
+
+    <!-- 7z archive options -->
+    <string name="compress_sevenz">Archive 7z</string>
+    <string name="solid_compression">Solid Compression</string>
+    <string name="thread_count">Thread Count</string>
+    <string name="max_available_thread">0 for maximum available threads</string>
+    <string name="automatic_threads">Maximum Threads</string>
+    <string name="automatic_threads_subtitle">Uses maximum CPU for fastest speeds</string>
+    <string name="automatic_threads_warning">Warning: Uses all CPU cores. Device may become unresponsive during archive operation.</string>
+    <string name="solid_compression_subtitle">Improves ratio for many small files but extraction time will increase</string>
+    <string name="destination">General</string>
+    <string name="compression_settings">Compression Settings</string>
+    <string name="security">Security</string>
+    <string name="specify_custom_thread_count">Specify custom thread count</string>
+    <string name="min_split_size_error">Minimum split size is 64KB</string>
+
+    <!-- Success toast messages -->
+    <string name="compression_success">Compression successful</string>
+    <string name="extraction_success">File extracted successfully</string>
+    <string name="archive_success">File archived successfully</string>
+    <string name="tar_creation_success">TAR file archived successfully</string>
+    <string name="zip_creation_success">ZIP file archived successfully</string>
+    <string name="sevenz_creation_success">7z file archived successfully</string>
+    <string name="file_deleted">Deleted</string>
+    <string name="copied_to_clipboard">Copied to clipboard</string>
+    <string name="operation_cancelled">Operation cancelled</string>
+    <string name="archive_updated_successfully">Archive updated successfully</string>
+
+    <!-- Error toast messages -->
+    <string name="tar_creation_failed">Error archiving TAR file</string>
+    <string name="compression_failed">Compression failed</string>
+    <string name="sevenz_creation_failed">Error archiving 7z file</string>
+    <string name="zip_creation_failed">Error archiving ZIP file</string>
+    <string name="general_error_msg">An unexpected error occurred.</string>
+    <string name="unsupported_compression_format">This compression format is not supported.</string>
+    <string name="extraction_failed">Extraction Failed</string>
+    <string name="access_denied">Access denied</string>
+    <string name="no_files_to_archive">No files were selected for archiving</string>
+    <string name="permission_denied">Permission Denied</string>
+    <string name="no_file_selected">No File Selected</string>
+    <string name="sd_card_not_available">SD card or external storage not detected</string>
+    <string name="error_no_file_information_provided">Error: No file information provided.</string>
+    <string name="error_updating_archive">Error updating archive</string>
+    <string name="error_opening_archive">Error opening archive: %1$s</string>
+    <string name="no_valid_files_found_to_archive">No valid files found to archive.</string>
+    <string name="file_does_not_exist">File does not exist</string>
+    <string name="invalid_archive_type">Invalid archive type</string>
+
+
+    <!-- Notification title-->
+    <string name="copying_files">Copying…</string>
+    <string name="moving_files">Moving…</string>
+    <string name="delete_ongoing">Deleting…</string>
+    <string name="extraction_ongoing">Extracting…</string>
+    <string name="archive_ongoing">Archiving…</string>
+    <string name="updating_archive">Updating archive…</string>
+    <string name="success">Success</string>
+    <string name="error">Error</string>
+    <string name="archive_created">Archive Created</string>
+    <string name="extraction_completed">Extraction Completed</string>
+    <string name="archive_updated">Archive Updated</string>
+    <string name="compression_completed">Compression Completed</string>
+
+    <!-- Notification content-->
+    <string name="copying_files_progress">Copying files: %1$d/%2$d</string>
+    <string name="moving_files_progress">Moving files: %1$d/%2$d</string>
+    <string name="deleting_files">Deleting files: %1$d/%2$d</string>
+    <string name="extracting_progress">Extracting… %1$d %%</string>
+    <string name="compressing_progress">Archiving… %1$d %%</string>
+    <string name="compression_ongoing">Compressing…</string>
+
+    <!-- Notification channel name-->
+    <string name="delete_files_notification_name">Delete File</string>
+    <string name="copy_move_files_notification_name">Copy/Move Files</string>
+    <string name="extract_archive_notification_name">Extract Archive</string>
+    <string name="compress_archive_notification_name">Compress Archive</string>
+    <string name="update_archive_service">Update Archive</string>
+
+    <!-- non-translatable strings -->
+    <string name="zip" translatable="false">ZIP</string>
+    <string name="_7z" translatable="false">7z</string>
+    <string name="rar" translatable="false">RAR</string>
+    <string name="lzma" translatable="false">LZMA</string>
+    <string name="bzip2" translatable="false">BZIP2</string>
+    <string name="xz" translatable="false">XZ</string>
+    <string name="gzip" translatable="false">GZIP</string>
+    <string name="liberapay" translatable="false">Liberapay</string>
+    <string name="author_wirelessalien" translatable="false">Author: Abhilash</string>
+    <string name="zstd" translatable="false">ZSTD</string>
+    <string name="md5" translatable="false">MD5</string>
+    <string name="sha1" translatable="false">SHA-1</string>
+    <string name="sha256" translatable="false">SHA-256</string>
+    <string name="change_unc" translatable="false">\u2699</string>
+</resources>

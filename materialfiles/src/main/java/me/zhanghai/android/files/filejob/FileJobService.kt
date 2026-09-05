@@ -21,6 +21,9 @@ import me.zhanghai.android.files.util.removeFirst
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import me.zhanghai.android.files.compat.removeFirstCompat
+import org.eds.zipxtract.core.ArchiveCreateOptions
+import org.eds.zipxtract.core.ArchiveFormat
+import org.eds.zipxtract.core.cleanupStalePrivateArchiveTempStores
 
 class FileJobService : Service() {
     private lateinit var wakeWifiLock: WakeWifiLock
@@ -37,6 +40,8 @@ class FileJobService : Service() {
 
         wakeWifiLock = WakeWifiLock(FileJobService::class.java.simpleName)
         notificationManager = ForegroundNotificationManager(this)
+        cleanupStalePrivateArchiveTempStores(cacheDir.resolve("zipxtract"))
+        cleanupStalePrivateArchiveTempStores(cacheDir.resolve("zipxtract-ui"))
         instance = this
 
         while (pendingJobs.isNotEmpty()) {
@@ -121,6 +126,54 @@ class FileJobService : Service() {
             context: Context
         ) {
             startJob(ArchiveFileJob(sources, archiveFile, format, filter, password), context)
+        }
+
+        /**
+         * Starts the provider-neutral ZipXtract path. The legacy overload above
+         * remains available for callers that still need libarchive's metadata
+         * writer; new UI uses this API so ZIP/7z/TAR share one engine.
+         */
+        fun archiveZipXtract(
+            sources: List<Path>,
+            archiveFile: Path,
+            format: ArchiveFormat,
+            options: ArchiveCreateOptions = ArchiveCreateOptions(),
+            password: CharArray? = null,
+            context: Context
+        ) {
+            startJob(
+                ZipXtractCreateJob(sources, archiveFile, format, options, password),
+                context,
+            )
+        }
+
+        fun extractZipXtract(
+            sources: List<Path>,
+            targetDirectory: Path,
+            createContainingDirectory: Boolean,
+            context: Context,
+            entries: Set<String>? = null,
+            password: CharArray? = null,
+        ) {
+            startJob(
+                ZipXtractExtractJob(
+                    sources,
+                    targetDirectory,
+                    createContainingDirectory,
+                    entries,
+                    password,
+                ),
+                context,
+            )
+        }
+
+        fun update7z(
+            archive: Path,
+            additions: List<Path>,
+            removals: Set<String>,
+            context: Context,
+        ) {
+            startJob(ZipXtractUpdate7zJob(archive, additions, removals), context)
         }
 
         fun copy(sources: List<Path>, targetDirectory: Path, context: Context) {

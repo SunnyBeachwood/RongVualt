@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- The embedded FTP server obtains its advertised LAN address from
          WifiManager and holds a Wi-Fi lock while it is serving clients. -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -48,6 +50,152 @@
             android:name="me.zhanghai.android.files.filelist.FileListActivity"
             android:exported="false"
             android:theme="@style/Theme.MaterialFiles.Material3" />
+        <!-- External archive entry point. FileListActivity stays private; this
+             bridge only accepts content:// and file:// objects and forwards
+             explicit URI grants. -->
+        <activity
+            android:name="org.eds.veracrypt.ui.ArchiveIntentActivity"
+            android:exported="true"
+            android:theme="@style/Theme.MaterialFiles.Material3">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:scheme="content" android:mimeType="application/zip" />
+                <data android:scheme="content" android:mimeType="application/java-archive" />
+                <data android:scheme="content" android:mimeType="application/vnd.android.package-archive" />
+                <data android:scheme="content" android:mimeType="application/x-7z-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-rar-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-rar" />
+                <data android:scheme="content" android:mimeType="application/rar" />
+                <data android:scheme="content" android:mimeType="application/vnd.rar" />
+                <data android:scheme="content" android:mimeType="application/x-tar" />
+                <data android:scheme="content" android:mimeType="application/gzip" />
+                <data android:scheme="content" android:mimeType="application/x-gzip" />
+                <data android:scheme="content" android:mimeType="application/zstd" />
+                <data android:scheme="content" android:mimeType="application/x-bzip" />
+                <data android:scheme="content" android:mimeType="application/x-bzip2" />
+                <data android:scheme="content" android:mimeType="application/x-compress" />
+                <data android:scheme="content" android:mimeType="application/x-xz" />
+                <data android:scheme="content" android:mimeType="application/x-lzma" />
+                <data android:scheme="content" android:mimeType="application/x-lz4" />
+                <data android:scheme="content" android:mimeType="application/x-lzip" />
+                <data android:scheme="content" android:mimeType="application/x-brotli" />
+                <data android:scheme="content" android:mimeType="application/x-apple-diskimage" />
+                <data android:scheme="content" android:mimeType="application/vnd.ms-cab-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-cab" />
+                <data android:scheme="content" android:mimeType="application/x-deb" />
+                <data android:scheme="content" android:mimeType="application/x-redhat-package-manager" />
+                <data android:scheme="content" android:mimeType="application/x-rpm" />
+                <data android:scheme="content" android:mimeType="application/x-ms-wim" />
+                <data android:scheme="content" android:mimeType="application/vnd.ms-htmlhelp" />
+                <data android:scheme="content" android:mimeType="application/x-cpio" />
+                <data android:scheme="content" android:mimeType="application/x-gtar" />
+                <data android:scheme="content" android:mimeType="application/x-gtar-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-java-archive" />
+                <data android:scheme="content" android:mimeType="application/x-zip-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-iso9660-image" />
+                <data android:scheme="file" android:mimeType="application/zip" />
+                <data android:scheme="file" android:mimeType="application/java-archive" />
+                <data android:scheme="file" android:mimeType="application/vnd.android.package-archive" />
+                <data android:scheme="file" android:mimeType="application/x-7z-compressed" />
+                <data android:scheme="file" android:mimeType="application/x-rar-compressed" />
+                <data android:scheme="file" android:mimeType="application/x-rar" />
+                <data android:scheme="file" android:mimeType="application/rar" />
+                <data android:scheme="file" android:mimeType="application/vnd.rar" />
+                <data android:scheme="file" android:mimeType="application/x-tar" />
+                <data android:scheme="file" android:mimeType="application/gzip" />
+                <data android:scheme="file" android:mimeType="application/x-gzip" />
+                <data android:scheme="file" android:mimeType="application/zstd" />
+                <data android:scheme="file" android:mimeType="application/x-bzip" />
+                <data android:scheme="file" android:mimeType="application/x-bzip2" />
+                <data android:scheme="file" android:mimeType="application/x-compress" />
+                <data android:scheme="file" android:mimeType="application/x-xz" />
+                <data android:scheme="file" android:mimeType="application/x-lzma" />
+                <data android:scheme="file" android:mimeType="application/x-lz4" />
+                <data android:scheme="file" android:mimeType="application/x-lzip" />
+                <data android:scheme="file" android:mimeType="application/x-brotli" />
+                <data android:scheme="file" android:mimeType="application/x-apple-diskimage" />
+                <data android:scheme="file" android:mimeType="application/vnd.ms-cab-compressed" />
+                <data android:scheme="file" android:mimeType="application/x-cab" />
+                <data android:scheme="file" android:mimeType="application/x-deb" />
+                <data android:scheme="file" android:mimeType="application/x-redhat-package-manager" />
+                <data android:scheme="file" android:mimeType="application/x-rpm" />
+                <data android:scheme="file" android:mimeType="application/x-ms-wim" />
+                <data android:scheme="file" android:mimeType="application/vnd.ms-htmlhelp" />
+                <data android:scheme="file" android:mimeType="application/x-cpio" />
+                <data android:scheme="file" android:mimeType="application/x-gtar" />
+                <data android:scheme="file" android:mimeType="application/x-gtar-compressed" />
+                <data android:scheme="file" android:mimeType="application/x-java-archive" />
+                <data android:scheme="file" android:mimeType="application/x-zip-compressed" />
+                <data android:scheme="file" android:mimeType="application/x-iso9660-image" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.zip.*" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.z..*" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.jar" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.apk" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.7z.*" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.rar.*" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.r.." />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.part.*\.rar" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.tar" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.gz" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.bz2" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.xz" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.zst" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.zstd" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.z" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.lzma" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.lz4" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.br" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.lzip" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.iso" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.cab" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.deb" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.rpm" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.dmg" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.wim" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.chm" />
+                <data android:scheme="content" android:mimeType="application/octet-stream" android:pathPattern=".*\.cpio" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.zip.*" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.z..*" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.jar" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.apk" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.7z.*" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.rar.*" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.r.." />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.part.*\.rar" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.tar" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.gz" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.bz2" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.xz" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.zst" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.zstd" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.z" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.lzma" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.lz4" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.br" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.lzip" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.iso" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.cab" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.deb" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.rpm" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.dmg" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.wim" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.chm" />
+                <data android:scheme="file" android:mimeType="application/octet-stream" android:pathPattern=".*\.cpio" />
+            </intent-filter>
+        </activity>
         <!-- The library's secondary screens are launched from FileListActivity
              but are separate activities. Give them the same upstream theme so
              they cannot inherit RongVault's Material theme by accident. -->

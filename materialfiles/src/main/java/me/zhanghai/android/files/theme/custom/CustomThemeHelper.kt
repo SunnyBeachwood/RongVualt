@@ -67,16 +67,28 @@ object CustomThemeHelper {
     private fun getCustomThemeRes(@StyleRes baseThemeRes: Int, context: Context): Int {
         val resources = context.resources
         val baseThemeName = resources.getResourceName(baseThemeRes)
-        val customThemeName = if (Settings.MATERIAL_DESIGN_3.valueCompat) {
-            val defaultThemeName = resources.getResourceEntryName(R.style.Theme_MaterialFiles)
-            val material3ThemeName =
-                resources.getResourceEntryName(R.style.Theme_MaterialFiles_Material3)
-            baseThemeName.replace(defaultThemeName, material3ThemeName)
+        val defaultThemeName = resources.getResourceEntryName(R.style.Theme_MaterialFiles)
+        val material3ThemeName =
+            resources.getResourceEntryName(R.style.Theme_MaterialFiles_Material3)
+        // FileListActivity is declared with the Material 3 base theme. Avoid
+        // producing `...Material3.Material3` when the setting is enabled and
+        // map that base back to the legacy family when an existing user has
+        // explicitly disabled Material 3.
+        val customThemeBaseName = if (Settings.MATERIAL_DESIGN_3.valueCompat) {
+            if (baseThemeName.contains(material3ThemeName)) baseThemeName
+            else baseThemeName.replaceFirst(defaultThemeName, material3ThemeName)
         } else {
+            val legacyBaseName = if (baseThemeName.contains(material3ThemeName)) {
+                baseThemeName.replaceFirst(material3ThemeName, defaultThemeName)
+            } else {
+                baseThemeName
+            }
             val themeColorName =
                 resources.getResourceEntryName(Settings.THEME_COLOR.valueCompat.resourceId)
-            "$baseThemeName.$themeColorName"
-        } + if (Settings.BLACK_NIGHT_MODE.valueCompat) ".Black" else ""
+            "$legacyBaseName.$themeColorName"
+        }
+        val customThemeName = customThemeBaseName +
+            if (Settings.BLACK_NIGHT_MODE.valueCompat) ".Black" else ""
         return resources.getIdentifier(customThemeName, null, null)
     }
 

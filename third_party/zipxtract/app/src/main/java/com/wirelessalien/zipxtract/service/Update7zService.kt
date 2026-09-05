@@ -1,0 +1,337 @@
+/*
+ *  Copyright (C) 2023  WirelessAlien <https://github.com/WirelessAlien>
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License, or
+ *     any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.wirelessalien.zipxtract.service
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.pm.ServiceInfo
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.IBinder
+import android.os.PowerManager
+import androidx.core.app.NotificationCompat
+import com.wirelessalien.zipxtract.R
+import com.wirelessalien.zipxtract.constant.BroadcastConstants
+import com.wirelessalien.zipxtract.constant.ServiceConstants
+import com.wirelessalien.zipxtract.helper.AppEvent
+import com.wirelessalien.zipxtract.helper.EventBus
+import com.wirelessalien.zipxtract.helper.FileOperationsDao
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import net.sf.sevenzipjbinding.IOutCreateCallback
+import net.sf.sevenzipjbinding.IOutItemAllFormats
+import net.sf.sevenzipjbinding.ISequentialInStream
+import net.sf.sevenzipjbinding.PropID
+import net.sf.sevenzipjbinding.SevenZip
+import net.sf.sevenzipjbinding.impl.OutItemFactory
+import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream
+import net.sf.sevenzipjbinding.impl.RandomAccessFileOutStream
+import java.io.Closeable
+import java.io.File
+import java.io.RandomAccessFile
+
+class Update7zService : Service() {
+
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private lateinit var fileOperationsDao: FileOperationsDao
+
+    companion object {
+        const val NOTIFICATION_ID = 24
+    }
+
+    private var updateJob: Job? = null
+    private lateinit var notificationManager: NotificationManager
+    private lateinit var notificationBuilder: NotificationCompat.Builder
+    private var totalSize: Long = 0
+    private var lastProgress = -1
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        fileOperationsDao = FileOperationsDao(this)
+        notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        createNotificationChannel()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val archivePath = intent?.getStringExtra(ServiceConstants.EXTRA_ARCHIVE_PATH) ?: run {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+        val itemsToAddJobId = intent.getStringExtra(ServiceConstants.EXTRA_ITEMS_TO_ADD_JOB_ID)
+        val itemsToRemoveJobId = intent.getStringExtra(ServiceConstants.EXTRA_ITEMS_TO_REMOVE_JOB_ID)
+
+        lastProgress = -1
+        notificationBuilder = createNotificationBuilder()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, notificationBuilder.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            startForeground(NOTIFICATION_ID, notificationBuilder.build())
+        }
+
+        updateJob = serviceScope.launch {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ZipXtract:Update7zWakeLock")
+            wakeLock.acquire(60 * 60 * 1000L /*1 hour*/)
+            try {
+                val itemsToAdd = itemsToAddJobId?.let { fileOperationsDao.getFilePairsForJob(it) }
+                val itemsToRemovePaths = itemsToRemoveJobId?.let { fileOperationsDao.getFilesForJob(it) }
+
+                update7zFile(archivePath, itemsToAdd, itemsToRemovePaths)
+                itemsToAddJobId?.let { fileOperationsDao.deleteFilesForJob(it) }
+                itemsToRemoveJobId?.let { fileOperationsDao.deleteFilesForJob(it) }
+            } finally {
+                if (wakeLock.isHeld) wakeLock.release()
+                stopSelf(startId)
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    private fun update7zFile(
+        archivePath: String,
+        itemsToAdd: List<Pair<String, String?>>?,
+        itemsToRemovePaths: List<String>?
+    ) {
+        val closeables = ArrayList<Closeable>()
+        var tmpFile: File? = null
+        var success = false
+        try {
+            val inStream = RandomAccessFileInStream(RandomAccessFile(archivePath, "r"))
+            val inArchive = SevenZip.openInArchive(null, inStream)
+            closeables.add(inArchive)
+
+            val outArchive = inArchive.connectedOutArchive
+            tmpFile = File.createTempFile("7z-update", ".tmp")
+            val outStream = RandomAccessFileOutStream(RandomAccessFile(tmpFile, "rw"))
+            closeables.add(outStream)
+
+            val itemsToRemoveIndices = mutableListOf<Int>()
+            if (itemsToRemovePaths != null) {
+                val normalizedItemsToRemovePaths = itemsToRemovePaths.map { it.replace("\\", "/") }
+                for (i in 0 until inArchive.numberOfItems) {
+                    val itemPath = (inArchive.getProperty(i, PropID.PATH) as String).replace("\\", "/")
+                    for (pathToRemove in normalizedItemsToRemovePaths) {
+                        if (itemPath == pathToRemove || itemPath.startsWith("$pathToRemove/")) {
+                            itemsToRemoveIndices.add(i)
+                            break
+                        }
+                    }
+                }
+            }
+            itemsToRemoveIndices.sort()
+
+            val filesToAdd = if (itemsToAdd != null) {
+                getFilesToAdd(itemsToAdd)
+            } else {
+                emptyList()
+            }
+
+            val numToAdd = filesToAdd.size
+            val newCount = inArchive.numberOfItems - itemsToRemoveIndices.size + numToAdd
+
+            outArchive.updateItems(outStream, newCount, object : IOutCreateCallback<IOutItemAllFormats> {
+                override fun setOperationResult(p0: Boolean) {}
+                override fun setTotal(size: Long) {
+                    totalSize = size
+                }
+
+                override fun setCompleted(completed: Long) {
+                    val progress = if (totalSize == 0L) 0 else (completed * 100 / totalSize).toInt()
+                    if (progress > lastProgress) {
+                        lastProgress = progress
+                        updateNotification(progress)
+                        sendProgressBroadcast(progress)
+                    }
+                }
+
+                override fun getItemInformation(
+                    index: Int,
+                    outItemFactory: OutItemFactory<IOutItemAllFormats>
+                ): IOutItemAllFormats {
+                    if (index >= inArchive.numberOfItems - itemsToRemoveIndices.size) {
+                        // This is a new item
+                        val addItemIndex = index - (inArchive.numberOfItems - itemsToRemoveIndices.size)
+                        val (file, pathInArchive) = filesToAdd[addItemIndex]
+                        val outItem = outItemFactory.createOutItem()
+                        outItem.propertyPath = pathInArchive
+                        outItem.propertyLastModificationTime = java.util.Date(file.lastModified())
+                        if (file.isDirectory) {
+                            outItem.propertyIsDir = true
+                        } else {
+                            outItem.dataSize = file.length()
+                        }
+                        return outItem
+                    }
+
+                    var oldIndex = index
+                    var removedCount = 0
+                    for (removedIndex in itemsToRemoveIndices) {
+                        if (oldIndex + removedCount >= removedIndex) {
+                            removedCount++
+                        }
+                    }
+                    oldIndex += removedCount
+
+                    return outItemFactory.createOutItem(oldIndex)
+                }
+
+                override fun getStream(index: Int): ISequentialInStream? {
+                    if (index >= inArchive.numberOfItems - itemsToRemoveIndices.size) {
+                        val addItemIndex = index - (inArchive.numberOfItems - itemsToRemoveIndices.size)
+                        val (file, _) = filesToAdd[addItemIndex]
+                        if (file.isFile) {
+                            val stream = RandomAccessFileInStream(RandomAccessFile(file, "r"))
+                            closeables.add(stream)
+                            return stream
+                        }
+                    }
+                    return null
+                }
+            })
+
+            inArchive.close()
+            closeables.remove(inArchive)
+            outStream.close()
+            closeables.remove(outStream)
+
+            val originalFile = File(archivePath)
+            tmpFile.copyTo(originalFile, overwrite = true)
+
+            success = true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            EventBus.emit(AppEvent.ArchiveError(e.message))
+        } finally {
+            for (i in closeables.indices.reversed()) {
+                try {
+                    closeables[i].close()
+                } catch (e: Exception) {
+                    success = false
+                }
+            }
+            tmpFile?.delete()
+        }
+
+        if (success) {
+            showCompletionNotification(File(archivePath))
+            EventBus.emit(AppEvent.ArchiveComplete(null))
+        } else {
+            showErrorNotification(getString(R.string.error_updating_archive))
+            EventBus.emit(AppEvent.ArchiveError(getString(R.string.error_updating_archive)))
+        }
+        stopForegroundService()
+    }
+
+    private fun getFilesToAdd(
+        itemsToAdd: List<Pair<String, String?>>
+    ): List<Pair<File, String>> {
+        val fileList = mutableListOf<Pair<File, String>>()
+        for ((path, name) in itemsToAdd) {
+            val file = File(path)
+            if (file.isDirectory) {
+                file.walkTopDown().filter { it.isFile }.forEach {
+                    val relativePath = it.absolutePath.substring(file.absolutePath.length).removePrefix("/")
+                    val archivePath = if (relativePath.isEmpty()) name else "$name/$relativePath"
+                    fileList.add(Pair(it, archivePath!!))
+                }
+            } else {
+                fileList.add(Pair(file, name!!))
+            }
+        }
+        return fileList
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+        updateJob?.cancel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                BroadcastConstants.ARCHIVE_NOTIFICATION_CHANNEL_ID,
+                getString(R.string.update_archive_service),
+                NotificationManager.IMPORTANCE_LOW
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun createNotificationBuilder(): NotificationCompat.Builder {
+        return NotificationCompat.Builder(this, BroadcastConstants.ARCHIVE_NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.updating_archive))
+            .setSmallIcon(R.drawable.ic_notification_icon)
+            .setProgress(100, 0, true)
+            .setOngoing(true)
+    }
+
+    private var lastNotifyTime = 0L
+
+    private fun updateNotification(progress: Int) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastNotifyTime >= 500 || progress == 100 || progress == 0) {
+            lastNotifyTime = currentTime
+            notificationBuilder.setProgress(100, progress, false)
+                .setContentText("$progress%")
+            notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+        }
+    }
+
+    private fun sendProgressBroadcast(progress: Int) {
+        EventBus.emit(AppEvent.ArchiveProgress(progress))
+    }
+
+    private fun stopForegroundService() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        notificationManager.cancel(NOTIFICATION_ID)
+    }
+
+    private fun showCompletionNotification(file: File) {
+        val notification = NotificationCompat.Builder(this, BroadcastConstants.ARCHIVE_NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.archive_updated))
+            .setContentText(file.name)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("${file.name} - ${file.parent}"))
+            .setSmallIcon(R.drawable.ic_notification_icon)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID + 1, notification)
+    }
+
+    private fun showErrorNotification(error: String) {
+        val notification = NotificationCompat.Builder(this, BroadcastConstants.ARCHIVE_NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.error))
+            .setContentText(error)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(error))
+            .setSmallIcon(R.drawable.ic_notification_icon)
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(NOTIFICATION_ID + 2, notification)
+    }
+}

@@ -22,15 +22,20 @@ class UnlockedVolumeManager(
 
     fun add(containerId: UUID, displayName: String, session: VolumeSession): UnlockedVolume {
         require(displayName.isNotBlank()) { "Unlocked volume display name is required" }
-        synchronized(lock) {
+        val volume = synchronized(lock) {
             check(entries.values.none { it.containerId == containerId }) {
                 "A container can expose only one unlocked volume at a time"
             }
             val volume = UnlockedVolume(UUID.randomUUID(), containerId, displayName, session)
             entries[volume.id] = volume
             publishLocked()
-            return volume
+            volume
         }
+        // Install outside the manager lock. Session shutdown invokes this
+        // callback while holding its own lock, so taking locks in the reverse
+        // order here could deadlock an add racing with automatic locking.
+        installBeforeCloseListener(volume)
+        return volume
     }
 
     fun find(id: UUID): UnlockedVolume? = synchronized(lock) { entries[id] }
@@ -59,19 +64,26 @@ class UnlockedVolumeManager(
     }
 
     /** Restores a temporarily detached root after a failed sensitive operation. */
-    internal fun restore(volume: UnlockedVolume) = synchronized(lock) {
-        check(entries[volume.id] == null) { "A root already occupies the detached volume ID" }
-        entries[volume.id] = volume
-        publishLocked()
+    internal fun restore(volume: UnlockedVolume) {
+        synchronized(lock) {
+            check(entries[volume.id] == null) { "A root already occupies the detached volume ID" }
+            entries[volume.id] = volume
+            publishLocked()
+        }
+        installBeforeCloseListener(volume)
     }
 
     /** Atomically puts a dependent hidden session behind the previous root ID. */
-    internal fun replace(detached: UnlockedVolume, hiddenSession: VolumeSession): UnlockedVolume = synchronized(lock) {
-        check(entries[detached.id] == null) { "A root already occupies the detached volume ID" }
-        val replacement = UnlockedVolume(detached.id, detached.containerId, detached.displayName, hiddenSession)
-        entries[replacement.id] = replacement
-        publishLocked()
-        replacement
+    internal fun replace(detached: UnlockedVolume, hiddenSession: VolumeSession): UnlockedVolume {
+        val replacement = synchronized(lock) {
+            check(entries[detached.id] == null) { "A root already occupies the detached volume ID" }
+            val replacement = UnlockedVolume(detached.id, detached.containerId, detached.displayName, hiddenSession)
+            entries[replacement.id] = replacement
+            publishLocked()
+            replacement
+        }
+        installBeforeCloseListener(replacement)
+        return replacement
     }
 
     fun touch(id: UUID) = synchronized(lock) { entries[id] }?.session?.touch()
@@ -129,6 +141,25 @@ class UnlockedVolumeManager(
 
     private fun publishLocked() {
         mutableVolumes.value = entries.values.sortedBy { it.displayName.lowercase() }
+    }
+
+    /**
+     * Managed sessions can close themselves when their idle timer expires.
+     * Remove that root before the session's native onClose callback runs so
+     * FTP and DocumentsProvider clients cannot race a closing descriptor.
+     */
+    private fun installBeforeCloseListener(volume: UnlockedVolume) {
+        (volume.session as? BeforeCloseAwareSession)?.setBeforeCloseListener {
+            val removed = synchronized(lock) {
+                val current = entries[volume.id]
+                if (current?.session !== volume.session) null else {
+                    entries.remove(volume.id)
+                    publishLocked()
+                    current
+                }
+            }
+            removed?.let(onVolumeClosed)
+        }
     }
 }
 

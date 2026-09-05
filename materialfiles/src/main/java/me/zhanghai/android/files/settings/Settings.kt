@@ -39,6 +39,14 @@ object Settings {
             Paths.get(Environment.getExternalStorageDirectory().absolutePath)
         )
 
+    /** Initial directory used by the right pane of the native dual-pane browser. */
+    val FILE_LIST_SECONDARY_START_DIRECTORY: SettingLiveData<Path> =
+        ParcelValueSettingLiveData(
+            R.string.pref_key_file_list_secondary_start_directory,
+            @Suppress("DEPRECATION")
+            Paths.get(Environment.getExternalStorageDirectory().absolutePath)
+        )
+
     val FILE_LIST_PERSISTENT_DRAWER_OPEN: SettingLiveData<Boolean> =
         BooleanSettingLiveData(
             R.string.pref_key_file_list_persistent_drawer_open,

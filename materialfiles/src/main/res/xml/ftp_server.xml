@@ -17,6 +17,13 @@
     <me.zhanghai.android.files.ftpserver.FtpServerUrlPreference
         android:title="@string/ftp_server_url_title" />
 
+    <Preference
+        android:key="ftp_server_security_warning"
+        android:title="@string/ftp_server_security_warning_title"
+        android:summary="@string/ftp_server_security_warning_summary"
+        android:selectable="false"
+        android:persistent="false" />
+
     <me.zhanghai.android.files.ftpserver.FtpServerAddTilePreference
         android:title="@string/ftp_server_add_tile_title"
         app:isPreferenceVisible="@bool/pref_visible_ftp_server_add_tile" />

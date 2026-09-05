@@ -35,8 +35,8 @@ android {
         applicationId providers.gradleProperty('EDS_APPLICATION_ID').orElse('app.rongvault').get()
         minSdk 35
         targetSdk 37
-        versionCode 6
-        versionName '1.1.0'
+        versionCode 8
+        versionName '1.3.0'
         buildConfigField 'String', 'RONGVAULT_SOURCE_URL', '"' + sourceUrl.replace('"', '\\"') + '"'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
@@ -130,6 +130,17 @@ android {
         coreLibraryDesugaringEnabled true
     }
     packaging {
+        jniLibs {
+            // ZipXtract's JBinding/libarchive loaders use System.loadLibrary;
+            // keep the native payload in the extractable form used by the
+            // upstream Android packaging configuration.
+            useLegacyPackaging true
+            keepDebugSymbols += [
+                    'lib7-Zip-JBinding.so',
+                    'libarchive-jni.so',
+                    'libzstd-jni-1.5.7-2.so'
+            ]
+        }
         resources {
             excludes += [
                     'META-INF/LICENSE.txt', 'META-INF/LICENSE', 'META-INF/NOTICE.txt',
@@ -179,6 +190,7 @@ dependencies {
     androidTestImplementation 'androidx.test:core:1.6.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
     androidTestImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'commons-net:commons-net:3.8.0'
 }
 
 // Release artifacts must never be produced with a fallback, debug, or

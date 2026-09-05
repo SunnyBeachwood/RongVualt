@@ -8,6 +8,7 @@ package me.zhanghai.android.files.ftpserver
 import android.app.PendingIntent
 import android.app.Service
 import android.os.Build
+import android.content.pm.ServiceInfo
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
@@ -38,10 +39,14 @@ val ftpServerServiceNotificationTemplate =
 
 class FtpServerNotification(private val service: Service) {
     private val receiver = FtpServerUrl.createChangeReceiver(service) { doStartForeground() }
+    private var receiverRegistered = false
 
     fun startForeground() {
         doStartForeground()
-        receiver.register()
+        if (!receiverRegistered) {
+            receiver.register()
+            receiverRegistered = true
+        }
     }
 
     private fun doStartForeground() {
@@ -66,11 +71,19 @@ class FtpServerNotification(private val service: Service) {
                 R.drawable.stop_icon_white_24dp, service.getString(R.string.stop), stopPendingIntent
             )
             .build()
-        service.startForeground(NotificationIds.FTP_SERVER, notification)
+        ServiceCompat.startForeground(
+            service,
+            NotificationIds.FTP_SERVER,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+        )
     }
 
     fun stopForeground() {
-        receiver.unregister()
+        if (receiverRegistered) {
+            runCatching { receiver.unregister() }
+            receiverRegistered = false
+        }
         service.stopForegroundCompat(ServiceCompat.STOP_FOREGROUND_REMOVE)
     }
 }

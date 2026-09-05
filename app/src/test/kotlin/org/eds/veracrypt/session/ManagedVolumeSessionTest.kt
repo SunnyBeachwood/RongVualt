@@ -49,6 +49,30 @@ class ManagedVolumeSessionTest {
     }
 
     @Test
+    fun beforeCloseListenerRunsBeforeNativeCleanup() {
+        val dispatcher = StandardTestDispatcher()
+        val scope = TestScope(dispatcher)
+        var nativeClosed = false
+        var listenerSawOpenNativeState = false
+        val session = ManagedVolumeSession(
+            1L,
+            VolumeAccessMode.READ_ONLY,
+            VolumeKind.NORMAL,
+            scope,
+        ) {
+            nativeClosed = true
+        }
+        session.setBeforeCloseListener {
+            listenerSawOpenNativeState = !nativeClosed
+        }
+
+        session.close()
+
+        check(listenerSawOpenNativeState)
+        check(nativeClosed)
+    }
+
+    @Test
     fun closingOuterSessionClosesDependentHiddenSession() {
         val dispatcher = StandardTestDispatcher()
         val scope = TestScope(dispatcher)

@@ -202,7 +202,6 @@ class FileListAdapter(
             }
             popupMenu = PopupMenu(menuButton.context, menuButton)
                 .apply { inflate(R.menu.file_item) }
-            menuButton.setOnClickListener { popupMenu.show() }
         }
     }
 
@@ -244,12 +243,21 @@ class FileListAdapter(
                 }
             }
             setOnLongClickListener {
-                if (selectedFiles.isEmpty()) {
-                    selectFile(file)
+                if (listener.onFileLongClick(file)) {
+                    true
                 } else {
-                    listener.openFile(file)
+                    if (selectedFiles.isEmpty()) {
+                        selectFile(file)
+                    } else {
+                        listener.openFile(file)
+                    }
+                    true
                 }
-                true
+            }
+        }
+        holder.menuButton.setOnClickListener {
+            if (!listener.onFileMenuRequested(file)) {
+                holder.popupMenu.show()
             }
         }
         holder.iconLayout.setOnClickListener { selectFile(file) }
@@ -487,5 +495,11 @@ class FileListAdapter(
         fun addBookmark(file: FileItem)
         fun createShortcut(file: FileItem)
         fun showPropertiesDialog(file: FileItem)
+
+        /** Return true when a host wants to replace the legacy popup menu. */
+        fun onFileMenuRequested(file: FileItem): Boolean = false
+
+        /** Return true when a host handled long-press interaction itself. */
+        fun onFileLongClick(file: FileItem): Boolean = false
     }
 }

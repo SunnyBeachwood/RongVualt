@@ -3,13 +3,34 @@
 Status terms: **planned** means no compatibility claim; **verified** requires
 both the listed VeraCrypt test vector and a desktop round trip.
 
-The RongVault 1.1.0 algorithm/KDF expansion is source-complete but deliberately
+The RongVault 1.2.0 algorithm/KDF expansion is source-complete but deliberately
 remains **planned (待编译/待验证)** throughout this matrix until the independent
 build and verification phase is run.
+
+RongVault 1.3.0 adds the ZipXtract archive engine and native file-manager
+actions. Archive rows are likewise **代码完成，未编译/未验证** until the
+release-first verification pass is authorized.
 
 The existing `CipherHint` names and numeric values, native request v2 framing,
 and saved credential record field order are unchanged; this matrix tracks only
 the newly exposed algorithms, KDFs, and capability coverage.
+
+## ZipXtract archive matrix (1.3.0)
+
+These rows describe the source-level routing; every row remains unverified until
+the release-first build and fixture pass is authorized.
+
+| Family | Read/extract route | Create/update | Status |
+| --- | --- | --- | --- |
+| ZIP/JAR/APK, standard and split | Zip4j; 7-Zip-JBinding for `.zip.001`/`.partN` | ZIP STORE/DEFLATE, Zip Standard/Strong/AES, optional split | code complete, not compiled/verified |
+| 7z and RAR/RAR5, split | 7-Zip-JBinding volume callbacks | 7z create; unencrypted 7z update only | code complete, not compiled/verified |
+| tar, tar.gz/bz2/xz/lzma/zst/lz4/br | Commons Compress + XZ/zstd/Brotli decoders | TAR family (Zstd level default 3) | code complete, not compiled/verified |
+| ISO/CAB/DEB/RPM/DMG/WIM/CHM/CPIO and Lzip fallback | Existing libarchive reader through the read-only archive filesystem | never mutated by ZipXtract jobs | code complete, not compiled/verified |
+
+Archive extraction rejects absolute/parent-traversing names, NULs, archive
+symlinks and hard links. Password buffers are transient character arrays and
+are wiped in the engine/job `finally` paths; archive entries are streamed rather
+than cached as plaintext files.
 
 ## Test corpus provenance
 
@@ -89,3 +110,19 @@ setting on constrained devices.
   full storage, process death, lock screen, and automatic session close.
 - Run native unit tests under ASan and UBSan, and fuzz header parsing and
   seekable-container boundary handling.
+
+## Root and FTP coverage (1.2.0)
+
+The following rows are deliberately source-only. They describe the required
+checks for the next build/device phase and do not claim that a Root device or a
+network client has been exercised yet.
+
+| Area | Required behavior | Status |
+| --- | --- | --- |
+| Root strategy | Preserve `NEVER`/`AUTOMATIC`/`ALWAYS` enum order, setting key, and default `AUTOMATIC`; dispatch denied mounted paths through libsu service 5.2.2 | planned (pending build/device verification) |
+| Root failure handling | Root unavailable, denied, timed out, or revoked returns an explicit error; no silent local fallback | planned (pending build/device verification) |
+| Root file operations | Browse, read, create, edit, copy, move, rename, delete, permissions, and properties on mounted paths; read-only/AVB/kernel restrictions remain effective; no block-device writes/remount | planned (pending build/device verification) |
+| FTP share roots | Persist ordinary/Root path in existing home-directory setting; keep one unlocked-volume path, runtime ID, and read-only state in process memory only | planned (pending build/device verification) |
+| FTP listener | Apache FtpServer 1.2.1/MINA 2.2.4, all interfaces, port 1..65535 validation, account login/2121/read-only defaults, explicit anonymous login/write opt-ins, specialUse foreground service | planned (pending build/protocol verification) |
+| FTP safety | Reject archives and FTP/SFTP/SMB/WebDAV roots; normalize paths, enforce `startsWith(homeDirectory)` boundary, reject `..` and symlink escapes | planned (pending unit/device verification) |
+| FTP volume lifecycle | Capture immutable root at start; touch active volume session during operations; stop clients/server before volume close; unlocked-root service start is non-sticky | planned (pending device verification) |

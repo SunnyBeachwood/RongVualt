@@ -8,6 +8,7 @@ import org.eds.veracrypt.catalog.ContainerCatalog
 import org.eds.veracrypt.credentials.CredentialVault
 import org.eds.veracrypt.documents.UnlockedVolumeService
 import org.eds.veracrypt.nativecore.NativeVeraCryptRepository
+import me.zhanghai.android.files.ftpserver.FtpServerService
 
 /** Process owner for catalog records and unlocked native sessions. */
 class VeraCryptApplication : Application() {
@@ -23,6 +24,7 @@ class VeraCryptApplication : Application() {
     }
 
     override fun onTerminate() {
+        FtpServerService.stopAndWait(this)
         UnlockedVolumeService.volumes.close()
         applicationJob.cancel()
         super.onTerminate()

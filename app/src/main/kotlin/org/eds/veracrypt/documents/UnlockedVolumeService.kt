@@ -3,6 +3,8 @@ package org.eds.veracrypt.documents
 import android.content.Context
 import android.provider.DocumentsContract
 import me.zhanghai.android.files.coil.clearFilePreviewMemoryCache
+import me.zhanghai.android.files.ftpserver.FtpServerService
+import me.zhanghai.android.files.ftpserver.FtpShareRootStore
 import me.zhanghai.android.files.navigation.RuntimeNavigationRoot
 import me.zhanghai.android.files.navigation.RuntimeNavigationRoots
 import me.zhanghai.android.files.provider.document.createDocumentTreeRootPath
@@ -32,6 +34,12 @@ internal object UnlockedVolumeService {
     private val foregroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val documentIds = OpaqueDocumentIdRegistry<UnlockedDocumentNode>()
     val volumes = UnlockedVolumeManager { volume ->
+        // FTP providers may still hold native-backed file handles. Stop the
+        // listener synchronously before the session is allowed to close, then
+        // remove the process-only root so a stale picker selection cannot be
+        // reused by a later service start.
+        FtpServerService.stopIfSharing(volume.id.toString())
+        FtpShareRootStore.invalidateRuntimeRoot(volume.id.toString())
         closeProxyFiles(volume.id)
         try {
             synchronized(nodes) { nodes.remove(volume.id) }
@@ -166,6 +174,7 @@ internal object UnlockedVolumeService {
                 ),
                 iconRes = com.sovworks.eds.android.R.drawable.ic_unlocked_container,
                 isReadOnly = volume.session.isReadOnly,
+                onAccess = volume.session::touch,
             )
         }
         RuntimeNavigationRoots.replace(roots)

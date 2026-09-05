@@ -1,0 +1,76 @@
+/*
+ *  Copyright (C) 2023  WirelessAlien <https://github.com/WirelessAlien>
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License, or
+ *     any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.wirelessalien.zipxtract.fragment
+
+import android.app.Dialog
+import android.content.DialogInterface
+import android.content.Intent
+import android.content.SharedPreferences
+import android.net.Uri
+import android.os.Bundle
+import androidx.fragment.app.DialogFragment
+import androidx.preference.PreferenceManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.wirelessalien.zipxtract.R
+import com.wirelessalien.zipxtract.databinding.FragmentDonationBinding
+
+class DonationFragment : DialogFragment() {
+
+   private lateinit var preference: SharedPreferences
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val binding = FragmentDonationBinding.inflate(layoutInflater)
+        val dView = binding.root
+
+        preference = PreferenceManager.getDefaultSharedPreferences(requireContext())
+
+        binding.libPayBtn.setOnClickListener {
+            val url = "https://liberapay.com/WirelessAlien/donate"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
+        }
+
+        binding.githubSBtn.setOnClickListener {
+            val url = "https://github.com/sponsors/WirelessAlien"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
+        }
+
+        binding.paypalBtn.setOnClickListener {
+            val url = "https://paypal.me/WirelessAlien"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
+        }
+
+        binding.kofiBtn.setOnClickListener {
+            val url = "https://ko-fi.com/wirelessalien"
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
+        }
+
+        return MaterialAlertDialogBuilder(requireContext(), R.style.MaterialDialog)
+            .setView(dView)
+            .create()
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        super.onDismiss(dialog)
+        preference.edit()
+            .putInt("donation_dialog_version1", 2)
+            .apply()
+    }
+}

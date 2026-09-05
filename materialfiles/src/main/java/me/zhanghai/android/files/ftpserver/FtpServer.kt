@@ -7,7 +7,7 @@ package me.zhanghai.android.files.ftpserver
 
 import java8.nio.file.Path
 import org.apache.ftpserver.ConnectionConfigFactory
-import org.apache.ftpserver.FtpServer
+import org.apache.ftpserver.FtpServer as ApacheFtpServer
 import org.apache.ftpserver.FtpServerFactory
 import org.apache.ftpserver.ftplet.FtpException
 import org.apache.ftpserver.listener.ListenerFactory
@@ -19,15 +19,19 @@ class FtpServer(
     private val password: String?,
     private val port: Int,
     private val homeDirectory: Path,
-    private val writable: Boolean
+    private val writable: Boolean,
+    private val anonymous: Boolean = false,
 ) {
-    private lateinit var server: FtpServer
+    private var server: ApacheFtpServer? = null
 
     @Throws(FtpException::class, RuntimeException::class)
     fun start() {
-        server = FtpServerFactory()
+        check(server == null) { "FTP server is already running" }
+        val configured = FtpServerFactory()
             .apply {
                 val listener = ListenerFactory()
+                    // An unset server address intentionally listens on all
+                    // interfaces; the UI advertises the primary LAN address.
                     .apply { port = this@FtpServer.port }
                     .createListener()
                 addListener("default", listener)
@@ -40,14 +44,27 @@ class FtpServer(
                 userManager.save(user)
                 fileSystem = ProviderFileSystemFactory()
                 connectionConfig = ConnectionConfigFactory()
-                    .apply { isAnonymousLoginEnabled = true }
+                    .apply { isAnonymousLoginEnabled = this@FtpServer.anonymous }
                     .createConnectionConfig()
             }
             .createServer()
-        server.start()
+        server = configured
+        try {
+            configured.start()
+        } catch (error: Throwable) {
+            server = null
+            runCatching { configured.stop() }
+            throw error
+        }
     }
 
     fun stop() {
-        server.stop()
+        server?.let {
+            try {
+                it.stop()
+            } finally {
+                server = null
+            }
+        }
     }
 }

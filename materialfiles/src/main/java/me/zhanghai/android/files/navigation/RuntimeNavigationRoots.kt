@@ -25,6 +25,27 @@ object RuntimeNavigationRoots {
 
     /** Whether a tree belongs to a currently unlocked, process-only container root. */
     fun contains(treeUri: Uri): Boolean = snapshot.any { it.treeUri == treeUri }
+
+    /** Returns the live unlocked root that contains [path], if any. */
+    fun findContaining(path: Path): RuntimeNavigationRoot? {
+        val normalizedPath = runCatching { path.normalize() }.getOrNull() ?: return null
+        return snapshot.firstOrNull { root ->
+            runCatching {
+                val normalizedRoot = root.path.normalize()
+                normalizedPath == normalizedRoot || normalizedPath.startsWith(normalizedRoot)
+            }.getOrDefault(false)
+        }
+    }
+
+    /**
+     * Records an operation on a process-only root. The callback is supplied by
+     * the owner of the root (RongVault's volume session) and is deliberately
+     * not persisted with navigation settings.
+     */
+    fun touch(path: Path): Boolean = findContaining(path)?.let { root ->
+        root.onAccess?.invoke()
+        true
+    } ?: false
 }
 
 data class RuntimeNavigationRoot(
@@ -35,4 +56,6 @@ data class RuntimeNavigationRoot(
     val subtitle: String?,
     @DrawableRes val iconRes: Int,
     val isReadOnly: Boolean,
+    /** Optional activity hook for process-only roots, never serialized. */
+    val onAccess: (() -> Unit)? = null,
 )

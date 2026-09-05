@@ -47,6 +47,19 @@
 -keep class me.zhanghai.android.files.provider.linux.syscall.** { *; }
 -keep class me.zhanghai.android.files.provider.common.ByteString { *; }
 
+# ZipXtract's 7-Zip callbacks and native loader are discovered by JNI and
+# reflection. Keep the provider-neutral facade as well as all binding types.
+-keep class org.eds.zipxtract.core.** { *; }
+-keep class net.sf.sevenzipjbinding.** { *; }
+-keep class net.sf.sevenzipjbinding.impl.** { *; }
+-keep class org.brotli.dec.** { *; }
+
+# These Material Files entry points are inflated by FragmentManager and
+# Preference XML, so their names must remain stable across release shrinking.
+-keep class me.zhanghai.android.files.filelist.DualPaneFileListFragment { *; }
+-keep class me.zhanghai.android.files.filelist.DualPaneFileListViewModel { *; }
+-keep class me.zhanghai.android.files.settings.SecondaryDirectoryPreference { *; }
+
 # vc_core invokes callbacks and constructs result/error objects through JNI.
 # Keep the complete bridge surface: R8 cannot see these native lookups and
 # would otherwise remove methods such as NativeUnlockProgress.onProgress().

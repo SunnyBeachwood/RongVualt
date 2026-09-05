@@ -256,10 +256,20 @@
         <item quantity="other">Delete %1$,d items?</item>
     </plurals>
     <string name="file_create_archive_title">Create archive</string>
+    <string name="file_create_archive_target">Target: %1$s</string>
+    <string name="file_create_archive_target_multiple">current directory</string>
     <string name="file_create_archive_type_zip">.zip</string>
-    <string name="file_create_archive_type_tar_xz">.tar.xz</string>
+    <string name="file_create_archive_type_tar_xz">TAR</string>
     <string name="file_create_archive_type_7z">.7z</string>
     <string name="file_create_archive_password">Password (optional)</string>
+    <string name="file_create_archive_advanced">Advanced options</string>
+    <string name="file_create_archive_compression">Compression</string>
+    <string name="file_create_archive_compression_level">Compression level</string>
+    <string name="file_create_archive_split_size">ZIP split size (KiB, optional)</string>
+    <string name="file_create_archive_7z_threads">7z threads</string>
+    <string name="file_create_archive_7z_solid">Solid 7z archive</string>
+    <string name="file_create_archive_large_split_title">Many ZIP volumes</string>
+    <string name="file_create_archive_large_split_message">This archive may create more than 100 volumes. Continue?</string>
     <string name="file_add_bookmark_success">Bookmark added</string>
     <string name="file_create_file_title">New file</string>
     <string name="file_create_directory_title">New folder</string>
@@ -297,6 +307,33 @@
     <string name="file_list_action_view_sort_path_specific">Only for this folder</string>
     <string name="file_list_action_new_task">New window</string>
     <string name="file_list_action_navigate_up">Go up</string>
+    <string name="file_list_action_layout_mode">Pane layout</string>
+    <string name="file_list_action_layout_auto">Automatic</string>
+    <string name="file_list_action_layout_single">Single pane</string>
+    <string name="file_list_action_layout_dual">Dual pane</string>
+    <string name="file_list_action_set_secondary_start">Set as right-pane startup folder</string>
+    <string name="file_list_secondary_start_directory_title">Right-pane startup folder</string>
+    <string name="file_list_secondary_start_directory_summary">Folder opened in the right pane when the file manager starts</string>
+    <string name="file_list_pane_left">Left pane</string>
+    <string name="file_list_pane_right">Right pane</string>
+    <string name="file_list_pane_current">Current</string>
+    <string name="file_list_pane_switch">Switch pane</string>
+    <string name="file_list_toolbar_active_format">%1$s · %2$,d selected</string>
+    <string name="file_list_action_back">Back</string>
+    <string name="file_list_action_forward">Forward</string>
+    <string name="file_list_action_new">New</string>
+    <string name="file_list_action_copy_to_other">Copy to other pane</string>
+    <string name="file_list_action_move_to_other">Move to other pane</string>
+    <string name="file_list_action_cancel_selection">Cancel</string>
+    <string name="file_list_action_selection_more">More selection actions</string>
+    <string name="file_list_action_select">Select</string>
+    <string name="file_list_action_copy_path_short">Copy path</string>
+    <string name="file_list_action_fix_secondary_success">Right-pane startup folder saved</string>
+    <string name="file_list_action_secondary_path_fallback">The saved right-pane folder is unavailable; using shared storage instead.</string>
+    <string name="file_list_pane_empty_message">This folder is empty</string>
+    <string name="file_list_pane_empty_hint">Use New to create a file or folder</string>
+    <string name="file_list_action_destination_read_only">The other pane is read-only.</string>
+    <string name="file_list_action_disabled_with_reason">%1$s: %2$s</string>
     <string name="file_list_action_navigate_to">Go to</string>
     <string name="file_list_navigate_to_title" translatable="false">@string/file_list_action_navigate_to</string>
     <string name="file_list_action_show_hidden_files">Show hidden files</string>
@@ -304,10 +341,15 @@
     <string name="file_list_action_open_in_terminal">Open in terminal</string>
     <string name="file_list_action_add_bookmark">Add bookmark</string>
     <string name="file_list_action_create_shortcut">Create shortcut</string>
+    <string name="file_list_action_archive_add">Add file to 7z archive</string>
+    <string name="file_list_action_archive_add_folder">Add folder to 7z archive</string>
     <string name="file_list_breadcrumb_action_copy_path" translatable="false">@string/file_list_action_copy_path</string>
     <string name="file_list_breadcrumb_action_open_in_new_task">Open in new window</string>
     <string name="file_list_select_title_format">%1$,d</string>
     <string name="file_list_select_action_extract" translatable="false">@string/file_item_action_extract</string>
+    <string name="file_list_select_action_extract_here">Extract here</string>
+    <string name="file_list_select_action_extract_choose">Choose extraction folder</string>
+    <string name="file_list_select_action_archive_delete_entries">Delete archive entries</string>
     <string name="file_list_select_action_archive" translatable="false">@string/file_item_action_archive</string>
     <string name="file_list_create_file_name_hint">File name</string>
     <string name="file_list_create_file_name_error_empty" translatable="false">@string/file_name_error_empty</string>
@@ -719,6 +761,8 @@
     <string name="ftp_server_state_summary_stopped">Not started</string>
     <string name="ftp_server_url_title">URL</string>
     <string name="ftp_server_url_summary_no_local_inet_address">Local IP address is unknown</string>
+    <string name="ftp_server_security_warning_title">Unencrypted FTP</string>
+    <string name="ftp_server_security_warning_summary">FTP transfers and credentials are sent without encryption. Use this server only on a trusted network.</string>
     <string name="ftp_server_url_menu_copy_url">Copy URL</string>
     <string name="ftp_server_url_menu_copy_password">Copy password</string>
     <string name="ftp_server_add_tile_title">Add to Quick Settings</string>
@@ -730,7 +774,7 @@
     <string name="ftp_server_username_title">Username</string>
     <string name="ftp_server_password_title">Password</string>
     <string name="ftp_server_port_title">Port</string>
-    <string name="ftp_server_home_directory_title">Root folder</string>
+    <string name="ftp_server_home_directory_title">Shared root folder</string>
     <string name="ftp_server_writable_title">Allow writing</string>
     <string name="ftp_server_notification_title" translatable="false">@string/ftp_server_title</string>
     <string name="ftp_server_notification_text_no_local_inet_address" translatable="false">@string/ftp_server_url_summary_no_local_inet_address</string>

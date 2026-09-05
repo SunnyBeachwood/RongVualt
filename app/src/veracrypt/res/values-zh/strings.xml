@@ -189,14 +189,14 @@ FAT/exFAT 支持读写，NTFS 仅支持只读。向外层卷写入时应启用�
 PIM 范围为 0 到 2147468，且必须与容器匹配。支持选择 6 种 KDF；Argon2id 会显示由 PIM 推导的内存量和迭代次数估算。隐藏卷保护会自动识别 KDF，以保持 native request v2 布局兼容。密钥文件不会保存为生物识别凭据。保存的凭据由 Android Keystore 加密。请备份卷头；忘记密码无法恢复。
 
 兼容格式
-容匣 1.1.0 注册了全部 15 种 VeraCrypt 非系统 XTS 算法用于打开和自动识别，并开放 Windows 版的 9 种创建算法。支持 PBKDF2-HMAC-SHA-512（默认）、SHA-256、BLAKE2s-256、Whirlpool、Streebog 和 Argon2id KDF。新增算法和 KDF 路径仍处于待编译、待验证状态。容匣是独立项目，与 VeraCrypt 没有官方关联或认可关系。</string>
+容匣 1.3.0 注册了全部 15 种 VeraCrypt 非系统 XTS 算法用于打开和自动识别，并开放 Windows 版的 9 种创建算法。支持 PBKDF2-HMAC-SHA-512（默认）、SHA-256、BLAKE2s-256、Whirlpool、Streebog 和 Argon2id KDF。内置文件管理器原生整合 ZipXtract，可处理 ZIP/JAR、7z、RAR/RAR5、TAR 和压缩流，并创建 ZIP/7z/TAR、在安全位置更新未加密 7z。Root 文件访问和本机 FTP 服务已加入源代码；Root、FTP、已解锁卷共享、归档夹具和设备兼容性仍处于待编译、待验证状态。明文 FTP 内容和凭据不会加密。容匣是独立项目，与 VeraCrypt 没有官方关联或认可关系。</string>
     <string name="rv_about_body">容匣 RongVault
 
-版本 1.1.0
+版本 1.3.0
 
-容匣在 Android 上离线访问兼容 VeraCrypt 的文件容器。容匣是独立项目，与 VeraCrypt 没有关联，也未获其认可。
+容匣在 Android 上离线访问兼容 VeraCrypt 的文件容器，并原生提供 ZipXtract 归档能力，同时通过 libsu 提供 Root 文件访问和本机 FTP 服务。容匣是独立项目，与 VeraCrypt 没有关联，也未获其认可。
 
-应用不申请网络权限，项目按 GPLv3 或更高版本发布。第三方组件包括 Botan、FatFs 和 libyal 项目，完整版权与许可证信息见项目许可证文件。</string>
+除非用户主动开启本机 FTP 监听，应用不会连接远程服务。FTP 内容和凭据不会加密。项目按 GPLv3 或更高版本发布。第三方组件包括 ZipXtract v7.1.1、Zip4j、7-Zip-JBinding、Apache Commons Compress、libsu 5.2.2、Apache FtpServer 1.2.1/MINA 2.2.4、Botan、FatFs 和 libyal 项目，完整版权与许可证信息见项目许可证文件。</string>
     <string name="vc_foreground_title">VeraCrypt 正在运行</string>
     <string name="vc_foreground_processing">正在处理加密卷</string>
     <string name="vc_foreground_unlocking_one">正在解锁加密卷：%1$s</string>

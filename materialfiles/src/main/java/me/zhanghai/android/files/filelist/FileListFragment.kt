@@ -45,13 +45,19 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.leinardi.android.speeddial.SpeedDialView
 import java8.nio.file.Path
 import java8.nio.file.Paths
+import java.util.Locale
 import kotlinx.parcelize.Parcelize
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.clipboardManager
@@ -70,6 +76,7 @@ import me.zhanghai.android.files.file.extension
 import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.file.isApk
 import me.zhanghai.android.files.file.isMarkdownFile
+import me.zhanghai.android.files.file.loadFileItem
 import me.zhanghai.android.files.viewer.text.TextEditorActivity
 import me.zhanghai.android.files.file.isImage
 import me.zhanghai.android.files.filejob.FileJobService
@@ -82,6 +89,8 @@ import me.zhanghai.android.files.navigation.NavigationFragment
 import me.zhanghai.android.files.navigation.NavigationRootMapLiveData
 import me.zhanghai.android.files.navigation.RuntimeNavigationRoots
 import me.zhanghai.android.files.provider.archive.createArchiveRootPath
+import me.zhanghai.android.files.provider.archive.archiveFile
+import me.zhanghai.android.files.provider.document.isDocumentPath
 import me.zhanghai.android.files.provider.document.resolver.DocumentResolver
 import me.zhanghai.android.files.provider.archive.isArchivePath
 import me.zhanghai.android.files.provider.linux.isLinuxPath
@@ -135,6 +144,12 @@ import me.zhanghai.android.files.util.viewModels
 import me.zhanghai.android.files.util.withChooser
 import me.zhanghai.android.files.viewer.image.ImageViewerActivity
 import me.zhanghai.android.files.viewer.markdown.MarkdownViewerActivity
+import org.eds.zipxtract.core.ArchiveCreateOptions
+import org.eds.zipxtract.core.ArchiveEditPolicy
+import org.eds.zipxtract.core.ArchiveFormat
+import org.eds.zipxtract.core.PrivateArchiveTempStore
+import org.eds.zipxtract.core.ZipXtractArchiveEngine
+import me.zhanghai.android.files.provider.archive.zipxtract.PathArchiveSource
 import kotlin.math.roundToInt
 
 class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.Listener,
@@ -166,6 +181,20 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         RequestPermissionInSettingsContract(android.Manifest.permission.POST_NOTIFICATIONS),
         this::onRequestNotificationPermissionInSettingsResult
     )
+    private val chooseExtractionDirectoryLauncher = registerForActivityResult(
+        FileListActivity.OpenDirectoryContract(), this::onExtractionDirectoryResult
+    )
+    private val chooseArchiveAdditionLauncher = registerForActivityResult(
+        FileListActivity.OpenFileContract(), this::onArchiveAdditionResult
+    )
+    private val chooseArchiveAdditionFolderLauncher = registerForActivityResult(
+        FileListActivity.OpenDirectoryContract(), this::onArchiveAdditionFolderResult
+    )
+
+    private var pendingExtractionSources: List<Path>? = null
+    private var externalArchiveDialogShown = false
+    private var archiveEditProbePath: Path? = null
+    private var canEditCurrentArchive = false
 
     private val args by args<Args>()
     private val argsPath by lazy { args.intent.extraPath }
@@ -453,9 +482,19 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     override fun onPrepareOptionsMenu(menu: Menu) {
         super.onPrepareOptionsMenu(menu)
 
+        // These actions belong to the RongVualt dual-pane shell. The legacy
+        // single-pane fragment remains the implementation used by external
+        // document pickers and must not expose them.
+        menu.findItem(R.id.action_layout_mode)?.isVisible = false
+        menu.findItem(R.id.action_set_secondary_start)?.isVisible = false
+        menu.findItem(R.id.action_selection_more)?.isVisible = false
+
         updateViewSortMenuItems()
         updateSelectAllMenuItem()
         updateShowHiddenFilesMenuItem()
+        val canAddToArchive = currentSevenZArchiveRoot() != null && canEditCurrentArchive
+        menu.findItem(R.id.action_archive_add)?.isVisible = canAddToArchive
+        menu.findItem(R.id.action_archive_add_folder)?.isVisible = canAddToArchive
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -527,6 +566,14 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 refresh()
                 true
             }
+            R.id.action_archive_add -> {
+                chooseArchiveAddition()
+                true
+            }
+            R.id.action_archive_add_folder -> {
+                chooseArchiveAdditionFolder()
+                true
+            }
             R.id.action_select_all -> {
                 selectAllFiles()
                 true
@@ -595,6 +642,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private fun onCurrentPathChanged(path: Path) {
         updateOverlayToolbar()
         updateBottomToolbar()
+        updateArchiveEditCapability()
+        requireActivity().invalidateOptionsMenu()
     }
 
     private fun onSearchViewExpandedChanged(expanded: Boolean) {
@@ -632,6 +681,31 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         }
         if (stateful is Success) {
             viewModel.pendingState?.let { layoutManager.onRestoreInstanceState(it) }
+            maybeHandleExternalArchiveIntent()
+        }
+    }
+
+    private fun maybeHandleExternalArchiveIntent() {
+        if (externalArchiveDialogShown) return
+        // DialogFragment state is restored by FragmentManager across a
+        // configuration change. Do not enqueue a second archive dialog while
+        // the restored instance is still attached.
+        if (childFragmentManager.fragments.any { it is CreateArchiveDialogFragment }) {
+            externalArchiveDialogShown = true
+            return
+        }
+        val intent = args.intent
+        if (!intent.getBooleanExtra(FileListActivity.EXTRA_EXTERNAL_CREATE_ARCHIVE, false)) return
+        val paths = intent.extraPathList
+        if (paths.isEmpty()) return
+        externalArchiveDialogShown = true
+        lifecycleScope.launch {
+            val files = withContext(Dispatchers.IO) {
+                paths.mapNotNull { path -> runCatching { path.loadFileItem() }.getOrNull() }
+            }
+            if (files.isNotEmpty() && isAdded) {
+                showCreateArchiveDialog(FileItemSet().apply { addAll(files) })
+            }
         }
     }
 
@@ -906,8 +980,17 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 )
             menu.findItem(R.id.action_delete).isVisible = !isAnyFileReadOnly
             val areAllFilesArchiveFiles = files.all { it.isArchiveFile }
-            menu.findItem(R.id.action_extract).isVisible = areAllFilesArchiveFiles
             val isCurrentPathReadOnly = viewModel.currentPath.fileSystem.isReadOnly
+            // Both in-place extraction actions create siblings in the current
+            // directory. Keep them hidden on read-only volume roots; the
+            // choose-location action remains available for an external target.
+            menu.findItem(R.id.action_extract).isVisible =
+                areAllFilesArchiveFiles && !isCurrentPathReadOnly
+            menu.findItem(R.id.action_extract_here).isVisible =
+                areAllFilesArchiveFiles && !isCurrentPathReadOnly
+            menu.findItem(R.id.action_extract_choose).isVisible = areAllFilesArchiveFiles
+            menu.findItem(R.id.action_archive_delete_entries).isVisible =
+                areAllFilesArchivePaths && currentSevenZArchiveFile() != null && canEditCurrentArchive
             menu.findItem(R.id.action_archive).isVisible = !isCurrentPathReadOnly
         }
         if (!overlayActionMode.isActive) {
@@ -952,6 +1035,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             }
             R.id.action_extract -> {
                 extractFiles(viewModel.selectedFiles)
+                true
+            }
+            R.id.action_extract_here -> {
+                extractFilesHere(viewModel.selectedFiles)
+                true
+            }
+            R.id.action_extract_choose -> {
+                chooseExtractionDirectory(viewModel.selectedFiles)
+                true
+            }
+            R.id.action_archive_delete_entries -> {
+                deleteArchiveEntries(viewModel.selectedFiles)
                 true
             }
             R.id.action_archive -> {
@@ -1008,8 +1103,140 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun extractFiles(files: FileItemSet) {
-        copyFiles(files.mapTo(fileItemSetOf()) { it.createDummyArchiveRoot() })
+        FileJobService.extractZipXtract(
+            makePathListForJob(files),
+            viewModel.currentPath,
+            createContainingDirectory = true,
+            context = requireContext(),
+        )
         viewModel.selectFiles(files, false)
+    }
+
+    private fun extractFilesHere(files: FileItemSet) {
+        FileJobService.extractZipXtract(
+            makePathListForJob(files),
+            viewModel.currentPath,
+            createContainingDirectory = false,
+            context = requireContext(),
+        )
+        viewModel.selectFiles(files, false)
+    }
+
+    private fun chooseExtractionDirectory(files: FileItemSet) {
+        pendingExtractionSources = makePathListForJob(files)
+        chooseExtractionDirectoryLauncher.launch(viewModel.currentPath)
+    }
+
+    private fun onExtractionDirectoryResult(path: Path?) {
+        val sources = pendingExtractionSources ?: return
+        pendingExtractionSources = null
+        if (path == null) return
+        FileJobService.extractZipXtract(
+            sources,
+            path,
+            createContainingDirectory = true,
+            context = requireContext(),
+        )
+        viewModel.clearSelectedFiles()
+    }
+
+    private fun currentSevenZArchiveRoot(): Path? {
+        val current = viewModel.currentPath
+        if (!current.isArchivePath || current.nameCount != 0) return null
+        return currentSevenZArchiveFile()
+    }
+
+    private fun currentSevenZArchiveFile(): Path? {
+        val current = viewModel.currentPath
+        if (!current.isArchivePath) return null
+        val archive = runCatching { current.archiveFile }.getOrNull() ?: return null
+        val name = archive.fileName?.toString()?.lowercase(Locale.ROOT) ?: return null
+        return archive.takeIf { name.endsWith(".7z") }
+    }
+
+    private fun updateArchiveEditCapability() {
+        val archive = currentSevenZArchiveFile()
+        if (archive == archiveEditProbePath) return
+        archiveEditProbePath = archive
+        canEditCurrentArchive = false
+        if (archive == null) return
+        val context = requireContext()
+        lifecycleScope.launch {
+            val editable = withContext(Dispatchers.IO) {
+                if (!(archive.isLinuxPath || archive.isDocumentPath) || archive.fileSystem.isReadOnly) {
+                    false
+                } else {
+                    val root = context.cacheDir.resolve("zipxtract-ui")
+                    if (!root.mkdirs() && !root.isDirectory) {
+                        false
+                    } else {
+                        val store = PrivateArchiveTempStore(root)
+                        try {
+                            val engine = ZipXtractArchiveEngine(store)
+                            val probe = engine.probe(PathArchiveSource(archive))
+                            ArchiveEditPolicy.canUpdate7z(probe, true) &&
+                                engine.list(PathArchiveSource(archive)).none { it.encrypted }
+                        } catch (_: Throwable) {
+                            false
+                        } finally {
+                            store.close()
+                        }
+                    }
+                }
+            }
+            if (isAdded && archive == archiveEditProbePath) {
+                canEditCurrentArchive = editable
+                requireActivity().invalidateOptionsMenu()
+                updateOverlayToolbar()
+            }
+        }
+    }
+
+    private fun chooseArchiveAddition() {
+        if (currentSevenZArchiveRoot() == null) return
+        chooseArchiveAdditionLauncher.launch(listOf(MimeType.ANY))
+    }
+
+    private fun chooseArchiveAdditionFolder() {
+        if (currentSevenZArchiveRoot() == null) return
+        chooseArchiveAdditionFolderLauncher.launch(null)
+    }
+
+    private fun onArchiveAdditionResult(path: Path?) {
+        val archive = currentSevenZArchiveRoot() ?: return
+        if (path == null) return
+        FileJobService.update7z(archive, listOf(path), emptySet(), requireContext())
+        refresh()
+    }
+
+    private fun onArchiveAdditionFolderResult(path: Path?) {
+        val archive = currentSevenZArchiveRoot() ?: return
+        if (path == null) return
+        FileJobService.update7z(archive, listOf(path), emptySet(), requireContext())
+        refresh()
+    }
+
+    private fun deleteArchiveEntries(files: FileItemSet) {
+        val archive = currentSevenZArchiveFile() ?: return
+        // FileItem.name is only the basename.  Use the path relative to the
+        // archive root (rather than the current nested directory) so deleting
+        // `foo/bar` addresses the actual 7z entry instead of a root `bar`.
+        val archiveRoot = viewModel.currentPath.root ?: return
+        val names = files.mapNotNull { file ->
+            val relative = runCatching {
+                archiveRoot.relativize(file.path)
+            }.getOrNull() ?: return@mapNotNull null
+            if (relative.isAbsolute) return@mapNotNull null
+            relative.toString().replace('\\', '/')
+                .trim('/')
+                .takeIf { it.isNotEmpty() }
+        }
+            .filter { it.isNotEmpty() }
+            .toSet()
+        if (names.isEmpty()) return
+        FileJobService.update7z(archive, emptyList(), names, requireContext())
+        viewModel.selectFiles(files, false)
+        refresh()
     }
 
     private fun showCreateArchiveDialog(files: FileItemSet) {
@@ -1026,6 +1253,47 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         val archiveFile = viewModel.currentPath.resolve(name)
         FileJobService.archive(
             makePathListForJob(files), archiveFile, format, filter, password, requireContext()
+        )
+        viewModel.selectFiles(files, false)
+    }
+
+    override fun archiveWithOptions(
+        files: FileItemSet,
+        name: String,
+        format: ArchiveFormat,
+        options: ArchiveCreateOptions,
+        password: String?,
+    ) {
+        val splitSize = options.zipSplitSizeBytes
+        val estimatedBytes = files.sumOf { it.attributes.size().coerceAtLeast(0L) }
+        val estimatedVolumes = if (splitSize == null || splitSize <= 0L || estimatedBytes <= 0L) {
+            0L
+        } else {
+            ((estimatedBytes - 1L) / splitSize) + 1L
+        }
+        if (format == ArchiveFormat.ZIP && splitSize != null &&
+            estimatedVolumes > 100L && !options.allowLargeZipSplit
+        ) {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.file_create_archive_large_split_title)
+                .setMessage(R.string.file_create_archive_large_split_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    archiveWithOptions(
+                        files,
+                        name,
+                        format,
+                        options.copy(allowLargeZipSplit = true),
+                        password,
+                    )
+                }
+                .show()
+            return
+        }
+        val archiveFile = viewModel.currentPath.resolve(name)
+        FileJobService.archiveZipXtract(
+            makePathListForJob(files), archiveFile, format, options,
+            password?.toCharArray(), requireContext()
         )
         viewModel.selectFiles(files, false)
     }
@@ -1378,7 +1646,12 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     override fun extractFile(file: FileItem) {
-        copyFile(file.createDummyArchiveRoot())
+        FileJobService.extractZipXtract(
+            listOf(file.path),
+            viewModel.currentPath,
+            createContainingDirectory = true,
+            context = requireContext(),
+        )
     }
 
     override fun showCreateArchiveDialog(file: FileItem) {

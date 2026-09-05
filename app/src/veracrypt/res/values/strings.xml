@@ -196,15 +196,21 @@ Normal volumes support FAT/exFAT read and write. NTFS is read-only. Hidden-volum
 Passwords and security
 PIM must be between 0 and 2147468 and match the container. Choose one of the six KDF hints; Argon2id shows the PIM-derived memory and iteration estimate. Hidden-volume protection auto-detects its KDF to preserve the native request v2 layout. Keyfiles are never saved as biometric credentials. Saved credentials are encrypted by Android Keystore. Back up volume headers and remember that forgotten passwords cannot be recovered.
 
+Root file access
+The built-in file manager offers NEVER, AUTOMATIC (default), and ALWAYS Root strategies through libsu. A denied, timed-out, or revoked Root session is reported as an error. The / entry can browse mounted /data, /system, /vendor, and /product paths, but block-device writes and remounting are not supported. Shizuku/Sui remains disabled.
+
+FTP server
+The FTP page can share ordinary storage, a Root path, or one directory in a currently unlocked volume. It listens on all interfaces, uses port 2121, and runs until manually stopped. Account login and read-only access are the defaults; anonymous login and writes are opt-in. FTP content and credentials are not encrypted. An unlocked-volume share is process-only and stops before the volume is closed.
+
 Compatible formats
-RongVault 1.1.0 registers all 15 VeraCrypt non-system XTS suites for opening and automatic detection, and exposes the nine Windows creation suites. It supports PBKDF2-HMAC-SHA-512 (default), SHA-256, BLAKE2s-256, Whirlpool, Streebog, and Argon2id KDF hints. The new algorithm and KDF paths remain pending build and compatibility verification. It is an independent project and is not affiliated with VeraCrypt.</string>
+RongVault 1.3.0 registers all 15 VeraCrypt non-system XTS suites for opening and automatic detection, and exposes the nine Windows creation suites. It supports PBKDF2-HMAC-SHA-512 (default), SHA-256, BLAKE2s-256, Whirlpool, Streebog, and Argon2id KDF hints. The built-in file manager integrates ZipXtract for ZIP/JAR, 7z, RAR/RAR5, TAR and compressed streams, including ZIP/7z/TAR creation and safe unencrypted-7z updates. Root browsing through libsu and the local FTP server are available in source; Root, FTP, unlocked-volume sharing, archive fixtures, and device compatibility remain pending build and verification. Plain FTP is not encrypted. It is an independent project and is not affiliated with VeraCrypt.</string>
     <string name="rv_about_body">RongVault
 
-Version 1.1.0
+Version 1.3.0
 
-RongVault provides offline access to VeraCrypt-compatible file containers on Android. It is an independent project and is not affiliated with or endorsed by VeraCrypt.
+RongVault provides offline access to VeraCrypt-compatible file containers and a native ZipXtract archive surface on Android. It is an independent project and is not affiliated with or endorsed by VeraCrypt.
 
-The app does not require network access. It is released under GPLv3-or-later. Third-party components include Botan, FatFs and libyal projects; see the project license files for the complete notices.</string>
+The app does not contact remote services unless you explicitly start its local FTP listener. FTP content and credentials are not encrypted. It is released under GPLv3-or-later. Third-party components include ZipXtract v7.1.1, Zip4j, 7-Zip-JBinding, Apache Commons Compress, libsu 5.2.2, Apache FtpServer 1.2.1/MINA 2.2.4, Botan, FatFs and libyal projects; see the project license files for the complete notices.</string>
     <string name="vc_foreground_title">VeraCrypt is active</string>
     <string name="vc_foreground_processing">Processing an encrypted volume</string>
     <string name="vc_foreground_unlocking_one">Unlocking an encrypted volume: %1$s</string>

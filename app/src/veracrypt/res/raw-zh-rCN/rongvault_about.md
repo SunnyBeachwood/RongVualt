@@ -7,10 +7,12 @@
 
 ## 项目 README
 
-容匣支持普通卷和隐藏卷、卷类型自动识别、密码/PIM 解锁、打开全部 15 种
+容匣 1.2.0 支持普通卷和隐藏卷、卷类型自动识别、密码/PIM 解锁、打开全部 15 种
 VeraCrypt 非系统 XTS 算法、9 种 Windows 创建算法和 6 种 KDF，以及为符合
-条件的已保存凭据提供生物识别解锁。1.1.0 算法/KDF 扩展仍待编译、待互操作
-验证。FAT 和 exFAT 支持读写，NTFS 仅支持只读。应用不会把整个容器解密到设备上的明文目录。
+条件的已保存凭据提供生物识别解锁，并通过 libsu 提供 Root 文件访问和本机 FTP 服务。Root、
+FTP、已解锁卷共享和匿名写入仍待编译、待互操作验证。FTP 默认端口 2121、账号登录、只读，
+内容和凭据不会加密。FAT 和 exFAT 支持读写，NTFS 仅支持只读。应用不会把整个容器解密到
+设备上的明文目录。
 
 完整 README、兼容性说明、构建方法和安全限制请访问项目源码仓库：
 
@@ -24,6 +26,7 @@ VeraCrypt 非系统 XTS 算法、9 种 Windows 创建算法和 6 种 KDF，以�
 
 ## 使用的开源组件
 
-本发行版包含 EDS Lite 来源代码、Material Files 1.7.4、Botan、FatFs、
+本发行版包含 EDS Lite 来源代码、Material Files 1.7.4、libsu 5.2.2、Apache FtpServer
+1.2.1/MINA 2.2.4、Botan、FatFs、
 libyal NTFS 库、Markwon、AndroidX、Kotlin 及其运行时依赖。其版权和许可证
 声明保留在源码发行包与应用内声明中。

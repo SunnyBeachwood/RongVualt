@@ -18,6 +18,7 @@ import java8.nio.file.attribute.BasicFileAttributeView
 import java8.nio.file.attribute.BasicFileAttributes
 import java8.nio.file.attribute.FileTime
 import me.zhanghai.android.files.provider.linux.isLinuxPath
+import me.zhanghai.android.files.provider.root.shouldUseRoot
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
@@ -178,7 +179,7 @@ internal object ForeignCopyMove {
  */
 @Throws(IOException::class)
 private fun Path.openCopyInputStream(vararg options: OpenOption): java.io.InputStream =
-    if (isLinuxPath) {
+    if (isLinuxPath && !shouldUseRoot(this)) {
         // The caller already classified this branch as a regular file with the requested
         // link options.  Opening it directly avoids Android's blocked hidden
         // NioUtils.newFileChannel() API; symbolic links are handled by the separate branch
@@ -190,7 +191,7 @@ private fun Path.openCopyInputStream(vararg options: OpenOption): java.io.InputS
 
 @Throws(IOException::class)
 private fun Path.openCopyOutputStream(): OutputStream =
-    if (isLinuxPath) {
+    if (isLinuxPath && !shouldUseRoot(this)) {
         FileOutputStream(toString())
     } else {
         newOutputStream(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)

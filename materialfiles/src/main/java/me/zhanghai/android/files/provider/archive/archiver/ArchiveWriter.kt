@@ -19,6 +19,7 @@ import me.zhanghai.android.files.provider.common.readAttributes
 import me.zhanghai.android.files.provider.common.readSymbolicLinkByteString
 import me.zhanghai.android.files.provider.common.size
 import me.zhanghai.android.files.provider.linux.isLinuxPath
+import me.zhanghai.android.files.provider.root.shouldUseRoot
 import java.io.Closeable
 import java.io.FileInputStream
 import java.io.IOException
@@ -81,4 +82,10 @@ class ArchiveWriter @Throws(IOException::class) constructor(
 }
 
 private fun Path.openArchiveInputStream(): InputStream =
-    if (isLinuxPath) FileInputStream(toString()) else newInputStream(LinkOption.NOFOLLOW_LINKS)
+    if (isLinuxPath && !shouldUseRoot(this)) {
+        // Android 16/Oplus workaround for ordinary local files. Rootable paths
+        // must use the provider so the operation runs in the root service.
+        FileInputStream(toString())
+    } else {
+        newInputStream(LinkOption.NOFOLLOW_LINKS)
+    }

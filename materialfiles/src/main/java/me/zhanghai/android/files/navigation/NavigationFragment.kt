@@ -57,6 +57,11 @@ class NavigationFragment : Fragment(), NavigationItem.Listener {
         adapter.notifyCheckedChanged()
     }
 
+    /** Refresh checked storage/bookmark state when a host swaps its active pane. */
+    fun refreshCheckedState() {
+        if (::adapter.isInitialized) adapter.notifyCheckedChanged()
+    }
+
     override val currentPath: Path
         get() = listener.currentPath
 

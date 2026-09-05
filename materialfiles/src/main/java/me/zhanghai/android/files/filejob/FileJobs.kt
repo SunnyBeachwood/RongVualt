@@ -85,6 +85,7 @@ import me.zhanghai.android.files.provider.common.toModeString
 import me.zhanghai.android.files.provider.document.isDocumentPath
 import me.zhanghai.android.files.provider.document.resolver.DocumentResolver
 import me.zhanghai.android.files.provider.linux.isLinuxPath
+import me.zhanghai.android.files.provider.root.shouldUseRoot
 import me.zhanghai.android.files.util.asFileName
 import me.zhanghai.android.files.util.createInstallPackageIntent
 import me.zhanghai.android.files.util.createIntent
@@ -156,6 +157,39 @@ private fun FileJob.postNotification(
         }
     }.build()
     service.notificationManager.notify(id, notification)
+}
+
+/**
+ * Progress bridge for archive engines that do not use Material Files'
+ * CopyFileJob callbacks. Keeping the notification construction here means
+ * ZipXtract jobs still share the foreground channel and cancel action.
+ */
+internal fun FileJob.postArchiveEngineNotification(
+    title: CharSequence,
+    completedBytes: Long,
+    totalBytes: Long,
+    completedEntries: Long = 0,
+    totalEntries: Long = 0,
+) {
+    val max: Int
+    val progress: Int
+    if (totalBytes > 0 && totalBytes <= Int.MAX_VALUE) {
+        max = totalBytes.toInt()
+        progress = completedBytes.coerceIn(0, totalBytes).toInt()
+    } else if (totalBytes > Int.MAX_VALUE) {
+        var scaledTotal = totalBytes
+        var scaledCompleted = completedBytes.coerceIn(0, totalBytes)
+        while (scaledTotal > Int.MAX_VALUE) {
+            scaledTotal /= 2
+            scaledCompleted /= 2
+        }
+        max = scaledTotal.toInt()
+        progress = scaledCompleted.toInt()
+    } else {
+        max = totalEntries.coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+        progress = completedEntries.coerceIn(0, totalEntries).toInt()
+    }
+    postNotification(title, null, null, null, max, progress, totalBytes <= 0 && totalEntries <= 0, true)
 }
 
 private const val PROGRESS_INTERVAL_MILLIS = 200L
@@ -697,12 +731,16 @@ class ArchiveFileJob(
  */
 @Throws(IOException::class)
 fun Path.openArchiveOutputChannel(): SeekableByteChannel =
-    if (isLinuxPath) {
+    if (isLinuxPath && !shouldUseRoot(this)) {
         val file = toFile()
         if (!file.createNewFile()) {
             throw FileAlreadyExistsException(toString())
         }
         FileChannels.from(FileOutputStream(file).channel)
+    } else if (isLinuxPath) {
+        // Keep RootablePath writes inside the libsu provider; a direct
+        // FileOutputStream here would silently drop back to the app UID.
+        newByteChannel(StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE)
     } else if (isDocumentPath) {
         // DocumentFileSystemProvider's generic FileChannel bridge relies on
         // the hidden NioUtils.newFileChannel() API removed by recent Android

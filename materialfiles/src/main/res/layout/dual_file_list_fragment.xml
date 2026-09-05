@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<androidx.drawerlayout.widget.DrawerLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/dualDrawerLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:id="@+id/dualContentRoot"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:fitsSystemWindows="true"
+        android:background="?colorSurface">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:id="@+id/dualAppBarLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?colorAppBarSurface"
+            android:theme="?actionBarTheme">
+
+            <androidx.appcompat.widget.Toolbar
+                android:id="@+id/dualToolbar"
+                android:layout_width="match_parent"
+                android:layout_height="?actionBarSize"
+                android:paddingStart="@dimen/file_list_toolbar_padding_start"
+                android:paddingEnd="@dimen/file_list_toolbar_padding_end_with_overflow"
+                app:navigationIcon="@drawable/menu_icon_control_normal_24dp"
+                app:navigationContentDescription="@string/open_navigation_drawer"
+                app:popupTheme="?actionBarPopupTheme" />
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <LinearLayout
+            android:id="@+id/dualPaneContainer"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <include
+                android:id="@+id/leftPane"
+                layout="@layout/dual_file_pane"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+
+            <View
+                android:id="@+id/dualPaneDivider"
+                android:layout_width="1dp"
+                android:layout_height="match_parent"
+                android:background="?colorOutlineVariant" />
+
+            <include
+                android:id="@+id/rightPane"
+                layout="@layout/dual_file_pane"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/dualActionDock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="64dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:background="?colorSurface"
+            android:elevation="@dimen/design_appbar_elevation"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp" />
+    </LinearLayout>
+
+    <me.zhanghai.android.files.ui.NavigationFrameLayout
+        android:id="@+id/dualNavigationFragment"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="?colorSurface"
+        android:fitsSystemWindows="true" />
+</androidx.drawerlayout.widget.DrawerLayout>

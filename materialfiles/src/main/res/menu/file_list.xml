@@ -80,6 +80,38 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/action_layout_mode"
+        android:orderInCategory="100"
+        android:title="@string/file_list_action_layout_mode"
+        app:showAsAction="never">
+        <menu>
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/action_layout_auto"
+                    android:title="@string/file_list_action_layout_auto" />
+                <item
+                    android:id="@+id/action_layout_single"
+                    android:title="@string/file_list_action_layout_single" />
+                <item
+                    android:id="@+id/action_layout_dual"
+                    android:title="@string/file_list_action_layout_dual" />
+            </group>
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/action_set_secondary_start"
+        android:orderInCategory="100"
+        android:title="@string/file_list_action_set_secondary_start"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_selection_more"
+        android:orderInCategory="100"
+        android:title="@string/file_list_action_selection_more"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/action_navigate_to"
         android:alphabeticShortcut="l"
         android:orderInCategory="100"
@@ -136,5 +168,17 @@
         android:id="@+id/action_create_shortcut"
         android:orderInCategory="100"
         android:title="@string/file_list_action_create_shortcut"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_archive_add"
+        android:orderInCategory="100"
+        android:title="@string/file_list_action_archive_add"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_archive_add_folder"
+        android:orderInCategory="100"
+        android:title="@string/file_list_action_archive_add_folder"
         app:showAsAction="never" />
 </menu>

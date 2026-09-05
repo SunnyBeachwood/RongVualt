@@ -20,10 +20,8 @@ import io.noties.markwon.image.ImageItem
 import io.noties.markwon.image.ImagesPlugin
 import io.noties.markwon.image.SchemeHandler
 import io.noties.markwon.image.destination.ImageDestinationProcessor
-import java.io.FileInputStream
 import java8.nio.file.Path
 import me.zhanghai.android.files.provider.common.newInputStream
-import me.zhanghai.android.files.provider.linux.isLinuxPath
 
 internal fun createMarkdownRenderer(
     context: Context,
@@ -86,7 +84,9 @@ private class LocalMarkdownImageSchemeHandler(
     override fun supportedSchemes(): Collection<String> = setOf(LOCAL_IMAGE_SCHEME)
 
     private fun Path.openImageInputStream() =
-        if (isLinuxPath) FileInputStream(toString()) else newInputStream()
+        // PathExtensions keeps the Android 16 public-stream workaround for
+        // ordinary files and dispatches RootablePath through libsu as needed.
+        newInputStream()
 }
 
 private fun calculateInSampleSize(width: Int, height: Int, maxWidth: Int, maxHeight: Int): Int {

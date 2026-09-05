@@ -39,6 +39,7 @@ import java.nio.charset.Charset
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 import me.zhanghai.android.files.provider.linux.isLinuxPath
+import me.zhanghai.android.files.provider.root.shouldUseRoot
 import java8.nio.file.attribute.PosixFileAttributeView as Java8PosixFileAttributeView
 
 @Throws(IOException::class)
@@ -157,7 +158,7 @@ fun Path.newDirectoryStream(): DirectoryStream<Path> = Files.newDirectoryStream(
 @Throws(IOException::class)
 fun Path.newInputStream(vararg options: OpenOption): InputStream =
     InterruptedIOExceptionInputStream(
-        if (isLinuxPath && options.isEmpty()) {
+        if (isLinuxPath && options.isEmpty() && !shouldUseRoot(this)) {
             // The desugared NIO provider opens local files through the hidden
             // NioUtils.newFileChannel() API. Android 16 and some recent Oplus
             // releases deny that API, while the public stream API still works.
@@ -231,7 +232,7 @@ private class InterruptedIOExceptionInputStream(
 @Throws(IOException::class)
 fun Path.newOutputStream(vararg options: OpenOption): OutputStream =
     InterruptedIOExceptionOutputStream(
-        if (isLinuxPath && options.isEmpty()) {
+        if (isLinuxPath && options.isEmpty() && !shouldUseRoot(this)) {
             // Match Files.newOutputStream() defaults: create the file if needed
             // and truncate an existing file.
             FileOutputStream(toString())

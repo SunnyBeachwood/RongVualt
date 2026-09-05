@@ -1,0 +1,1073 @@
+/*
+ *  Copyright (C) 2023  WirelessAlien <https://github.com/WirelessAlien>
+ *
+ *     This program is free software: you can redistribute it and/or modify
+ *     it under the terms of the GNU General Public License as published by
+ *     the Free Software Foundation, either version 3 of the License, or
+ *     any later version.
+ *
+ *     This program is distributed in the hope that it will be useful,
+ *     but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *     GNU General Public License for more details.
+ *
+ *     You should have received a copy of the GNU General Public License
+ *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+package com.wirelessalien.zipxtract.service
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.pm.ServiceInfo
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Environment
+import android.os.IBinder
+import android.os.PowerManager
+import android.system.Os
+import android.system.OsConstants
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
+import com.wirelessalien.zipxtract.R
+import com.wirelessalien.zipxtract.activity.MainActivity
+import com.wirelessalien.zipxtract.constant.BroadcastConstants.ACTION_CANCEL_OPERATION
+import com.wirelessalien.zipxtract.constant.BroadcastConstants.EXTRACTION_NOTIFICATION_CHANNEL_ID
+import com.wirelessalien.zipxtract.constant.BroadcastConstants.PREFERENCE_EXTRACT_DIR_PATH
+import com.wirelessalien.zipxtract.constant.ServiceConstants
+import com.wirelessalien.zipxtract.helper.AppEvent
+import com.wirelessalien.zipxtract.helper.EventBus
+import com.wirelessalien.zipxtract.helper.FileOperationsDao
+import com.wirelessalien.zipxtract.helper.FileUtils
+import com.wirelessalien.zipxtract.model.DirectoryInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import me.zhanghai.android.libarchive.Archive
+import me.zhanghai.android.libarchive.ArchiveEntry
+import net.lingala.zip4j.ZipFile
+import net.lingala.zip4j.exception.ZipException
+import net.lingala.zip4j.progress.ProgressMonitor
+import net.sf.sevenzipjbinding.ArchiveFormat
+import net.sf.sevenzipjbinding.ExtractAskMode
+import net.sf.sevenzipjbinding.ExtractOperationResult
+import net.sf.sevenzipjbinding.IArchiveExtractCallback
+import net.sf.sevenzipjbinding.IArchiveOpenCallback
+import net.sf.sevenzipjbinding.ICryptoGetTextPassword
+import net.sf.sevenzipjbinding.IInArchive
+import net.sf.sevenzipjbinding.ISequentialOutStream
+import net.sf.sevenzipjbinding.PropID
+import net.sf.sevenzipjbinding.SevenZip
+import net.sf.sevenzipjbinding.SevenZipException
+import net.sf.sevenzipjbinding.impl.RandomAccessFileInStream
+import org.apache.commons.compress.archivers.ArchiveInputStream
+import org.apache.commons.compress.archivers.ArchiveStreamFactory
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileDescriptor
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.OutputStream
+import java.io.RandomAccessFile
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
+import java.util.Date
+
+
+class ExtractArchiveService : Service() {
+
+    private val serviceScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private lateinit var fileOperationsDao: FileOperationsDao
+
+    companion object {
+        const val NOTIFICATION_ID = 18
+    }
+
+    private var archiveFormat: ArchiveFormat? = null
+    private var extractionJob: Job? = null
+    private var progressMonitor: ProgressMonitor? = null
+
+    private val cancelReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == ACTION_CANCEL_OPERATION) {
+                progressMonitor?.isCancelAllTasks = true
+                extractionJob?.cancel()
+                stopForegroundService()
+            }
+        }
+    }
+
+    override fun onBind(intent: Intent): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        fileOperationsDao = FileOperationsDao(this)
+        createNotificationChannel()
+        ContextCompat.registerReceiver(this, cancelReceiver, IntentFilter(ACTION_CANCEL_OPERATION), ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val jobId = intent?.getStringExtra(ServiceConstants.EXTRA_JOB_ID)
+        val password = intent?.getStringExtra(ServiceConstants.EXTRA_PASSWORD)
+        val useAppNameDir = intent?.getBooleanExtra(ServiceConstants.EXTRA_USE_APP_NAME_DIR, false) ?: false
+        val destinationPath = intent?.getStringExtra(ServiceConstants.EXTRA_DESTINATION_PATH)
+        val itemsToExtract = intent?.getStringArrayListExtra(ServiceConstants.EXTRA_ITEMS_TO_EXTRACT)
+
+        if (jobId == null) {
+            stopSelf(startId)
+            return START_NOT_STICKY
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(NOTIFICATION_ID, createNotification(0), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification(0))
+        }
+
+        extractionJob = serviceScope.launch {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ZipXtract:ExtractArchiveWakeLock")
+            wakeLock.acquire(60 * 60 * 1000L /*1 hour*/)
+            try {
+                val filesToExtract = fileOperationsDao.getFilesForJob(jobId)
+                if (filesToExtract.isEmpty()) {
+                    fileOperationsDao.deleteFilesForJob(jobId)
+                    return@launch
+                }
+                if (filesToExtract.size > 1) {
+                    Log.w("ExtractArchiveService", "This service only supports single file extraction. Only the first file will be extracted.")
+                }
+                val filePath = filesToExtract[0]
+
+                extractArchive(filePath, password, useAppNameDir, destinationPath, itemsToExtract)
+                fileOperationsDao.deleteFilesForJob(jobId)
+            } finally {
+                if (wakeLock.isHeld) wakeLock.release()
+                stopSelf(startId)
+            }
+        }
+
+        return START_NOT_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        serviceScope.cancel()
+        extractionJob?.cancel()
+        unregisterReceiver(cancelReceiver)
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                EXTRACTION_NOTIFICATION_CHANNEL_ID,
+                getString(R.string.extract_archive_notification_name),
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun createNotification(progress: Int): Notification {
+        val cancelIntent = Intent(ACTION_CANCEL_OPERATION)
+        val cancelPendingIntent = PendingIntent.getBroadcast(
+            this,
+            0,
+            cancelIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(this, EXTRACTION_NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.extraction_ongoing))
+            .setSmallIcon(R.drawable.ic_notification_icon)
+            .setProgress(100, progress, progress == 0)
+            .setOngoing(true)
+            .addAction(R.drawable.ic_close, getString(R.string.cancel), cancelPendingIntent)
+
+        return builder.build()
+    }
+
+    private suspend fun extractArchive(filePath: String, password: String?, useAppNameDir: Boolean, destinationPath: String?, itemsToExtract: ArrayList<String>?) {
+        if (filePath.isEmpty()) {
+            val errorMessage = getString(R.string.no_files_to_archive)
+            showErrorNotification(errorMessage)
+            EventBus.emit(AppEvent.ExtractionError(errorMessage))
+            stopForegroundService()
+            return
+        }
+
+        val file = File(filePath)
+        when {
+            file.extension.equals("zip", ignoreCase = true) -> {
+                extractZipArchive(file, password, useAppNameDir, destinationPath, itemsToExtract)
+                return
+            }
+            file.extension.equals("tar", ignoreCase = true) -> {
+                extractTarArchive(file, useAppNameDir, destinationPath)
+                return
+            }
+        }
+
+        try {
+            val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+            val extractPath = sharedPreferences.getString(PREFERENCE_EXTRACT_DIR_PATH, null)
+
+            val parentDir: File
+            if (!destinationPath.isNullOrBlank()) {
+                parentDir = File(destinationPath)
+            } else if (!extractPath.isNullOrEmpty()) {
+                parentDir = if (File(extractPath).isAbsolute) {
+                    File(extractPath)
+                } else {
+                    File(Environment.getExternalStorageDirectory(), extractPath)
+                }
+                if (!parentDir.exists()) {
+                    parentDir.mkdirs()
+                }
+            } else if (useAppNameDir) {
+                val rootDir = File(Environment.getExternalStorageDirectory().absolutePath)
+                parentDir = File(rootDir, getString(R.string.app_name))
+                if (!parentDir.exists()) {
+                    parentDir.mkdirs()
+                }
+            } else {
+                val isInternalDir = file.absolutePath.startsWith(filesDir.absolutePath)
+                if (isInternalDir) {
+                    parentDir = Environment.getExternalStorageDirectory()
+                } else {
+                    parentDir = file.parentFile ?: File(Environment.getExternalStorageDirectory().absolutePath)
+                }
+            }
+
+            val baseFileName = file.name.substring(0, file.name.lastIndexOf('.'))
+            var newFileName = baseFileName
+            var destinationDir = File(parentDir, newFileName)
+            var counter = 1
+
+            while (destinationDir.exists()) {
+                newFileName = "$baseFileName ($counter)"
+                destinationDir = File(parentDir, newFileName)
+                counter++
+            }
+
+            var success = trySevenZip(file, destinationDir, password, itemsToExtract)
+            if (success) {
+                if (useAppNameDir) {
+                    filesDir.deleteRecursively()
+                }
+                return
+            }
+
+            success = tryLibArchiveAndroid(file, destinationDir)
+            if (success) {
+                if (useAppNameDir) {
+                    filesDir.deleteRecursively()
+                }
+                return
+            }
+
+            success = tryApacheCommonsCompress(file, destinationDir)
+            if (success) {
+                if (useAppNameDir) {
+                    filesDir.deleteRecursively()
+                }
+                return
+            }
+
+            showErrorNotification(getString(R.string.general_error_msg))
+            EventBus.emit(AppEvent.ExtractionError(getString(R.string.general_error_msg)))
+            if (useAppNameDir) {
+                filesDir.deleteRecursively()
+            }
+
+        } catch (e: CancellationException) {
+            // Operation cancelled, stop service
+            stopForegroundService()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showErrorNotification(e.message ?: getString(R.string.general_error_msg))
+            EventBus.emit(AppEvent.ExtractionError(e.message ?: getString(R.string.general_error_msg)))
+        }
+    }
+
+    private fun trySevenZip(file: File, destinationDir: File, password: String?, itemsToExtract: ArrayList<String>?): Boolean {
+        var inStream: RandomAccessFileInStream? = null
+        try {
+            inStream = RandomAccessFileInStream(RandomAccessFile(file, "r"))
+            val inArchive = SevenZip.openInArchive(archiveFormat, inStream, OpenCallback(password))
+            destinationDir.mkdirs()
+
+            try {
+                val extractCallback = ExtractCallback(inArchive, destinationDir, password)
+                
+                if (!itemsToExtract.isNullOrEmpty()) {
+                    val itemsSet = itemsToExtract.toSet()
+                    val indices = mutableListOf<Int>()
+                    val count = inArchive.numberOfItems
+                    for (i in 0 until count) {
+                        val path = inArchive.getStringProperty(i, PropID.PATH)?.replace("\\", "/")
+                        if (path != null && itemsSet.contains(path)) {
+                            indices.add(i)
+                        }
+                    }
+                    inArchive.extract(indices.toIntArray(), false, extractCallback)
+                } else {
+                    inArchive.extract(null, false, extractCallback)
+                }
+
+                if (extractCallback.hasError) {
+                    return false
+                } else if (extractCallback.hasUnsupportedMethod) {
+                    return false
+                } else {
+                    FileUtils.setLastModifiedTime(extractCallback.directories)
+                    scanForNewFiles(destinationDir)
+                    showCompletionNotification(destinationDir)
+                    EventBus.emit(AppEvent.ExtractionComplete(destinationDir.absolutePath))
+                    return true
+                }
+            } catch (e: SevenZipException) {
+                if (e.message == "Cancelled") {
+                    throw CancellationException("Cancelled")
+                } else if (e.message == "WrongPasswordDetected") {
+                    throw FatalExtractionException(getString(R.string.wrong_password))
+                }
+                e.printStackTrace()
+                return false
+            } finally {
+                inArchive.close()
+            }
+        } catch (e: FatalExtractionException) {
+            throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        } finally {
+            try {
+                inStream?.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun tryLibArchiveAndroid(file: File, destinationDir: File): Boolean {
+        try {
+            val totalBytes = file.length()
+            var bytesProcessed = 0L
+            var lastProgress = -1
+
+            FileInputStream(file).use { fileInput ->
+                BufferedInputStream(fileInput).use {
+                    val fileDescriptor = fileInput.fd
+                    var archive: Long = 0
+                    try {
+                        archive = Archive.readNew()
+                        Archive.setCharset(
+                            archive,
+                            StandardCharsets.UTF_8.name().toByteArray(StandardCharsets.UTF_8)
+                        )
+                        Archive.readSupportFilterAll(archive)
+                        Archive.readSupportFormatAll(archive)
+
+                        val buffer = ByteBuffer.allocateDirect(65536)
+                        val readBuffer = ByteBuffer.allocateDirect(65536)
+                        val writeBuffer = ByteArray(65536)
+
+                        Archive.readSetCallbackData(archive, fileDescriptor)
+                        Archive.readSetReadCallback(
+                            archive,
+                            object : Archive.ReadCallback<FileDescriptor> {
+                                override fun onRead(
+                                    archive: Long,
+                                    clientData: FileDescriptor
+                                ): ByteBuffer? {
+                                    buffer.clear()
+                                    try {
+                                        if (extractionJob?.isActive == false) {
+                                            throw IOException("Cancelled")
+                                        }
+                                        val bytesRead = Os.read(clientData, buffer)
+                                        bytesProcessed += bytesRead
+                                        val progress = if (totalBytes > 0) (bytesProcessed * 100 / totalBytes).toInt() else 0
+                                        if (progress > lastProgress) {
+                                            lastProgress = progress
+                                            updateProgress(progress)
+                                        }
+                                        buffer.flip()
+                                        return buffer
+                                    } catch (e: IOException) {
+                                        if (e.message == "Cancelled") {
+                                            throw e
+                                        }
+                                        Log.e("ExtractArchiveService", "Read error", e)
+                                    } catch (e: Exception) {
+                                        Log.e("ExtractArchiveService", "Read error", e)
+                                    }
+                                    return null
+                                }
+
+                            })
+
+                        Archive.readSetSkipCallback(
+                            archive,
+                            object : Archive.SkipCallback<FileDescriptor> {
+                                override fun onSkip(
+                                    archive: Long,
+                                    clientData: FileDescriptor,
+                                    request: Long
+                                ): Long {
+                                    try {
+                                        return Os.lseek(clientData, request, OsConstants.SEEK_CUR)
+                                    } catch (e: Exception) {
+                                        Log.e("ExtractArchiveService", "Skip error", e)
+                                    }
+                                    return 0
+                                }
+                            })
+
+                        Archive.readSetSeekCallback(
+                            archive,
+                            object : Archive.SeekCallback<FileDescriptor> {
+                                override fun onSeek(
+                                    archive: Long,
+                                    clientData: FileDescriptor,
+                                    offset: Long,
+                                    whence: Int
+                                ): Long {
+                                    try {
+                                        return Os.lseek(clientData, offset, whence)
+                                    } catch (e: Exception) {
+                                        Log.e("ExtractArchiveService", "Seek error", e)
+                                    }
+                                    return 0
+                                }
+                            })
+
+                        Archive.readOpen1(archive)
+                        val directories = mutableListOf<DirectoryInfo>()
+
+                        val canonicalDstPath = destinationDir.canonicalPath
+                        var entry = Archive.readNextHeader(archive)
+                        while (entry != 0L) {
+                            val entryPath = getEntryPath(entry)
+                            val outputFile = File(destinationDir, entryPath)
+                            if (!outputFile.canonicalPath.startsWith(canonicalDstPath + File.separator) && outputFile.canonicalPath != canonicalDstPath) {
+                                throw IOException("Zip Slip detected: $entryPath")
+                            }
+
+                            val lastModifiedTime = if (ArchiveEntry.mtimeIsSet(entry)) {
+                                ArchiveEntry.mtime(entry) * 1000
+                            } else {
+                                System.currentTimeMillis()
+                            }
+
+                            outputFile.parentFile?.mkdirs()
+
+                            if (entryPath.endsWith("/")) {
+                                outputFile.mkdirs()
+                                directories.add(DirectoryInfo(outputFile.path, lastModifiedTime))
+                            } else {
+                                BufferedOutputStream(outputFile.outputStream()).use { outputStream ->
+                                    while (true) {
+                                        readBuffer.clear()
+                                        Archive.readData(archive, readBuffer)
+                                        val bytesRead = readBuffer.position()
+
+                                        if (bytesRead <= 0) break
+
+                                        readBuffer.flip()
+                                        readBuffer.get(writeBuffer, 0, bytesRead)
+                                        outputStream.write(writeBuffer, 0, bytesRead)
+                                    }
+                                }
+                                outputFile.setLastModified(lastModifiedTime)
+                            }
+                            entry = Archive.readNextHeader(archive)
+                        }
+                        FileUtils.setLastModifiedTime(directories)
+                        scanForNewFiles(destinationDir)
+                        showCompletionNotification(destinationDir)
+                        EventBus.emit(AppEvent.ExtractionComplete(destinationDir.absolutePath))
+                        
+                        return true
+                    } catch (e: Exception) {
+                        if (e.message == "Cancelled" || (e is IOException && e.message == "Cancelled")) {
+                            throw CancellationException("Cancelled")
+                        } else {
+                            e.printStackTrace()
+                            // Fallback
+                        }
+                        return false
+                    } finally {
+                        if (archive != 0L) {
+                            Archive.free(archive)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    private fun tryApacheCommonsCompress(file: File, destinationDir: File): Boolean {
+        try {
+            BufferedInputStream(FileInputStream(file)).use { bis ->
+                val ais: ArchiveInputStream<out org.apache.commons.compress.archivers.ArchiveEntry> = ArchiveStreamFactory().createArchiveInputStream(bis)
+                ais.use { input ->
+                    val canonicalDstPath = destinationDir.canonicalPath
+                    val directories = mutableListOf<DirectoryInfo>()
+                    val buffer = ByteArray(65536)
+                    var entry = input.nextEntry
+                    while (entry != null) {
+                        if (!input.canReadEntryData(entry)) {
+                            entry = input.nextEntry
+                            continue
+                        }
+                        val outputFile = File(destinationDir, entry.name)
+                        if (!outputFile.canonicalPath.startsWith(canonicalDstPath + File.separator) && outputFile.canonicalPath != canonicalDstPath) {
+                            throw IOException("Zip Slip detected: ${entry.name}")
+                        }
+
+                        if (entry.isDirectory) {
+                            outputFile.mkdirs()
+                            val lastModified = if (entry.lastModifiedDate.time > 0) entry.lastModifiedDate.time else System.currentTimeMillis()
+                            directories.add(DirectoryInfo(outputFile.path, lastModified))
+                        } else {
+                            outputFile.parentFile?.mkdirs()
+                            BufferedOutputStream(FileOutputStream(outputFile)).use { output ->
+                                var n: Int
+                                while (input.read(buffer).also { n = it } != -1) {
+                                    if (extractionJob?.isActive == false) {
+                                        throw CancellationException("Cancelled")
+                                    }
+                                    output.write(buffer, 0, n)
+                                }
+                            }
+                            if (entry.lastModifiedDate.time > 0) {
+                                outputFile.setLastModified(entry.lastModifiedDate.time)
+                            }
+                        }
+                        entry = input.nextEntry
+                    }
+                    FileUtils.setLastModifiedTime(directories)
+                    scanForNewFiles(destinationDir)
+                    showCompletionNotification(destinationDir)
+                    EventBus.emit(AppEvent.ExtractionComplete(destinationDir.absolutePath))
+                    return true
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    private fun getEntryPath(entry: Long): String {
+        val utf8Path = ArchiveEntry.pathnameUtf8(entry)
+        val defaultPath = ArchiveEntry.pathname(entry)
+
+        return when {
+            utf8Path != null -> utf8Path
+            defaultPath != null -> String(defaultPath, StandardCharsets.UTF_8)
+            else -> ""
+        }
+    }
+
+    private fun extractTarArchive(file: File, useAppNameDir: Boolean, destinationPath: String?) {
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        val extractPath = sharedPreferences.getString(PREFERENCE_EXTRACT_DIR_PATH, null)
+
+        val parentDir: File
+        if (!destinationPath.isNullOrBlank()) {
+            parentDir = File(destinationPath)
+        } else if (!extractPath.isNullOrEmpty()) {
+            parentDir = if (File(extractPath).isAbsolute) {
+                File(extractPath)
+            } else {
+                File(Environment.getExternalStorageDirectory(), extractPath)
+            }
+            if (!parentDir.exists()) {
+                parentDir.mkdirs()
+            }
+        } else if (useAppNameDir) {
+            val rootDir = File(Environment.getExternalStorageDirectory().absolutePath)
+            parentDir = File(rootDir, getString(R.string.app_name))
+            if (!parentDir.exists()) {
+                parentDir.mkdirs()
+            }
+        } else {
+            val isInternalDir = file.absolutePath.startsWith(filesDir.absolutePath)
+            if (isInternalDir) {
+                parentDir = Environment.getExternalStorageDirectory()
+            } else {
+                parentDir = file.parentFile ?: File(Environment.getExternalStorageDirectory().absolutePath)
+            }
+        }
+
+        val baseFileName = file.name.substring(0, file.name.lastIndexOf('.'))
+        var newFileName = baseFileName
+        var destinationDir = File(parentDir, newFileName)
+        var counter = 1
+
+        while (destinationDir.exists()) {
+            newFileName = "$baseFileName ($counter)"
+            destinationDir = File(parentDir, newFileName)
+            counter++
+        }
+
+        destinationDir.mkdirs()
+
+        try {
+            val totalBytes = file.length()
+            var bytesRead = 0L
+            val buffer = ByteArray(65536)
+            val directories = mutableListOf<DirectoryInfo>()
+            var lastProgress = -1
+            val canonicalDstPath = destinationDir.canonicalPath
+            val safeDstPath = if (canonicalDstPath.endsWith(File.separator)) canonicalDstPath else canonicalDstPath + File.separator
+
+            TarArchiveInputStream(FileInputStream(file)).use { tarInput ->
+                var entry: TarArchiveEntry? = tarInput.nextEntry
+                while (entry != null) {
+                    val outputFile = File(destinationDir, entry.name)
+                    
+                    if (!outputFile.canonicalPath.startsWith(safeDstPath) && outputFile.canonicalPath != canonicalDstPath) {
+                        throw IOException("Zip Slip detected: ${entry.name}")
+                    }
+
+                    if (entry.isDirectory) {
+                        outputFile.mkdirs()
+                        val lastModified = if (entry.modTime.time > 0) entry.modTime.time else System.currentTimeMillis()
+                        directories.add(DirectoryInfo(outputFile.path, lastModified))
+                    } else {
+                        outputFile.parentFile?.mkdirs()
+                        BufferedOutputStream(FileOutputStream(outputFile)).use { output ->
+                            var n: Int
+                            while (tarInput.read(buffer).also { n = it } != -1) {
+                                if (extractionJob?.isActive == false) {
+                                    return
+                                }
+                                output.write(buffer, 0, n)
+                                bytesRead += n
+                                val progress = if (totalBytes > 0) (bytesRead * 100 / totalBytes).toInt() else 0
+                                if (progress > lastProgress) {
+                                    lastProgress = progress
+                                    updateProgress(progress)
+                                }
+                            }
+                        }
+                        if (entry.modTime.time > 0) {
+                            outputFile.setLastModified(entry.modTime.time)
+                        }
+                    }
+                    entry = tarInput.nextEntry
+                }
+            }
+            FileUtils.setLastModifiedTime(directories)
+            scanForNewFiles(destinationDir)
+            showCompletionNotification(destinationDir)
+            EventBus.emit(AppEvent.ExtractionComplete(destinationDir.absolutePath))
+        } catch (e: IOException) {
+            if (e.message == "Cancelled") {
+                // Cancelled
+            } else {
+                e.printStackTrace()
+                if (tryLibArchiveAndroid(file, destinationDir)) return
+                if (tryApacheCommonsCompress(file, destinationDir)) return
+                if (extractionJob?.isActive == false) return
+                showErrorNotification(e.message ?: getString(R.string.general_error_msg))
+                EventBus.emit(AppEvent.ExtractionError(e.message ?: getString(R.string.general_error_msg)))
+            }
+        }
+    }
+
+    private suspend fun extractZipArchive(file: File, password: String?, useAppNameDir: Boolean, destinationPath: String?, itemsToExtract: ArrayList<String>?) {
+        var destinationDir: File? = null
+        try {
+            val zipFile = ZipFile(file)
+
+            if (!password.isNullOrEmpty()) {
+                zipFile.setPassword(password.toCharArray())
+            }
+
+            val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+            val extractPath = sharedPreferences.getString(PREFERENCE_EXTRACT_DIR_PATH, null)
+
+            val parentDir: File
+            if (!destinationPath.isNullOrBlank()) {
+                parentDir = File(destinationPath)
+            } else if (!extractPath.isNullOrEmpty()) {
+                parentDir = if (File(extractPath).isAbsolute) {
+                    File(extractPath)
+                } else {
+                    File(Environment.getExternalStorageDirectory(), extractPath)
+                }
+                if (!parentDir.exists()) {
+                    parentDir.mkdirs()
+                }
+            } else if (useAppNameDir) {
+                val rootDir = File(Environment.getExternalStorageDirectory().absolutePath)
+                parentDir = File(rootDir, getString(R.string.app_name))
+                if (!parentDir.exists()) {
+                    parentDir.mkdirs()
+                }
+            } else {
+                val isInternalDir = file.absolutePath.startsWith(filesDir.absolutePath)
+                if (isInternalDir) {
+                    parentDir = Environment.getExternalStorageDirectory()
+                } else {
+                    parentDir = file.parentFile ?: File(Environment.getExternalStorageDirectory().absolutePath)
+                }
+            }
+
+            val baseFileName = file.name.substring(0, file.name.lastIndexOf('.'))
+            var newFileName = baseFileName
+            var finalDestinationDir = File(parentDir, newFileName)
+            var counter = 1
+
+            while (finalDestinationDir.exists()) {
+                newFileName = "$baseFileName ($counter)"
+                finalDestinationDir = File(parentDir, newFileName)
+                counter++
+            }
+            destinationDir = finalDestinationDir
+
+            finalDestinationDir.mkdirs()
+
+            zipFile.isRunInThread = true
+            val directories = mutableListOf<DirectoryInfo>()
+
+            if (itemsToExtract != null && itemsToExtract.isNotEmpty()) {
+                for (itemPath in itemsToExtract) {
+                    zipFile.extractFile(itemPath, finalDestinationDir.absolutePath)
+
+                    progressMonitor = zipFile.progressMonitor
+                    var lastProgress = -1
+                    while (!progressMonitor!!.state.equals(ProgressMonitor.State.READY)) {
+                        if (progressMonitor!!.state.equals(ProgressMonitor.State.BUSY)) {
+                            val percentDone = (progressMonitor!!.percentDone)
+                            if (percentDone > lastProgress) {
+                                lastProgress = percentDone
+                                updateProgress(percentDone)
+                            }
+                        }
+                        kotlinx.coroutines.delay(100)
+                    }
+                    if (progressMonitor!!.result == ProgressMonitor.Result.CANCELLED) {
+                        break
+                    } else if (progressMonitor!!.result == ProgressMonitor.Result.ERROR) {
+                        throw progressMonitor!!.exception
+                    }
+                }
+            } else {
+                val canonicalDstPath = finalDestinationDir.canonicalPath
+                val destDirPath = canonicalDstPath + if (canonicalDstPath.endsWith(File.separator)) "" else File.separator
+                for (fileHeader in zipFile.fileHeaders) {
+                    if (fileHeader.isDirectory) {
+                        val destFile = File(finalDestinationDir, fileHeader.fileName)
+                        if (destFile.canonicalPath.startsWith(destDirPath)) {
+                            val directoryPath = destFile.path
+                            val lastModified = if (fileHeader.lastModifiedTime > 0) fileHeader.lastModifiedTimeEpoch else System.currentTimeMillis()
+                            directories.add(DirectoryInfo(directoryPath, lastModified))
+                        }
+                    }
+                }
+                zipFile.extractAll(finalDestinationDir.absolutePath)
+
+                progressMonitor = zipFile.progressMonitor
+                var lastProgress = -1
+                while (!progressMonitor!!.state.equals(ProgressMonitor.State.READY)) {
+                    if (progressMonitor!!.state.equals(ProgressMonitor.State.BUSY)) {
+                        val percentDone = (progressMonitor!!.percentDone)
+                        if (percentDone > lastProgress) {
+                            lastProgress = percentDone
+                            updateProgress(percentDone)
+                        }
+                    }
+                    kotlinx.coroutines.delay(100)
+                }
+            }
+
+            if (progressMonitor!!.result == ProgressMonitor.Result.CANCELLED) {
+                // Do nothing
+            } else if (progressMonitor!!.result == ProgressMonitor.Result.SUCCESS) {
+                FileUtils.setLastModifiedTime(directories)
+                scanForNewFiles(finalDestinationDir)
+                showCompletionNotification(finalDestinationDir)
+                EventBus.emit(AppEvent.ExtractionComplete(finalDestinationDir.absolutePath)) 
+
+                if (useAppNameDir) {
+                    filesDir.deleteRecursively()
+                }
+            } else {
+                val exception = progressMonitor!!.exception
+                val errorMessage = if (exception is ZipException && exception.type == ZipException.Type.WRONG_PASSWORD) {
+                    getString(R.string.wrong_password)
+                } else {
+                    exception?.message ?: getString(R.string.general_error_msg)
+                }
+                showErrorNotification(errorMessage)
+                EventBus.emit(AppEvent.ExtractionError(errorMessage))
+            }
+
+        } catch (e: ZipException) {
+            e.printStackTrace()
+            if (e.type == ZipException.Type.UNKNOWN_COMPRESSION_METHOD && destinationDir != null) {
+                if (tryLibArchiveAndroid(file, destinationDir)) return
+                if (tryApacheCommonsCompress(file, destinationDir)) return
+            }
+
+            val errorMessage = when (e.type) {
+                ZipException.Type.WRONG_PASSWORD -> getString(R.string.wrong_password)
+                ZipException.Type.UNKNOWN_COMPRESSION_METHOD -> getString(R.string.general_error_msg)
+                ZipException.Type.UNSUPPORTED_ENCRYPTION -> getString(R.string.general_error_msg)
+                else -> e.message ?: getString(R.string.general_error_msg)
+            }
+            showErrorNotification(errorMessage)
+            EventBus.emit(AppEvent.ExtractionError(errorMessage))
+        }
+    }
+
+    private inner class OpenCallback(private val password: String?) : IArchiveOpenCallback, ICryptoGetTextPassword {
+        override fun setCompleted(p0: Long?, p1: Long?) {}
+        override fun setTotal(p0: Long?, p1: Long?) {}
+        override fun cryptoGetTextPassword(): String {
+            return password ?: ""
+        }
+    }
+
+    private inner class ExtractCallback(
+        private val inArchive: IInArchive,
+        private val dstDir: File,
+        private val password: String?
+    ) : IArchiveExtractCallback, ICryptoGetTextPassword {
+        private var uos: OutputStream? = null
+        private var totalSize: Long = 0
+        private var extractedSize: Long = 0
+        private var currentFileIndex: Int = -1
+        private var currentUnpackedFile: File? = null
+        var hasUnsupportedMethod = false
+        var hasError = false
+        val directories = mutableListOf<DirectoryInfo>()
+        private val dstDirCanonicalPath: String
+
+        init {
+            totalSize = inArchive.numberOfItems.toLong()
+            dstDirCanonicalPath = dstDir.canonicalPath
+        }
+
+        private var errorBroadcasted = false
+
+        override fun setOperationResult(p0: ExtractOperationResult?) {
+            when (p0) {
+                ExtractOperationResult.UNSUPPORTEDMETHOD -> {
+                    hasUnsupportedMethod = true
+                }
+                ExtractOperationResult.WRONG_PASSWORD -> {
+                    hasError = true
+                    if (!errorBroadcasted) {
+
+                        errorBroadcasted = true
+                    }
+                    throw SevenZipException("WrongPasswordDetected")
+                }
+                ExtractOperationResult.DATAERROR, ExtractOperationResult.CRCERROR, ExtractOperationResult.UNAVAILABLE, ExtractOperationResult.HEADERS_ERROR, ExtractOperationResult.UNEXPECTED_END, ExtractOperationResult.UNKNOWN_OPERATION_RESULT -> {
+                    hasError = true
+                    if (!errorBroadcasted) {
+
+                        errorBroadcasted = true
+                    }
+                }
+                ExtractOperationResult.OK -> {
+                    try {
+                        uos?.close()
+                        if (this.currentUnpackedFile != null) {
+                            val modTime =
+                                inArchive.getProperty(
+                                    this.currentFileIndex,
+                                    PropID.LAST_MODIFICATION_TIME
+                                ) as? Date
+                            if (modTime != null && modTime.time > 0) {
+                                this.currentUnpackedFile!!.setLastModified(modTime.time)
+                            }
+                        }
+                        // Reset currentUnpackedFile and currentFileIndex for the next entry
+                        this.currentUnpackedFile = null
+                        this.currentFileIndex = -1
+                        extractedSize++
+                    } catch (e: SevenZipException) {
+                        e.printStackTrace()
+                    }
+                }
+                else -> {
+                    hasError = true
+                    if (!errorBroadcasted) {
+
+                        errorBroadcasted = true
+                    }
+                }
+            }
+        }
+
+        override fun getStream(p0: Int, p1: ExtractAskMode?): ISequentialOutStream {
+            this.currentFileIndex = p0 // Store current file index
+
+            val path: String = inArchive.getStringProperty(p0, PropID.PATH)
+            val isDir: Boolean = inArchive.getProperty(p0, PropID.IS_FOLDER) as Boolean
+            this.currentUnpackedFile = File(dstDir.path, path) // Store current unpacked file
+
+            val fileCanonical = this.currentUnpackedFile!!.canonicalPath
+            if (!fileCanonical.startsWith(dstDirCanonicalPath + File.separator) && fileCanonical != dstDirCanonicalPath) {
+                throw SevenZipException("Zip Slip detected: $path")
+            }
+
+            if (isDir) {
+                this.currentUnpackedFile!!.mkdirs()
+                val modTime = (inArchive.getProperty(p0, PropID.LAST_MODIFICATION_TIME) as? Date)?.time
+                val lastModified = if (modTime != null && modTime > 0) modTime else System.currentTimeMillis()
+                directories.add(DirectoryInfo(this.currentUnpackedFile!!.path, lastModified))
+            } else {
+                try {
+                    val dir = this.currentUnpackedFile!!.parent?.let { File(it) }
+                    if (dir != null && !dir.isDirectory) {
+                        dir.mkdirs()
+                    }
+                    this.currentUnpackedFile!!.createNewFile()
+                    uos = BufferedOutputStream(FileOutputStream(this.currentUnpackedFile!!))
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
+
+            return ISequentialOutStream { data: ByteArray ->
+                try {
+                    if (!isDir) {
+                        uos?.write(data)
+                    }
+                } catch (e: SevenZipException) {
+                    e.printStackTrace()
+                }
+                data.size
+            }
+        }
+
+        override fun prepareOperation(p0: ExtractAskMode?) {}
+
+        private var lastProgress = -1
+
+        override fun setCompleted(complete: Long) {
+            if (extractionJob?.isActive == false) {
+                throw SevenZipException("Cancelled")
+            }
+            if (hasError) return
+            val progress = if (totalSize > 0) ((complete.toDouble() / totalSize) * 100).toInt() else 0
+            if (progress > lastProgress) {
+                lastProgress = progress
+                updateProgress(progress)
+            }
+        }
+
+        override fun setTotal(p0: Long) {
+            totalSize = p0
+        }
+
+        override fun cryptoGetTextPassword(): String {
+            return password ?: ""
+        }
+    }
+
+    private var lastNotifyTime = 0L
+
+    private fun updateProgress(progress: Int) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastNotifyTime >= 500 || progress == 100 || progress == 0) {
+            lastNotifyTime = currentTime
+            
+            val notification = createNotification(progress)
+            val notificationManager = getSystemService(NotificationManager::class.java)
+            notificationManager.notify(NOTIFICATION_ID, notification)
+
+            EventBus.emit(AppEvent.ExtractionProgress(progress))
+        }
+    }
+
+    private fun showCompletionNotification(destination: File) {
+        stopForegroundService()
+
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = MainActivity.ACTION_OPEN_DIRECTORY
+            putExtra(MainActivity.EXTRA_DIRECTORY_PATH, destination.absolutePath)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+
+        val notification = NotificationCompat.Builder(this, EXTRACTION_NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.extraction_completed))
+            .setContentText(destination.name)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("${destination.name} - ${destination.path}"))
+            .setSmallIcon(R.drawable.ic_notification_icon)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(NOTIFICATION_ID + 1, notification)
+    }
+
+    private fun showErrorNotification(error: String) {
+        stopForegroundService()
+        val notification = NotificationCompat.Builder(this, EXTRACTION_NOTIFICATION_CHANNEL_ID)
+            .setContentTitle(getString(R.string.error))
+            .setContentText(error)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(error))
+            .setSmallIcon(R.drawable.ic_notification_icon)
+            .setAutoCancel(true)
+            .build()
+
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.notify(NOTIFICATION_ID + 2, notification)
+    }
+
+    private fun stopForegroundService() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        notificationManager.cancel(NOTIFICATION_ID)
+    }
+
+    private fun scanForNewFiles(directory: File) {
+        val files = directory.listFiles()
+        if (files != null) {
+            val paths = files.map { it.absolutePath }
+            FileUtils.scanFiles(this, paths)
+        }
+    }
+
+    private class FatalExtractionException(message: String) : Exception(message)
+
+    private class CancellationException(message: String) : Exception(message)
+}

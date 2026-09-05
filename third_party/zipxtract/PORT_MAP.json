@@ -1,0 +1,36 @@
+{
+  "upstream": {
+    "repository": "https://github.com/WirelessAlien/ZipXtract",
+    "ref": "v7.1.1",
+    "commit": "c137bc1e07e8bea89f13dc26a938fd35df62918c"
+  },
+  "excluded": [
+    "Activity", "Fragment", "Service", "Room/database", "storage permissions", "brand resources"
+  ],
+  "ports": [
+    {
+      "upstream": "app/src/main/java/com/wirelessalien/zipxtract/service/ExtractArchiveService.kt",
+      "local": "zipxtract-core/src/main/java/org/eds/zipxtract/core/ZipXtractArchiveEngine.kt",
+      "scope": "ZIP/7z/RAR/TAR stream extraction and path policy",
+      "review": "manual when upstream source changes"
+    },
+    {
+      "upstream": "app/src/main/java/com/wirelessalien/zipxtract/service/ArchiveZipService.kt",
+      "local": "zipxtract-core/src/main/java/org/eds/zipxtract/core/ZipXtractArchiveEngine.kt",
+      "scope": "ZIP creation, encryption and split output",
+      "review": "manual when upstream source changes"
+    },
+    {
+      "upstream": "app/src/main/java/com/wirelessalien/zipxtract/service/Archive7zService.kt",
+      "local": "zipxtract-core/src/main/java/org/eds/zipxtract/core/ZipXtractArchiveEngine.kt",
+      "scope": "7z creation and provider-neutral update callback",
+      "review": "manual when upstream source changes"
+    },
+    {
+      "upstream": "app/src/main/java/com/wirelessalien/zipxtract/service/ArchiveTarService.kt",
+      "local": "zipxtract-core/src/main/java/org/eds/zipxtract/core/ZipXtractArchiveEngine.kt",
+      "scope": "tar and compressor streams",
+      "review": "manual when upstream source changes"
+    }
+  ]
+}

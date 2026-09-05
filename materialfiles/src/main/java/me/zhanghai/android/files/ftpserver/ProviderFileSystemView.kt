@@ -7,6 +7,7 @@ package me.zhanghai.android.files.ftpserver
 
 import java8.nio.file.Paths
 import me.zhanghai.android.files.provider.archive.isArchivePath
+import me.zhanghai.android.files.navigation.RuntimeNavigationRoots
 import org.apache.ftpserver.ftplet.FileSystemView
 import org.apache.ftpserver.ftplet.User
 import java.net.URI
@@ -16,9 +17,13 @@ class ProviderFileSystemView(private val user: User) : FileSystemView {
     private var workingDirectory: ProviderFtpFile
 
     init {
-        val homeDirectoryPath = Paths.get(URI.create(user.homeDirectory))
+        val homeDirectoryPath = Paths.get(URI.create(user.homeDirectory)).normalize()
         homeDirectory = ProviderFtpFile(
-            homeDirectoryPath, homeDirectoryPath.relativize(homeDirectoryPath), user
+            homeDirectoryPath,
+            homeDirectoryPath.relativize(homeDirectoryPath),
+            user,
+            ::isSafePath,
+            ::touchPath,
         )
         workingDirectory = homeDirectory
     }
@@ -45,7 +50,17 @@ class ProviderFileSystemView(private val user: User) : FileSystemView {
         if (!filePath.startsWith(homeDirectoryPath)) {
             return homeDirectory
         }
-        return ProviderFtpFile(filePath, homeDirectoryPath.relativize(filePath), user)
+        return if (isSafePath(filePath)) {
+            ProviderFtpFile(
+                filePath,
+                homeDirectoryPath.relativize(filePath),
+                user,
+                ::isSafePath,
+                ::touchPath,
+            )
+        } else {
+            homeDirectory
+        }
     }
 
     override fun isRandomAccessible(): Boolean =
@@ -53,4 +68,20 @@ class ProviderFileSystemView(private val user: User) : FileSystemView {
         !homeDirectory.physicalFile.isArchivePath
 
     override fun dispose() {}
+
+    /**
+     * Lexical normalization alone does not stop a symlink below the shared
+     * root from resolving outside it. Check every existing component without
+     * following links before handing a path to the provider.
+     */
+    private fun isSafePath(path: java8.nio.file.Path): Boolean {
+        return FtpPathPolicy.isSafe(homeDirectory.physicalFile, path)
+    }
+
+    private fun touchPath(path: java8.nio.file.Path) {
+        // RuntimeNavigationRoots is a no-op for ordinary or Root paths. For
+        // an unlocked volume it forwards activity to the session's auto-lock
+        // timer without persisting its opaque document identifier.
+        RuntimeNavigationRoots.touch(path)
+    }
 }

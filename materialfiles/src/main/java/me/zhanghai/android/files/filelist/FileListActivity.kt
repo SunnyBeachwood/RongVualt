@@ -13,18 +13,31 @@ import android.view.KeyEvent
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.fragment.app.commit
+import androidx.fragment.app.Fragment
 import java8.nio.file.Path
 import java8.nio.file.Paths
 import me.zhanghai.android.files.app.AppActivity
 import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.extraPath
+import me.zhanghai.android.files.util.extraPathList
 import me.zhanghai.android.files.util.putArgs
 
 class FileListActivity : AppActivity() {
-    private lateinit var fragment: FileListFragment
+    private lateinit var fragment: Fragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (savedInstanceState == null &&
+            (intent.action == Intent.ACTION_SEND || intent.action == Intent.ACTION_SEND_MULTIPLE)
+        ) {
+            val paths = intent.extraPathList
+            if (paths.isNotEmpty()) {
+                val parent = paths.mapNotNull { it.parent }.distinct().singleOrNull()
+                parent?.let { intent.extraPath = it }
+                intent.putExtra(EXTRA_EXTERNAL_CREATE_ARCHIVE, true)
+                intent.extraPathList = paths
+            }
+        }
         if (intent.extraPath == null &&
             (intent.action == null || intent.action == Intent.ACTION_VIEW)
         ) {
@@ -37,26 +50,45 @@ class FileListActivity : AppActivity() {
         // Calls ensureSubDecor().
         findViewById<View>(android.R.id.content)
         if (savedInstanceState == null) {
-            fragment = FileListFragment().putArgs(FileListFragment.Args(intent))
+            fragment = if (shouldUseDualPane(intent)) {
+                DualPaneFileListFragment().putArgs(FileListFragment.Args(intent))
+            } else {
+                FileListFragment().putArgs(FileListFragment.Args(intent))
+            }
             supportFragmentManager.commit { add(android.R.id.content, fragment) }
         } else {
-            fragment = supportFragmentManager.findFragmentById(android.R.id.content)
-                as FileListFragment
+            fragment = supportFragmentManager.findFragmentById(android.R.id.content)!!
         }
     }
 
     override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
-        if (fragment.onKeyShortcut(keyCode, event)) {
+        if (fragment is DualPaneFileListFragment && fragment.onKeyShortcut(keyCode, event)) {
+            return true
+        }
+        if (fragment is FileListFragment && fragment.onKeyShortcut(keyCode, event)) {
             return true
         }
         return super.onKeyUp(keyCode, event)
     }
 
     companion object {
+        const val EXTRA_EXTERNAL_CREATE_ARCHIVE =
+            "me.zhanghai.android.files.filelist.extra.EXTERNAL_CREATE_ARCHIVE"
+
         fun createViewIntent(path: Path): Intent =
             FileListActivity::class.createIntent()
                 .setAction(Intent.ACTION_VIEW)
                 .apply { extraPath = path }
+
+        private fun shouldUseDualPane(intent: Intent): Boolean = when (intent.action) {
+            Intent.ACTION_GET_CONTENT,
+            Intent.ACTION_OPEN_DOCUMENT,
+            Intent.ACTION_CREATE_DOCUMENT,
+            Intent.ACTION_OPEN_DOCUMENT_TREE,
+            Intent.ACTION_SEND,
+            Intent.ACTION_SEND_MULTIPLE -> false
+            else -> true
+        }
     }
 
     class OpenFileContract : ActivityResultContract<List<MimeType>, Path?>() {

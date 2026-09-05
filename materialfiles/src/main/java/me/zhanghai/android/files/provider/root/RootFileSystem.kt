@@ -17,7 +17,10 @@ import me.zhanghai.android.files.provider.remote.RemoteInterface
 import java.io.IOException
 
 open class RootFileSystem(fileSystem: FileSystem) : RemoteFileSystem(
-    RemoteInterface { RootFileService.getRemoteFileSystemInterface(fileSystem) }
+    RemoteInterface(
+        { RootFileService.getRemoteFileSystemInterface(fileSystem) },
+        remoteFailure = { RootAccessErrors.disconnected(it) },
+    )
 ) {
     override fun provider(): FileSystemProvider {
         throw AssertionError()

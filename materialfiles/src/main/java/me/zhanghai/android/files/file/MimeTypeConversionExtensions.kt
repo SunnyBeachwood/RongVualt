@@ -6,6 +6,7 @@
 package me.zhanghai.android.files.file
 
 import android.webkit.MimeTypeMap
+import java.util.Locale
 import me.zhanghai.android.files.compat.getMimeTypeFromExtensionCompat
 import me.zhanghai.android.files.provider.common.PosixFileType
 import me.zhanghai.android.files.util.asFileName
@@ -13,11 +14,25 @@ import me.zhanghai.android.files.util.asPathName
 
 fun MimeType.Companion.guessFromPath(path: String): MimeType {
     val fileName = path.asPathName().fileName ?: return DIRECTORY
+    val lowerFileName = fileName.lowercase(Locale.ROOT)
+    // Volume suffixes are not understood by Android's MimeTypeMap (their
+    // apparent extension is numeric), but they are first-class archive
+    // entries for ZipXtract's multipart resolver.
+    when {
+        lowerFileName.matches(Regex(".+\\.(zip|jar|apk)\\.\\d{3}")) ||
+            lowerFileName.matches(Regex(".+\\.(zip|jar|apk)\\.part\\d+")) ||
+            lowerFileName.matches(Regex(".+\\.z\\d{2,}")) -> return "application/zip".asMimeType()
+        lowerFileName.matches(Regex(".+\\.7z\\.\\d{3}")) ->
+            return "application/x-7z-compressed".asMimeType()
+        lowerFileName.matches(Regex(".+\\.part\\d+\\.rar")) ||
+            lowerFileName.matches(Regex(".+\\.r\\d{2}")) ->
+            return "application/x-rar-compressed".asMimeType()
+    }
     return guessFromExtension(fileName.asFileName().singleExtension)
 }
 
 fun MimeType.Companion.guessFromExtension(extension: String): MimeType {
-    val extension = extension.lowercase()
+    val extension = extension.lowercase(Locale.ROOT)
     return extensionToMimeTypeOverrideMap[extension]
         ?: MimeTypeMap.getSingleton().getMimeTypeFromExtensionCompat(extension)?.asMimeTypeOrNull()
         ?: GENERIC
@@ -33,10 +48,17 @@ private val extensionToMimeTypeOverrideMap = mapOf(
     "csv" to "text/csv", // Was "text/comma-separated-values"
     "sh" to "application/x-sh", // Was "text/x-sh"
     // Addition
+    "br" to "application/x-brotli",
+    "chm" to "application/vnd.ms-htmlhelp",
     "bz" to "application/x-bzip",
     "bz2" to "application/x-bzip2",
+    "lz4" to "application/x-lz4",
+    "lzip" to "application/x-lzip",
     "z" to "application/x-compress",
+    "zst" to "application/zstd",
+    "zstd" to "application/zstd",
     "lzma" to "application/x-lzma",
+    "wim" to "application/x-ms-wim",
     "p7b" to "application/x-pkcs7-certificates",
     "spc" to "application/x-pkcs7-certificates", // Clashes with "chemical/x-galactic-spc"
     "ts" to "application/typescript", // Clashes with "video/mp2ts"
