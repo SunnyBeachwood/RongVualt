@@ -10,26 +10,39 @@ import java.io.IOException
 import java.io.InterruptedIOException
 import java.util.Random
 
+/** Outcome emitted after a foreground file job has really finished. */
+data class FileJobResult(
+    val id: Int,
+    val error: Exception? = null,
+    val cancelled: Boolean = false,
+) {
+    val isSuccess: Boolean get() = error == null && !cancelled
+}
+
 abstract class FileJob {
     val id = Random().nextInt()
 
     internal lateinit var service: FileJobService
         private set
 
-    fun runOn(service: FileJobService) {
+    fun runOn(service: FileJobService): FileJobResult {
         this.service = service
+        var result = FileJobResult(id)
         try {
             run()
             // TODO: Toast
         } catch (e: InterruptedIOException) {
             // TODO
             e.printStackTrace()
+            result = FileJobResult(id, e, cancelled = true)
         } catch (e: Exception) {
             e.printStackTrace()
             service.showToast(e.toString())
+            result = FileJobResult(id, e)
         } finally {
             service.notificationManager.cancel(id)
         }
+        return result
     }
 
     @Throws(IOException::class)

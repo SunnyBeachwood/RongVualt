@@ -29,17 +29,23 @@ internal object FtpPathPolicy {
         null
     }
 
-    fun isSafe(root: Path, path: Path): Boolean {
+    fun isSafe(root: Path, path: Path): Boolean = isSafe(root, path) {
+        readAttributesIfExists(it)?.isSymbolicLink
+    }
+
+    internal fun isSafe(
+        root: Path,
+        path: Path,
+        isSymbolicLink: (Path) -> Boolean?,
+    ): Boolean {
         val normalizedRoot = runCatching { root.normalize() }.getOrNull() ?: return false
         val normalizedPath = runCatching { path.normalize() }.getOrNull() ?: return false
         if (!runCatching { normalizedPath.startsWith(normalizedRoot) }.getOrDefault(false)) return false
-        val rootAttributes = readAttributesIfExists(normalizedRoot)
-        if (rootAttributes?.isSymbolicLink == true) return false
+        if (isSymbolicLink(normalizedRoot) == true) return false
         var current: Path? = normalizedPath
         while (current != null && current != normalizedRoot) {
             val candidate = current
-            val attributes = readAttributesIfExists(candidate)
-            if (attributes?.isSymbolicLink == true) return false
+            if (isSymbolicLink(candidate) == true) return false
             current = candidate.parent
         }
         return current == normalizedRoot

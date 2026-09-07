@@ -1,6 +1,7 @@
 package me.zhanghai.android.files.filelist
 
 import java8.nio.file.Paths
+import me.zhanghai.android.files.provider.TestFileSystemProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,6 +9,14 @@ import org.junit.Test
 
 /** Pure state tests for the dual-pane shell; intentionally does not start Android UI. */
 class DualPaneFileListViewModelTest {
+    companion object {
+        @JvmStatic
+        @org.junit.BeforeClass
+        fun installFileSystemProvider() {
+            TestFileSystemProvider.install()
+        }
+    }
+
     @Test
     fun historyIsIndependentAndSupportsBackForward() {
         val state = DualPaneFileListViewModel()
@@ -47,11 +56,12 @@ class DualPaneFileListViewModelTest {
     }
 
     @Test
-    fun layoutModeUsesAutoForDefaultAndCanBeOverridden() {
+    fun layoutModeUsesDualForDefaultAndCanBeOverridden() {
         val state = DualPaneFileListViewModel()
-        assertEquals(FileListLayoutMode.AUTO, state.layoutMode)
-        assertFalse(state.layoutMode.isDualPane(599))
-        assertTrue(state.layoutMode.isDualPane(600))
+        assertEquals(FileListLayoutMode.DUAL, state.layoutMode)
+        assertTrue(state.layoutMode.isDualPane(360))
+        assertFalse(FileListLayoutMode.AUTO.isDualPane(599))
+        assertTrue(FileListLayoutMode.AUTO.isDualPane(600))
         state.layoutMode = FileListLayoutMode.SINGLE
         assertFalse(state.layoutMode.isDualPane(1200))
         assertEquals(FileListLayoutMode.SINGLE, state.layoutMode)

@@ -53,6 +53,13 @@
             android:entries="@array/settings_file_name_ellipsize_entries"
             android:entryValues="@array/pref_entry_values_file_name_ellipsize"
             app:useSimpleSummaryProvider="true" />
+
+        <me.zhanghai.android.files.settings.FileListFontSizePreference
+            android:key="@string/pref_key_file_list_font_size"
+            android:title="@string/settings_file_list_font_size_title"
+            android:defaultValue="@integer/pref_default_value_file_list_font_size"
+            android:positiveButtonText="@android:string/ok"
+            android:negativeButtonText="@android:string/cancel" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/settings_behavior_title">

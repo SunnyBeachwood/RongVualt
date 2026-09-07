@@ -13,6 +13,7 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.compat.EnvironmentCompat2
 import me.zhanghai.android.files.filelist.FileSortOptions
+import me.zhanghai.android.files.filelist.FileListLayoutMode
 import me.zhanghai.android.files.filelist.FileViewType
 import me.zhanghai.android.files.filelist.OpenApkDefaultAction
 import me.zhanghai.android.files.navigation.BookmarkDirectory
@@ -45,6 +46,20 @@ object Settings {
             R.string.pref_key_file_list_secondary_start_directory,
             @Suppress("DEPRECATION")
             Paths.get(Environment.getExternalStorageDirectory().absolutePath)
+        )
+
+    /** Preferred layout for the normal, in-app file manager. Pickers stay single-pane. */
+    val FILE_LIST_LAYOUT_MODE: SettingLiveData<FileListLayoutMode> =
+        EnumSettingLiveData(
+            R.string.pref_key_file_list_layout_mode,
+            R.string.pref_default_value_file_list_layout_mode,
+            FileListLayoutMode::class.java
+        )
+
+    val FILE_LIST_FONT_SIZE: SettingLiveData<Int> =
+        IntegerSettingLiveData(
+            R.string.pref_key_file_list_font_size,
+            R.integer.pref_default_value_file_list_font_size
         )
 
     val FILE_LIST_PERSISTENT_DRAWER_OPEN: SettingLiveData<Boolean> =

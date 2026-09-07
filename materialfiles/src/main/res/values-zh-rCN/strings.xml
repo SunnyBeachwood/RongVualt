@@ -279,11 +279,17 @@
     <string name="file_list_pane_current">当前</string>
     <string name="file_list_pane_switch">切换窗格</string>
     <string name="file_list_toolbar_active_format">%1$s · 已选择 %2$,d 项</string>
+    <string name="file_list_toolbar_summary_format">文件夹：%1$d · 文件：%2$d · 存储：%3$s/%4$s</string>
+    <string name="file_list_parent_directory">返回上一级</string>
     <string name="file_list_action_back">后退</string>
     <string name="file_list_action_forward">前进</string>
     <string name="file_list_action_new">新建</string>
     <string name="file_list_action_copy_to_other">复制到另一侧</string>
     <string name="file_list_action_move_to_other">移动到另一侧</string>
+    <string name="file_list_action_copy_short">复制 →</string>
+    <string name="file_list_action_move_short">移动 →</string>
+    <string name="file_list_action_link">链接</string>
+    <string name="file_list_action_compress">压缩</string>
     <string name="file_list_action_cancel_selection">取消</string>
     <string name="file_list_action_selection_more">更多选择操作</string>
     <string name="file_list_action_select">选择</string>
@@ -653,6 +659,19 @@
         <item>省略中间</item>
         <item>省略结尾</item>
         <item>滚动</item>
+    </string-array>
+    <string name="settings_file_list_font_size_title">文件列表字号</string>
+    <string name="settings_file_list_font_size_summary">%1$d sp</string>
+    <string name="settings_file_list_font_size_range">可调整范围：%1$d–%2$d sp</string>
+    <string-array name="settings_file_list_font_size_entries">
+        <item>小</item>
+        <item>标准</item>
+        <item>大</item>
+    </string-array>
+    <string-array name="pref_entry_values_file_list_font_size">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
     </string-array>
     <string name="settings_behavior_title">行为</string>
     <string name="settings_default_directory_title">默认文件夹</string>

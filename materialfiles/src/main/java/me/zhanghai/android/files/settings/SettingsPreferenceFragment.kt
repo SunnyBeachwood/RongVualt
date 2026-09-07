@@ -13,9 +13,18 @@ import me.zhanghai.android.files.theme.custom.ThemeColor
 import me.zhanghai.android.files.theme.night.NightMode
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.PreferenceFragmentCompat
+import androidx.preference.Preference
 
 class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     private lateinit var localePreference: LocalePreference
+
+    override fun onDisplayPreferenceDialog(preference: Preference) {
+        if (preference is FileListFontSizePreference) {
+            displayPreferenceDialog(FileListFontSizeDialogFragment(), preference.key)
+        } else {
+            super.onDisplayPreferenceDialog(preference)
+        }
+    }
 
     override fun onCreatePreferencesFix(savedInstanceState: Bundle?, rootKey: String?) {
         addPreferencesFromResource(R.xml.settings)

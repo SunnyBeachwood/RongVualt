@@ -100,12 +100,10 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        if (::binding.isInitialized) {
-            outState.putBoolean(
-                KEY_ADVANCED,
-                binding.root.findViewById<View>(R.id.advancedLayout).isVisible,
-            )
-        }
+        outState.putBoolean(
+            KEY_ADVANCED,
+            binding.root.findViewById<View>(R.id.advancedLayout).isVisible,
+        )
         super.onSaveInstanceState(outState)
     }
 

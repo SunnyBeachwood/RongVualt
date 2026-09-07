@@ -254,6 +254,22 @@ internal fun upgradeAppTo1_3_0() {
     migrateSmbServersSetting1_3_0()
 }
 
+/** Convert the original ordinal string preference to the new editable sp value. */
+internal fun migrateFileListFontSizeSetting() {
+    val key = application.getString(R.string.pref_key_file_list_font_size)
+    val oldValue = defaultSharedPreferences.all[key] as? String ?: return
+    val newValue = when (oldValue.toIntOrNull()) {
+        0 -> 14
+        1 -> 16
+        2 -> 18
+        else -> 16
+    }
+    defaultSharedPreferences.edit {
+        remove(key)
+        putInt(key, newValue)
+    }
+}
+
 private fun migrateSmbServersSetting1_3_0() {
     val key = application.getString(R.string.pref_key_storages)
     val oldBytes = defaultSharedPreferences.getString(key, null)?.asBase64()?.toByteArray()

@@ -44,6 +44,17 @@ enum class ArchiveCapability {
     ENCRYPTION,
 }
 
+private fun defaultArchiveCapabilities(format: ArchiveFormat): Set<ArchiveCapability> = when (format) {
+    ArchiveFormat.ZIP,
+    ArchiveFormat.SEVEN_ZIP,
+    ArchiveFormat.RAR,
+    ArchiveFormat.TAR,
+    ArchiveFormat.COMPRESSED_TAR,
+    ArchiveFormat.COMPRESSED_STREAM,
+    ArchiveFormat.GENERIC -> setOf(ArchiveCapability.LIST, ArchiveCapability.EXTRACT)
+    ArchiveFormat.UNKNOWN -> emptySet()
+}
+
 /** Stable capability value exposed to the file-manager adapter. */
 data class ArchiveCapabilities(
     val format: ArchiveFormat,
@@ -57,10 +68,10 @@ data class ArchiveProbe(
     val format: ArchiveFormat,
     val displayName: String,
     val encryption: ArchiveEncryption = ArchiveEncryption.NONE,
-    val capabilities: Set<ArchiveCapability> = setOf(
-        ArchiveCapability.LIST,
-        ArchiveCapability.EXTRACT,
-    ),
+    // A probe constructed for an unrecognised name must be inert. Callers
+    // should only advertise operations after the detector or engine has
+    // positively identified an archive family.
+    val capabilities: Set<ArchiveCapability> = defaultArchiveCapabilities(format),
     val volumeNames: List<String> = emptyList(),
 ) {
     val archiveCapabilities: ArchiveCapabilities
@@ -203,16 +214,16 @@ fun ArchiveCreateOptions.validate(format: ArchiveFormat, password: CharArray?, i
     if (format != ArchiveFormat.ZIP && zipEncryption != ArchiveEncryption.NONE) {
         throw UnsupportedArchiveException("ZIP encryption options are only valid for ZIP")
     }
-    if (zipEncryption != ArchiveEncryption.NONE && password.isNullOrEmpty()) {
+    if (zipEncryption != ArchiveEncryption.NONE && (password == null || password.isEmpty())) {
         throw ArchivePasswordException("An encryption password is required")
     }
     if (format != ArchiveFormat.ZIP && format != ArchiveFormat.SEVEN_ZIP &&
-        !password.isNullOrEmpty()
+        password?.isNotEmpty() == true
     ) {
         throw UnsupportedArchiveException("Passwords are only supported for ZIP and 7z")
     }
     if (format == ArchiveFormat.ZIP && zipEncryption == ArchiveEncryption.NONE &&
-        !password.isNullOrEmpty()
+        password?.isNotEmpty() == true
     ) {
         throw UnsupportedArchiveException("A ZIP password requires an encryption mode")
     }

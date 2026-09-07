@@ -6,14 +6,21 @@
 package me.zhanghai.android.files.ftpserver
 
 import java8.nio.file.Paths
-import me.zhanghai.android.files.provider.common.createSymbolicLink
-import me.zhanghai.android.files.provider.common.delete
+import me.zhanghai.android.files.provider.TestFileSystemProvider
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Source-level coverage for the validation that is exercised before startup. */
 class FtpServerValidationTest {
+    companion object {
+        @JvmStatic
+        @org.junit.BeforeClass
+        fun installFileSystemProvider() {
+            TestFileSystemProvider.install()
+        }
+    }
+
     @Test
     fun acceptsOnlyTheFullTcpPortRange() {
         assertTrue(FtpServerService.isValidPort(1))
@@ -26,28 +33,17 @@ class FtpServerValidationTest {
     @Test
     fun normalizesTraversalBeforeApplyingTheHomeBoundary() {
         val home = Paths.get("/srv/share")
-        assertTrue(FtpPathPolicy.isSafe(home, home.resolve("documents/report.txt").normalize()))
-        assertFalse(FtpPathPolicy.isSafe(home, home.resolve("../etc/passwd").normalize()))
-        assertFalse(FtpPathPolicy.isSafe(home, Paths.get("/srv/share-old/file.txt")))
+        assertTrue(FtpPathPolicy.isSafe(home, home.resolve("documents/report.txt").normalize()) { false })
+        assertFalse(FtpPathPolicy.isSafe(home, home.resolve("../etc/passwd").normalize()) { false })
+        assertFalse(FtpPathPolicy.isSafe(home, Paths.get("/srv/share-old/file.txt")) { false })
     }
 
     @Test
     fun rejectsAPathBelowASymbolicLink() {
-        val rootFile = java.io.File.createTempFile("rongvault-ftp-root", "").apply {
-            delete()
-            mkdirs()
-        }
-        val outsideFile = java.io.File.createTempFile("rongvault-ftp-outside", "")
-        val root = Paths.get(rootFile.toURI())
-        val outside = Paths.get(outsideFile.toURI())
+        val root = Paths.get("/srv/share")
         val link = root.resolve("escape")
-        try {
-            link.createSymbolicLink(outside)
-            assertFalse(FtpPathPolicy.isSafe(root, link.resolve("secret.txt")))
-        } finally {
-            runCatching { link.delete() }
-            rootFile.deleteRecursively()
-            outsideFile.delete()
-        }
+        assertFalse(FtpPathPolicy.isSafe(root, link.resolve("secret.txt")) { candidate ->
+            candidate == link
+        })
     }
 }

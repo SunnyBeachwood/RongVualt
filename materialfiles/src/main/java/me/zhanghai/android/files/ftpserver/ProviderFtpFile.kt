@@ -77,7 +77,7 @@ class ProviderFtpFile(
 
     override fun isRemovable(): Boolean {
         if (!touchIfSafe()) return false
-        if (relativePath.isEmpty) {
+        if (relativePath.toString().isEmpty()) {
             return false
         }
         if (user.authorize(WriteRequest(absolutePath)) == null) {
@@ -87,9 +87,9 @@ class ProviderFtpFile(
         return isSafePath(parent) && hasAccess(parent, AccessMode.WRITE)
     }
 
-    override fun getOwnerName(): String =
-        try {
-            if (!touchIfSafe()) return "user"
+    override fun getOwnerName(): String {
+        if (!touchIfSafe()) return "user"
+        return try {
             path.getOwner().name
         } catch (ignored: UnsupportedOperationException) {
             null
@@ -99,6 +99,7 @@ class ProviderFtpFile(
             e.printStackTrace()
             null
         } ?: "user"
+    }
 
     override fun getGroupName(): String {
         if (!touchIfSafe()) return "group"
@@ -317,7 +318,7 @@ class ProviderFtpFile(
         return true
     }
 
-    /** FTP must never turn a special node (for example /dev/block/*) into a
+    /** FTP must never turn a special node (for example a node under /dev/block) into a
      * writable data sink, even when the selected Root strategy grants access. */
     private fun isWritableTarget(): Boolean =
         FtpPathPolicy.readAttributesIfExists(path)?.isRegularFile != false

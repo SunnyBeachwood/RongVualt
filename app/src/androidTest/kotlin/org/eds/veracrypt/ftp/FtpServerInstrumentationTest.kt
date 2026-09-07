@@ -14,6 +14,8 @@ import java.net.ServerSocket
 import java8.nio.file.Paths
 import me.zhanghai.android.files.ftpserver.FtpServer
 import me.zhanghai.android.files.ftpserver.FtpServerService
+import me.zhanghai.android.files.provider.common.readAttributes
+import java8.nio.file.attribute.BasicFileAttributes
 import org.apache.commons.net.ftp.FTPClient
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
@@ -30,19 +32,22 @@ class FtpServerInstrumentationTest {
     fun loopbackLoginListUploadResumeDownloadRenameAndDelete() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val directory = File(context.cacheDir, "ftp-test-${System.nanoTime()}").apply { mkdirs() }
+        val homeDirectory = Paths.get(directory.toURI())
+        assertTrue(homeDirectory.readAttributes(BasicFileAttributes::class.java).isDirectory)
         val port = ServerSocket(0).use { it.localPort }
         val server = FtpServer(
             username = "test-user",
             password = "test-password",
             port = port,
-            homeDirectory = Paths.get(directory.toURI()),
+            homeDirectory = homeDirectory,
             writable = true,
             anonymous = false,
         )
         val client = FTPClient()
         try {
             server.start()
-            client.connect("127.0.0.1", port, 5_000)
+            client.setConnectTimeout(5_000)
+            client.connect("127.0.0.1", port)
             assertTrue(client.login("test-user", "test-password"))
             client.enterLocalPassiveMode()
             assertTrue(client.changeWorkingDirectory("/"))
@@ -74,19 +79,22 @@ class FtpServerInstrumentationTest {
     fun anonymousLoginCanWriteWhenTheUserExplicitlyEnablesIt() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val directory = File(context.cacheDir, "ftp-anonymous-${System.nanoTime()}").apply { mkdirs() }
+        val homeDirectory = Paths.get(directory.toURI())
+        assertTrue(homeDirectory.readAttributes(BasicFileAttributes::class.java).isDirectory)
         val port = ServerSocket(0).use { it.localPort }
         val server = FtpServer(
             username = FtpServerService.USERNAME_ANONYMOUS,
             password = null,
             port = port,
-            homeDirectory = Paths.get(directory.toURI()),
+            homeDirectory = homeDirectory,
             writable = true,
             anonymous = true,
         )
         val client = FTPClient()
         try {
             server.start()
-            client.connect("127.0.0.1", port, 5_000)
+            client.setConnectTimeout(5_000)
+            client.connect("127.0.0.1", port)
             assertTrue(client.login(FtpServerService.USERNAME_ANONYMOUS, ""))
             client.enterLocalPassiveMode()
             assertTrue(client.storeFile("anonymous.txt", ByteArrayInputStream(byteArrayOf(1, 2, 3))))

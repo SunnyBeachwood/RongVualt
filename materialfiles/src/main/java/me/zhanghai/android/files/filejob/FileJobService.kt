@@ -20,6 +20,7 @@ import me.zhanghai.android.files.util.WakeWifiLock
 import me.zhanghai.android.files.util.removeFirst
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.CopyOnWriteArraySet
 import me.zhanghai.android.files.compat.removeFirstCompat
 import org.eds.zipxtract.core.ArchiveCreateOptions
 import org.eds.zipxtract.core.ArchiveFormat
@@ -60,7 +61,8 @@ class FileJobService : Service() {
         // Synchronize on runningJobs to prevent a job from removing itself before being added.
         synchronized(runningJobs) {
             val future = executorService.submit {
-                job.runOn(this)
+                val result = job.runOn(this)
+                dispatchResult(result)
                 synchronized(runningJobs) {
                     runningJobs.remove(job)
                     updateWakeWifiLockLocked()
@@ -97,10 +99,30 @@ class FileJobService : Service() {
         wakeWifiLock.isAcquired = jobCount > 0
     }
 
+    private fun dispatchResult(result: FileJobResult) {
+        resultListeners.forEach { listener ->
+            runCatching { listener(result) }
+        }
+    }
+
     companion object {
         private var instance: FileJobService? = null
 
         private val pendingJobs = mutableListOf<FileJob>()
+        private val resultListeners = CopyOnWriteArraySet<(FileJobResult) -> Unit>()
+
+        /**
+         * Result listeners are process-local and must be unregistered with
+         * the owner lifecycle. They let panes refresh only after a job has
+         * completed rather than optimistically refreshing at submission time.
+         */
+        fun addResultListener(listener: (FileJobResult) -> Unit) {
+            resultListeners += listener
+        }
+
+        fun removeResultListener(listener: (FileJobResult) -> Unit) {
+            resultListeners -= listener
+        }
 
         val runningJobCount: Int
             @MainThread

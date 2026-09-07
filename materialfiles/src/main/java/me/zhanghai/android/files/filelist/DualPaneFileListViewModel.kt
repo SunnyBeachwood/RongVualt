@@ -13,7 +13,9 @@ import java.util.ArrayDeque
 class DualPaneFileListViewModel : ViewModel() {
     var activePane: PaneId = PaneId.LEFT
 
-    var layoutMode: FileListLayoutMode = FileListLayoutMode.AUTO
+    // Normal file-manager sessions start as two panes. The Fragment restores the
+    // application preference immediately after construction.
+    var layoutMode: FileListLayoutMode = FileListLayoutMode.DUAL
 
     private val backStacks = PaneId.entries.associateWith { ArrayDeque<Path>() }
     private val forwardStacks = PaneId.entries.associateWith { ArrayDeque<Path>() }
@@ -47,4 +49,3 @@ class DualPaneFileListViewModel : ViewModel() {
         forwardStacks.getValue(pane).clear()
     }
 }
-

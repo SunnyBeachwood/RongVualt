@@ -67,7 +67,7 @@ class ZipXtractExtractJob(
                         // behavior. Flattening an archive uses its root's
                         // immediate children, so “extract here” has the same
                         // semantics as the native engine.
-                        if (!password.isNullOrEmpty()) {
+                        if (password?.isNotEmpty() == true) {
                             throw IOException("This archive format does not support passwords")
                         }
                         copyLegacyArchive(source, targetDirectory, createContainingDirectory, entries)

@@ -53,7 +53,8 @@
                 android:id="@+id/dualPaneDivider"
                 android:layout_width="1dp"
                 android:layout_height="match_parent"
-                android:background="?colorOutlineVariant" />
+            android:background="?colorOutlineVariant"
+            android:elevation="1dp" />
 
             <include
                 android:id="@+id/rightPane"

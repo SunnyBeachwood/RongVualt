@@ -209,7 +209,7 @@ class ZipXtractArchiveEngine(
 
     private fun listZip(file: File, password: CharArray?): List<ArchiveEntry> {
         return ZipFile(file).use { zip ->
-            if (!password.isNullOrEmpty()) zip.setPassword(password)
+            if (password?.isNotEmpty() == true) zip.setPassword(password)
             zip.fileHeaders.map { header ->
                 val path = ArchivePathPolicy.normalizeEntryName(header.fileName)
                 ArchiveEntry(
@@ -231,7 +231,7 @@ class ZipXtractArchiveEngine(
         listener: ArchiveProgressListener?,
     ) {
         ZipFile(file).use { zip ->
-            if (!request.password.isNullOrEmpty()) zip.setPassword(request.password)
+            if (request.password?.isNotEmpty() == true) zip.setPassword(request.password)
             val headers = zip.fileHeaders
             headers.firstOrNull { isZipSymbolicLink(it) }?.let { header ->
                 throw ArchiveException("Symbolic links are not extracted: ${header.fileName}")
@@ -487,7 +487,7 @@ class ZipXtractArchiveEngine(
             }
             compressionLevel = compressionLevel(options.zipCompressionLevel)
             encryptionMethod = encryptionMethod(options.zipEncryption)
-            isEncryptFiles = options.zipEncryption != ArchiveEncryption.NONE && !request.password.isNullOrEmpty()
+            isEncryptFiles = options.zipEncryption != ArchiveEncryption.NONE && request.password?.isNotEmpty() == true
             aesKeyStrength = when (options.zipAesKeyBits) {
                 128 -> AesKeyStrength.KEY_STRENGTH_128
                 else -> AesKeyStrength.KEY_STRENGTH_256
@@ -579,8 +579,8 @@ class ZipXtractArchiveEngine(
                 request.cancellation.throwIfCancelled()
                 val name = ArchivePathPolicy.normalizeEntryName(entry.name)
                 val tarEntry = TarArchiveEntry(name, entry.isDirectory).apply {
-                    size = if (entry.isDirectory) 0 else entry.size.coerceAtLeast(0L)
-                    entry.lastModifiedEpochMillis?.let { lastModifiedDate = Date(it) }
+                    this.size = if (entry.isDirectory) 0 else entry.size.coerceAtLeast(0L)
+                    entry.lastModifiedEpochMillis?.let { setModTime(Date(it)) }
                 }
                 tar.putArchiveEntry(tarEntry)
                 if (!entry.isDirectory) {
@@ -824,7 +824,7 @@ class ZipXtractArchiveEngine(
                 archive.setSolid(request.options.sevenZipSolid)
                 archive.setSolidSize(8192)
                 archive.setThreadCount(request.options.sevenZipThreadCount.coerceAtLeast(1))
-                if (!request.password.isNullOrEmpty()) archive.setHeaderEncryption(true)
+                if (request.password?.isNotEmpty() == true) archive.setHeaderEncryption(true)
                 val callback = SevenZipCreateCallback(request, listener)
                 try {
                     archive.createArchive(
@@ -885,6 +885,12 @@ class ZipXtractArchiveEngine(
     }
 }
 
+private fun ArchiveTarget.ensureDirectoryRecursively() {
+    parent()?.ensureDirectoryRecursively()
+    if (!exists()) createDirectory()
+    if (!isDirectory()) throw ArchiveException("Target is not a directory: $displayName")
+}
+
 private class SevenZipExtractCallback(
     private val archive: IInArchive,
     private val destination: ArchiveTarget,
@@ -943,7 +949,7 @@ private class SevenZipExtractCallback(
         }
         return ISequentialOutStream { data ->
             try {
-                target.parent()?.ensureDirectory()
+                target.parent()?.ensureDirectoryRecursively()
                 if (output == null) output = target.openOutputStream(overwrite = true)
                 output!!.write(data)
                 data.size

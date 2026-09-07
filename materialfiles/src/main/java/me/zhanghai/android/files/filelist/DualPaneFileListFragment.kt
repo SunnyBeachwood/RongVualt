@@ -10,10 +10,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.util.Log
 import android.text.TextUtils
 import android.view.Gravity
 import android.view.KeyCharacterMap
@@ -34,7 +36,6 @@ import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.ContextCompat
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -52,11 +53,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textview.MaterialTextView
 import java8.nio.file.Path
 import java8.nio.file.Paths
 import java.util.Locale
@@ -69,6 +68,8 @@ import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.clipboardManager
 import me.zhanghai.android.files.compat.checkSelfPermissionCompat
 import me.zhanghai.android.files.file.FileItem
+import me.zhanghai.android.files.file.JavaFile
+import me.zhanghai.android.files.file.asFileSize
 import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.file.asMimeTypeOrNull
 import me.zhanghai.android.files.file.extension
@@ -78,6 +79,7 @@ import me.zhanghai.android.files.file.isImage
 import me.zhanghai.android.files.file.isMarkdownFile
 import me.zhanghai.android.files.file.loadFileItem
 import me.zhanghai.android.files.filejob.FileJobService
+import me.zhanghai.android.files.filejob.FileJobResult
 import me.zhanghai.android.files.filelist.FileSortOptions.By
 import me.zhanghai.android.files.filelist.FileSortOptions.Order
 import me.zhanghai.android.files.fileproperties.FilePropertiesDialogFragment
@@ -102,6 +104,8 @@ import me.zhanghai.android.files.util.Loading
 import me.zhanghai.android.files.util.Success
 import me.zhanghai.android.files.util.addOnBackPressedCallback
 import me.zhanghai.android.files.util.args
+import me.zhanghai.android.files.util.copyText
+import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.createManageAppAllFilesAccessPermissionIntent
 import me.zhanghai.android.files.util.createSendStreamIntent
 import me.zhanghai.android.files.util.createViewIntent
@@ -190,13 +194,27 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     private var pendingExtractionPane: PaneId? = null
     private var archiveAdditionPane: PaneId? = null
     private var lastWindowWidthDp = -1
+    private var startupErrorShown = false
     private val archiveEditProbePaths = EnumMap<PaneId, Path?>(PaneId::class.java)
     private val archiveEditCapabilities = EnumMap<PaneId, Boolean>(PaneId::class.java)
+    private val paneDiagnostics = EnumMap<PaneId, String>(PaneId::class.java)
+    // This is deliberately kept separate from FileListViewModel.selectedFiles
+    // during cold start. Its LiveData can be observed before its initial value
+    // is dispatched on some AndroidX versions.
+    private val selectionCounts = EnumMap<PaneId, Int>(PaneId::class.java).apply {
+        put(PaneId.LEFT, 0)
+        put(PaneId.RIGHT, 0)
+    }
     private val debouncedSearchRunnable = DebouncedRunnable(
         android.os.Handler(android.os.Looper.getMainLooper()), 500
     ) {
         val query = searchView?.query?.toString() ?: return@DebouncedRunnable
         if (query.isNotEmpty()) model(shellViewModel.activePane).search(query)
+    }
+    private val fileJobResultListener: (FileJobResult) -> Unit = { result ->
+        if (this::root.isInitialized) {
+            root.post { onFileJobResult(result) }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -235,10 +253,19 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
+        try {
+            initializeActivity(savedInstanceState)
+        } catch (exception: Exception) {
+            showRecoverableStartupError(exception)
+        }
+    }
+
+    /** Keep a browser startup fault isolated from RongVualt's container UI. */
+    private fun initializeActivity(savedInstanceState: Bundle?) {
         val activity = requireActivity() as AppCompatActivity
         activity.setTitle(R.string.file_list_title)
         activity.setSupportActionBar(toolbar)
-        toolbar.logo = ContextCompat.getDrawable(requireContext(), R.mipmap.launcher_icon)
+        toolbar.logo = null
         if (savedInstanceState == null) {
             navigationFragment = NavigationFragment()
             childFragmentManager.commit {
@@ -258,6 +285,11 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         if (!shellViewModelInitialized()) {
             initializePaths()
         }
+        // FileListActivity only creates this fragment for the normal browser;
+        // ACTION_OPEN_DOCUMENT and other picker contracts retain FileListFragment.
+        // Restoring here keeps the choice across new browser Activities while the
+        // ViewModel still preserves it across configuration changes.
+        shellViewModel.layoutMode = Settings.FILE_LIST_LAYOUT_MODE.valueCompat
         setupPane(PaneId.LEFT, leftPane, leftViewModel, PaneAdapterListener(PaneId.LEFT))
         setupPane(PaneId.RIGHT, rightPane, rightViewModel, PaneAdapterListener(PaneId.RIGHT))
         addOnBackPressedCallback(DrawerLayoutOnBackPressedCallback(drawerLayout))
@@ -266,7 +298,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 override fun handleOnBackPressed() {
                     val pane = shellViewModel.activePane
                     val current = model(pane).currentPath
-                    if (model(pane).selectedFiles.isNotEmpty()) {
+                    if (hasSelection(pane)) {
                         model(pane).clearSelectedFiles()
                     } else if (!goBack(pane, current)) {
                         isEnabled = false
@@ -282,10 +314,34 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         requireActivity().invalidateOptionsMenu()
     }
 
+    private fun showRecoverableStartupError(exception: Exception) {
+        if (startupErrorShown || !isAdded) return
+        startupErrorShown = true
+        Log.e("RongVualtFileManager", "Unable to initialize file manager", exception)
+        val detail = exception.localizedMessage?.takeIf { it.isNotBlank() }
+            ?: exception.javaClass.simpleName
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("文件管理器无法打开")
+            .setMessage("发生错误：$detail\n\n已安全返回，不会影响容器和已解锁卷。")
+            .setPositiveButton(android.R.string.ok) { _, _ -> requireActivity().finish() }
+            .setOnDismissListener { requireActivity().finish() }
+            .show()
+    }
+
     override fun onResume() {
         super.onResume()
         if (!leftViewModel.isStorageAccessRequested) ensureStorageAccess()
         if (!leftViewModel.isNotificationPermissionRequested) ensureNotificationPermission()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        FileJobService.addResultListener(fileJobResultListener)
+    }
+
+    override fun onStop() {
+        FileJobService.removeResultListener(fileJobResultListener)
+        super.onStop()
     }
 
     override fun onDestroyView() {
@@ -350,7 +406,11 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val context = requireContext()
         val layoutManager = GridLayoutManager(context, 1)
         val adapter = FileListAdapter(listener)
+        adapter.fontSize = FileListFontSize.fromSp(Settings.FILE_LIST_FONT_SIZE.valueCompat)
         binding.root.setOnClickListener { activatePane(pane) }
+        binding.parentRow.setOnClickListener {
+            model(pane).currentPathLiveData.value?.parent?.let { navigateTo(pane, it) }
+        }
         binding.header.contentDescription = getString(
             if (pane == PaneId.LEFT) R.string.file_list_pane_left else R.string.file_list_pane_right
         )
@@ -362,6 +422,14 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             ScrollingViewOnApplyWindowInsetsListener(binding.recyclerView, fastScroller)
         )
         binding.swipeRefreshLayout.setOnRefreshListener { model(pane).reload() }
+        binding.errorText.setOnClickListener { model(pane).reload() }
+        binding.errorText.setOnLongClickListener {
+            paneDiagnostics[pane]?.let { diagnostic ->
+                clipboardManager.copyText(diagnostic, requireContext())
+                showToast("已复制诊断信息")
+            }
+            true
+        }
         binding.breadcrumbLayout.setListener(PaneBreadcrumbListener(pane))
         if (pane == PaneId.LEFT) {
             leftAdapter = adapter
@@ -376,6 +444,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         viewModel.sortOptionsLiveData.observe(viewLifecycleOwner) { onPaneSortChanged(pane, it) }
         viewModel.viewSortPathSpecificLiveData.observe(viewLifecycleOwner) { invalidateOptionsMenu() }
         viewModel.selectedFilesLiveData.observe(viewLifecycleOwner) {
+            selectionCounts[pane] = it.size
             adapter.replaceSelectedFiles(it)
             updatePaneHeader(pane)
             renderActionDock()
@@ -383,6 +452,9 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
         viewModel.searchStateLiveData.observe(viewLifecycleOwner) { updatePaneHeader(pane) }
         viewModel.fileListLiveData.observe(viewLifecycleOwner) { onPaneFileListChanged(pane, it) }
+        Settings.FILE_LIST_FONT_SIZE.observe(viewLifecycleOwner) {
+            adapter.fontSize = FileListFontSize.fromSp(it)
+        }
         Settings.FILE_NAME_ELLIPSIZE.observe(viewLifecycleOwner) {
             adapter.nameEllipsize = it
         }
@@ -410,9 +482,18 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     private fun onPanePathChanged(pane: PaneId, path: Path) {
         val binding = binding(pane)
         binding.path.text = path.toUserFriendlyString()
+        updateParentRow(pane)
         updatePaneHeader(pane)
         updateArchiveEditCapability(pane)
         invalidateOptionsMenu()
+    }
+
+    private fun updateParentRow(pane: PaneId) {
+        val binding = binding(pane)
+        val parent = model(pane).currentPathLiveData.value?.parent
+        binding.parentRow.isVisible = parent != null
+        binding.parentText.text = ".."
+        binding.parentRow.contentDescription = getString(R.string.file_list_parent_directory)
     }
 
     private fun updatePaneHeader(pane: PaneId) {
@@ -429,13 +510,20 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         )
         binding.label.setText(if (pane == PaneId.LEFT) R.string.file_list_pane_left else R.string.file_list_pane_right)
         binding.currentBadge.isVisible = active
-        val selected = viewModel.selectedFiles.size
+        val selected = selectionCount(pane)
         binding.selectedCount.text = if (selected == 0) "" else selected.toString()
-        val files = viewModel.fileListStateful.value
-        if (files is Success) {
-            binding.summary.text = getSubtitle(files.value)
-        } else if (files is Loading) {
+        // FileListSwitchMapLiveData does not publish its first loading value
+        // synchronously with resetTo().  The pane header is set up immediately
+        // afterwards, so use the nullable LiveData value here rather than the
+        // ViewModel's non-null convenience accessor.
+        val fileListStateful = viewModel.fileListLiveData.value
+        val files = fileListStateful?.value
+        if (files != null) {
+            binding.summary.text = getSubtitle(files)
+        } else if (fileListStateful is Loading<*>) {
             binding.summary.setText(R.string.loading)
+        } else {
+            binding.summary.text = ""
         }
         if (shellViewModel.activePane == pane) updateToolbarState()
     }
@@ -443,17 +531,38 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     private fun updateToolbarState() {
         if (!this::toolbar.isInitialized || !this::leftViewModel.isInitialized) return
         val viewModel = model(shellViewModel.activePane)
-        val selected = viewModel.selectedFiles.size
-        toolbar.subtitle = if (selected == 0) {
-            viewModel.currentPath.toUserFriendlyString()
-        } else {
-            getString(
-                R.string.file_list_toolbar_active_format,
-                viewModel.currentPath.toUserFriendlyString(),
-                selected,
-            )
-        }
+        // The selected-files observer is allowed to run before the first path
+        // value is dispatched.  The non-null ViewModel convenience accessor is
+        // not valid during that cold-start interval.
+        val currentPath = viewModel.currentPathLiveData.value ?: return
+        toolbar.title = currentPath.toUserFriendlyString()
+        val files = viewModel.fileListLiveData.value?.value
+        val directories = files?.count { it.attributes.isDirectory } ?: 0
+        val regular = files?.count { !it.attributes.isDirectory } ?: 0
+        val storageRoot = Environment.getExternalStorageDirectory().absolutePath
+        val total = JavaFile.getTotalSpace(storageRoot)
+        val free = JavaFile.getFreeSpace(storageRoot)
+        val used = (total - free).coerceAtLeast(0)
+        val usedText = if (total > 0) used.asFileSize().formatHumanReadable(requireContext()) else "-"
+        val totalText = if (total > 0) total.asFileSize().formatHumanReadable(requireContext()) else "-"
+        toolbar.subtitle = getString(
+            R.string.file_list_toolbar_summary_format,
+            directories, regular, usedText, totalText,
+        )
     }
+
+    private fun invalidateOptionsMenu() {
+        requireActivity().invalidateOptionsMenu()
+    }
+
+    /**
+     * The two FileListViewModels are configured before their observers are
+     * attached.  On a cold launch LiveData can still be null for that small
+     * interval, so UI-only selection state must not use valueCompat.
+     */
+    private fun selectionCount(pane: PaneId): Int = selectionCounts[pane] ?: 0
+
+    private fun hasSelection(pane: PaneId): Boolean = selectionCount(pane) > 0
 
     private fun onPaneFileListChanged(
         pane: PaneId,
@@ -463,20 +572,57 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val files = stateful.value
         val searching = model(pane).searchState.isSearching
         val hasFiles = !files.isNullOrEmpty()
-        binding.swipeRefreshLayout.isRefreshing = stateful is Loading && (hasFiles || searching)
-        binding.progress.fadeToVisibilityUnsafe(stateful is Loading && !(hasFiles || searching))
-        binding.errorText.fadeToVisibilityUnsafe(stateful is Failure && !hasFiles)
-        binding.emptyView.fadeToVisibilityUnsafe(stateful is Success && !hasFiles)
+        binding.swipeRefreshLayout.isRefreshing = stateful is Loading<*> && (hasFiles || searching)
+        binding.progress.fadeToVisibilityUnsafe(stateful is Loading<*> && !(hasFiles || searching))
+        binding.errorText.fadeToVisibilityUnsafe(stateful is Failure<*> && !hasFiles)
+        binding.emptyView.fadeToVisibilityUnsafe(stateful is Success<*> && !hasFiles)
         val throwable = (stateful as? Failure)?.throwable
         if (throwable != null) {
-            throwable.printStackTrace()
-            if (hasFiles) showToast(throwable.toString()) else binding.errorText.text = throwable.toString()
+            showPaneError(pane, throwable, hasFiles)
+        } else if (files != null) {
+            paneDiagnostics.remove(pane)
         }
         if (files != null) updateAdapterFileList(pane) else adapter(pane).clear()
         updatePaneHeader(pane)
-        if (stateful is Success) {
+        if (stateful.value != null) {
             maybeRestorePaneScroll(pane)
         }
+    }
+
+    private fun onFileJobResult(result: FileJobResult) {
+        if (!isAdded || result.cancelled) return
+        if (result.isSuccess) {
+            model(PaneId.LEFT).reload()
+            model(PaneId.RIGHT).reload()
+        } else {
+            showPaneError(shellViewModel.activePane, result.error ?: return, hasFiles = true)
+        }
+    }
+
+    private fun showPaneError(pane: PaneId, throwable: Throwable, hasFiles: Boolean) {
+        val diagnostic = buildSafeDiagnostic(throwable)
+        paneDiagnostics[pane] = diagnostic
+        val message = "${userFacingError(throwable)}\n轻触重试，长按复制诊断信息。"
+        if (hasFiles) {
+            showToast(userFacingError(throwable))
+        } else {
+            binding(pane).errorText.text = message
+        }
+    }
+
+    private fun userFacingError(throwable: Throwable): String = when (throwable) {
+        is SecurityException -> "没有访问该位置的权限。"
+        is java.io.FileNotFoundException -> "文件或位置已不可用。"
+        is java.io.IOException -> "文件操作未完成：${throwable.message.orEmpty().take(120)}"
+        else -> "操作未完成：${throwable.message.orEmpty().take(120).ifBlank { "发生未知错误" }}"
+    }
+
+    private fun buildSafeDiagnostic(throwable: Throwable): String {
+        val raw = "${throwable.javaClass.simpleName}: ${throwable.message.orEmpty()}"
+        return raw
+            .replace(Regex("(?i)(password|passphrase|secret|key)\\s*[=:]\\s*[^,\\s]+"), "$1=<redacted>")
+            .replace(Regex("(?:content|file)://\\S+|/(?:[^\\s/]+/)+[^\\s]*"), "<path>")
+            .take(500)
     }
 
     private fun maybeRestorePaneScroll(pane: PaneId) {
@@ -516,9 +662,15 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     }
 
     private fun updateSpanCount(pane: PaneId) {
+        // The root view can receive its first layout pass before onActivityCreated()
+        // has installed both pane RecyclerViews. Do not turn that harmless early
+        // callback into a process-wide crash.
+        if (pane == PaneId.LEFT && !this::leftLayoutManager.isInitialized) return
+        if (pane == PaneId.RIGHT && !this::rightLayoutManager.isInitialized) return
+        val viewType = model(pane).viewTypeLiveData.value ?: return
         val widthDp = effectiveWindowWidthDp() /
             if (isDualPaneVisible()) 2 else 1
-        layoutManager(pane).spanCount = when (model(pane).viewType) {
+        layoutManager(pane).spanCount = when (viewType) {
             FileViewType.LIST -> 1
             FileViewType.GRID -> (widthDp / 180).coerceAtLeast(2)
         }
@@ -551,14 +703,22 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             weight = 1f
         }
         paneContainer.requestLayout()
+        updateActiveDivider()
         updateSpanCount(PaneId.LEFT)
         updateSpanCount(PaneId.RIGHT)
         renderActionDock()
     }
 
+    private fun setLayoutMode(mode: FileListLayoutMode) {
+        shellViewModel.layoutMode = mode
+        Settings.FILE_LIST_LAYOUT_MODE.putValue(mode)
+        updateLayoutMode()
+    }
+
     private fun activatePane(pane: PaneId) {
         if (shellViewModel.activePane == pane) return
         shellViewModel.activePane = pane
+        updateActiveDivider()
         if (!isDualPaneVisible()) updateLayoutMode()
         updatePaneHeader(PaneId.LEFT)
         updatePaneHeader(PaneId.RIGHT)
@@ -567,6 +727,21 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         if (this::navigationFragment.isInitialized) navigationFragment.refreshCheckedState()
         renderActionDock()
         invalidateOptionsMenu()
+    }
+
+    private fun updateActiveDivider() {
+        if (!this::root.isInitialized) return
+        val divider = root.findViewById<View>(R.id.dualPaneDivider)
+        if (!isDualPaneVisible()) return
+        val primary = MaterialColors.getColor(divider, androidx.appcompat.R.attr.colorPrimary)
+        val outline = MaterialColors.getColor(divider, com.google.android.material.R.attr.colorOutlineVariant)
+        divider.layoutParams = divider.layoutParams.apply { width = 3.dp() }
+        divider.background = GradientDrawable(
+            GradientDrawable.Orientation.LEFT_RIGHT,
+            if (shellViewModel.activePane == PaneId.LEFT) intArrayOf(primary, outline)
+            else intArrayOf(outline, primary),
+        )
+        ViewCompat.setElevation(divider, 4.dp().toFloat())
     }
 
     private fun navigateTo(pane: PaneId, path: Path, recordHistory: Boolean = true) {
@@ -590,6 +765,12 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.file_list, menu)
+        // Keep the title/subtitle area visually close to the reference file
+        // manager: search and sorting are available from the overflow menu.
+        menu.findItem(R.id.action_search).setShowAsAction(
+            MenuItem.SHOW_AS_ACTION_NEVER or MenuItem.SHOW_AS_ACTION_COLLAPSE_ACTION_VIEW
+        )
+        menu.findItem(R.id.action_view_sort).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
         setupSearchView(menu.findItem(R.id.action_search))
     }
 
@@ -636,7 +817,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         menu.findItem(R.id.action_layout_mode)?.isVisible = true
         menu.findItem(R.id.action_set_secondary_start)?.isVisible =
             pane == PaneId.RIGHT && !viewModel.currentPath.isArchivePath
-        menu.findItem(R.id.action_selection_more)?.isVisible = viewModel.selectedFiles.isNotEmpty()
+        menu.findItem(R.id.action_selection_more)?.isVisible = hasSelection(pane)
         menu.findItem(R.id.action_layout_auto)?.isChecked = shellViewModel.layoutMode == FileListLayoutMode.AUTO
         menu.findItem(R.id.action_layout_single)?.isChecked = shellViewModel.layoutMode == FileListLayoutMode.SINGLE
         menu.findItem(R.id.action_layout_dual)?.isChecked = shellViewModel.layoutMode == FileListLayoutMode.DUAL
@@ -661,19 +842,16 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val viewModel = model(pane)
         return when (item.itemId) {
             R.id.action_layout_auto -> {
-                shellViewModel.layoutMode = FileListLayoutMode.AUTO
-                updateLayoutMode()
+                setLayoutMode(FileListLayoutMode.AUTO)
                 invalidateOptionsMenu()
                 true
             }
             R.id.action_layout_single -> {
-                shellViewModel.layoutMode = FileListLayoutMode.SINGLE
-                updateLayoutMode()
+                setLayoutMode(FileListLayoutMode.SINGLE)
                 true
             }
             R.id.action_layout_dual -> {
-                shellViewModel.layoutMode = FileListLayoutMode.DUAL
-                updateLayoutMode()
+                setLayoutMode(FileListLayoutMode.DUAL)
                 true
             }
             R.id.action_set_secondary_start -> {
@@ -790,7 +968,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         if (item?.isActionViewExpanded == true) item.collapseActionView()
     }
 
-    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
+    fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
         val menu = toolbar.menu
         menu.setQwertyMode(KeyCharacterMap.load(event.deviceId).keyboardType != KeyCharacterMap.NUMERIC)
         return menu.performShortcut(keyCode, event, 0)
@@ -848,11 +1026,11 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
 
         override fun openFile(file: FileItem) = openFile(pane, file)
 
-        override fun openFileWith(file: FileItem) = openFileWith(file)
+        override fun openFileWith(file: FileItem) = this@DualPaneFileListFragment.openFileWith(file)
 
-        override fun cutFile(file: FileItem) = cutFiles(pane, fileItemSetOf(file), false)
+        override fun cutFile(file: FileItem) = transferSingle(pane, file, true)
 
-        override fun copyFile(file: FileItem) = copyFiles(pane, fileItemSetOf(file), false)
+        override fun copyFile(file: FileItem) = transferSingle(pane, file, false)
 
         override fun confirmDeleteFile(file: FileItem) = confirmDeleteFiles(pane, fileItemSetOf(file))
 
@@ -991,8 +1169,8 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         if (!this::actionDock.isInitialized) return
         actionDock.removeAllViews()
         val pane = shellViewModel.activePane
-        val selected = model(pane).selectedFiles
-        if (selected.isNotEmpty()) {
+        val selected = if (hasSelection(pane)) model(pane).selectedFiles else null
+        if (selected != null && selected.isNotEmpty()) {
             val copyButton = addDockButton(R.drawable.copy_icon_control_normal_24dp, R.string.file_list_action_copy_to_other) {
                 transferToOther(pane, false)
             }
@@ -1017,18 +1195,19 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 clearSelectedFiles(pane)
             }
         } else {
+            val currentPath = model(pane).currentPathLiveData.value
             val back = addDockButton(R.drawable.dual_arrow_back_24dp, R.string.file_list_action_back) {
-                goBack(pane, model(pane).currentPath)
+                model(pane).currentPathLiveData.value?.let { goBack(pane, it) }
             }
-            back.isEnabled = shellViewModel.canGoBack(pane)
+            back.isEnabled = currentPath != null && shellViewModel.canGoBack(pane)
             val forward = addDockButton(R.drawable.arrow_end_icon_white_24dp, R.string.file_list_action_forward) {
-                goForward(pane, model(pane).currentPath)
+                model(pane).currentPathLiveData.value?.let { goForward(pane, it) }
             }
-            forward.isEnabled = shellViewModel.canGoForward(pane)
+            forward.isEnabled = currentPath != null && shellViewModel.canGoForward(pane)
             val up = addDockButton(R.drawable.dual_arrow_up_24dp, R.string.file_list_action_navigate_up) {
                 navigateUp(pane)
             }
-            up.isEnabled = model(pane).currentPath.parent != null
+            up.isEnabled = currentPath?.parent != null
             addDockButton(R.drawable.add_icon_white_24dp, R.string.file_list_action_new) {
                 showNewActionPanel(pane)
             }
@@ -1060,7 +1239,11 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             )
             backgroundTintList = android.content.res.ColorStateList.valueOf(Color.TRANSPARENT)
             rippleColor = android.content.res.ColorStateList.valueOf(
-                MaterialColors.getColor(this, com.google.android.material.R.attr.colorPrimary, Color.GRAY)
+                // colorPrimary is owned by AppCompat in the host application's theme.  Looking
+                // it up through Material's generated R class is not safe when the host resolves
+                // a different Material artifact version: R8 can then leave no such field in the
+                // final APK (and crash the file manager at startup).
+                MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, Color.GRAY)
             ).withAlpha(32)
             contentDescription = getString(text)
         }
@@ -1108,11 +1291,9 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             FileJobService.copy(paths, destination, requireContext())
         }
         model(pane).clearSelectedFiles()
-        // Keep both visible panes in sync with the foreground job service. A
-        // provider watcher may deliver a second refresh once the copy/move
-        // finishes, but this gives the target pane immediate feedback.
-        model(destinationPane).reload()
-        if (move) model(pane).reload()
+        // FileJobService dispatches a result after the operation has actually
+        // completed. Refreshing here would present a failed copy/move as if it
+        // had already succeeded on slow or remote providers.
         activatePane(destinationPane)
     }
 
@@ -1169,42 +1350,27 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
 
     private fun showEntryActionPanel(pane: PaneId, file: FileItem) {
         activatePane(pane)
-        val dialog = if (effectiveWindowWidthDp() < 600) {
-            BottomSheetDialog(requireContext())
-        } else {
-            MaterialAlertDialogBuilder(requireContext()).create()
-        }
+        val dialog = MaterialAlertDialogBuilder(requireContext()).create()
         val content = LinearLayout(requireContext()).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(20.dp(), 16.dp(), 20.dp(), 12.dp())
+            setPadding(12.dp(), 12.dp(), 12.dp(), 12.dp())
         }
-        content.addView(MaterialTextView(requireContext()).apply {
-            text = file.name
-            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_TitleLarge)
-            setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
-            setPadding(0, 0, 0, 8.dp())
-        })
-        content.addView(MaterialTextView(requireContext()).apply {
-            text = file.path.toUserFriendlyString()
-            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
-            setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant))
-            setPadding(0, 0, 0, 12.dp())
-        })
         val grid = android.widget.GridLayout(requireContext()).apply {
             columnCount = 2
-            useDefaultMargins = true
+            useDefaultMargins = false
         }
-        val close = { dialog.dismiss() }
         val actions = entryActions(pane, file)
         actions.forEach { action ->
             val button = MaterialButton(requireContext()).apply {
                 layoutParams = android.widget.GridLayout.LayoutParams().apply {
                     width = 0
-                    height = 52.dp()
+                    height = 56.dp()
                     columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
                 }
                 minWidth = 0
                 minimumWidth = 0
+                insetTop = 0
+                insetBottom = 0
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
                 setText(action.title)
                 contentDescription = action.disabledReason?.let {
@@ -1216,26 +1382,20 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 )
                 isEnabled = action.enabled
                 setOnClickListener {
-                    close()
+                    dialog.dismiss()
                     action.run()
                 }
             }
             grid.addView(button)
         }
         content.addView(grid)
-        content.addView(MaterialButton(requireContext()).apply {
-            layoutParams = LinearLayout.LayoutParams(-1, 48.dp())
-            setText(R.string.close)
-            setOnClickListener { close() }
-        })
-        // Dialog is deliberately created through the common dialog
-        // superclass so the compact bottom sheet and the wide dialog share
-        // the same action grid. setContentView is available on both.
         dialog.setContentView(content)
+        dialog.setCanceledOnTouchOutside(true)
         dialog.show()
-        if (dialog is androidx.appcompat.app.AlertDialog) {
-            dialog.window?.setLayout((360.dp()).coerceAtMost(resources.displayMetrics.widthPixels - 32.dp()), -2)
-        }
+        dialog.window?.setLayout(
+            (360.dp()).coerceAtMost(resources.displayMetrics.widthPixels - 32.dp()),
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT,
+        )
     }
 
     private data class EntryAction(
@@ -1251,63 +1411,46 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val archivePath = file.path.isArchivePath
         val transferBlockCopy = transferBlockReasonForFile(pane, file, false)
         val transferBlockMove = transferBlockReasonForFile(pane, file, true)
-        val actions = mutableListOf<EntryAction>()
-        actions += EntryAction(
-            getString(R.string.file_list_action_copy_to_other),
-            R.drawable.copy_icon_control_normal_24dp,
-            enabled = transferBlockCopy == null,
-            disabledReason = transferBlockCopy,
-        ) { transferSingle(pane, file, false) }
-        actions += EntryAction(
-            getString(R.string.file_list_action_move_to_other),
-            R.drawable.arrow_end_icon_white_24dp,
-            enabled = transferBlockMove == null && !archivePath,
-            disabledReason = transferBlockMove,
-        ) { transferSingle(pane, file, true) }
-        actions += EntryAction(getString(R.string.rename), R.drawable.edit_icon, !readOnly) {
-            RenameFileDialogFragment.show(file, this)
-        }
-        if (file.isArchiveFile) {
-            actions += EntryAction(
-                getString(R.string.file_item_action_extract),
-                R.drawable.extract_icon_control_normal_24dp,
-                enabled = !model(pane).currentPath.fileSystem.isReadOnly,
-            ) {
-                extractFiles(pane, fileItemSetOf(file), true)
-            }
-        }
-        if (!archivePath) {
-            actions += EntryAction(
-                getString(R.string.file_item_action_archive),
-                R.drawable.file_archive_icon,
-                enabled = !model(pane).currentPath.fileSystem.isReadOnly,
-            ) {
-                showCreateArchiveDialog(pane, fileItemSetOf(file))
-            }
-        }
-        actions += EntryAction(getString(R.string.share), R.drawable.dual_share_24dp) {
-            sharePath(file.path, file.mimeType)
-        }
-        actions += EntryAction(getString(R.string.file_list_action_copy_path_short), R.drawable.copy_icon_control_normal_24dp) {
-            copyPath(file.path)
-        }
-        if (file.attributes.isDirectory) {
-            actions += EntryAction(getString(R.string.file_list_action_add_bookmark), R.drawable.dual_bookmark_24dp) {
-                addBookmark(file.path)
-            }
-        }
-        val selected = model(pane).selectedFiles.contains(file)
-        actions += EntryAction(
-            getString(if (selected) R.string.file_list_action_cancel_selection else R.string.file_list_action_select),
-            R.drawable.check_icon_control_normal_24dp,
-        ) { selectFile(pane, file, !selected) }
-        actions += EntryAction(getString(R.string.file_item_action_properties), R.drawable.information_icon_white_24dp) {
-            FilePropertiesDialogFragment.show(file, this)
-        }
-        actions += EntryAction(getString(R.string.delete), R.drawable.delete_icon_control_normal_24dp, !readOnly) {
-            confirmDeleteFiles(pane, fileItemSetOf(file))
-        }
-        return actions
+        return listOf(
+            EntryAction(
+                getString(R.string.file_list_action_copy_short),
+                R.drawable.copy_icon_control_normal_24dp,
+                enabled = transferBlockCopy == null,
+                disabledReason = transferBlockCopy,
+            ) { transferSingle(pane, file, false) },
+            EntryAction(
+                getString(R.string.file_list_action_move_short),
+                R.drawable.arrow_end_icon_white_24dp,
+                enabled = transferBlockMove == null && !archivePath,
+                disabledReason = transferBlockMove,
+            ) { transferSingle(pane, file, true) },
+            EntryAction(
+                getString(R.string.file_list_action_link), R.drawable.link_icon_control_normal_24dp,
+            ) { createShortcut(file.path, file.mimeType) },
+            EntryAction(getString(R.string.rename), R.drawable.edit_icon, !readOnly) {
+                RenameFileDialogFragment.show(file, this)
+            },
+            EntryAction(getString(R.string.delete), R.drawable.delete_icon_control_normal_24dp, !readOnly) {
+                confirmDeleteFiles(pane, fileItemSetOf(file))
+            },
+            EntryAction(
+                getString(R.string.file_list_action_compress), R.drawable.file_archive_icon,
+                enabled = !archivePath && !model(pane).currentPath.fileSystem.isReadOnly,
+            ) { showCreateArchiveDialog(pane, fileItemSetOf(file)) },
+            EntryAction(getString(R.string.file_item_action_properties), R.drawable.information_icon_white_24dp) {
+                FilePropertiesDialogFragment.show(file, this)
+            },
+            EntryAction(getString(R.string.share), R.drawable.dual_share_24dp) {
+                sharePath(file.path, file.mimeType)
+            },
+            EntryAction(getString(R.string.file_item_action_open_with), R.drawable.open_as_icon) {
+                openFileWith(file)
+            },
+            EntryAction(
+                getString(R.string.file_list_action_add_bookmark), R.drawable.dual_bookmark_24dp,
+                enabled = file.attributes.isDirectory,
+            ) { addBookmark(file.path) },
+        )
     }
 
     private fun showSelectionActionPanel(pane: PaneId, files: FileItemSet) {
@@ -1377,7 +1520,6 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         if (names.isEmpty()) return
         FileJobService.update7z(archive, emptyList(), names, requireContext())
         model(pane).selectFiles(files, false)
-        model(pane).reload()
     }
 
     private class PaneBinding(val root: View) {
@@ -1394,6 +1536,8 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val contentLayout: CoordinatorScrollingFrameLayout = root.findViewById(R.id.paneContentLayout)
         val swipeRefreshLayout: SwipeRefreshLayout = root.findViewById(R.id.paneSwipeRefreshLayout)
         val recyclerView: RecyclerView = root.findViewById(R.id.paneRecyclerView)
+        val parentRow: View = root.findViewById(R.id.paneParentRow)
+        val parentText: TextView = root.findViewById(R.id.paneParentText)
     }
 
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).roundToInt()
@@ -1521,7 +1665,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
 
     override fun hasFileWithName(name: String): Boolean {
         val files = model(shellViewModel.activePane).fileListStateful
-        return files is Success && files.value.any { it.name == name }
+        return files.value?.any { it.name == name } == true
     }
 
     override fun renameFile(file: FileItem, newName: String) {
@@ -1669,7 +1813,6 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         archiveAdditionPane = null
         val archive = currentSevenZArchiveRoot(pane) ?: return
         if (path != null) FileJobService.update7z(archive, listOf(path), emptySet(), requireContext())
-        model(pane).reload()
     }
 
     private fun onArchiveAdditionFolderResult(path: Path?) {
@@ -1677,7 +1820,6 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         archiveAdditionPane = null
         val archive = currentSevenZArchiveRoot(pane) ?: return
         if (path != null) FileJobService.update7z(archive, listOf(path), emptySet(), requireContext())
-        model(pane).reload()
     }
 
     private fun ensureStorageAccess() {

@@ -12,6 +12,10 @@
     <string name="pref_key_storages">key_storages</string>
     <string name="pref_key_file_list_default_directory">key_file_list_default_directory</string>
     <string name="pref_key_file_list_secondary_start_directory">key_file_list_secondary_start_directory</string>
+    <string name="pref_key_file_list_layout_mode">key_file_list_layout_mode</string>
+    <!-- FileListLayoutMode.DUAL -->
+    <string name="pref_default_value_file_list_layout_mode">2</string>
+    <string name="pref_key_file_list_font_size">key_file_list_font_size</string>
     <string name="pref_key_file_list_persistent_drawer_open">key_file_list_persistent_drawer_open</string>
     <bool name="pref_default_value_file_list_persistent_drawer_open">true</bool>
     <string name="pref_key_file_list_show_hidden_files">key_file_list_show_hidden_files</string>

@@ -39,6 +39,7 @@ android {
             excludes += ['META-INF/LICENSE.txt', 'META-INF/LICENSE', 'META-INF/NOTICE.txt', 'META-INF/NOTICE']
         }
     }
+
 }
 
 dependencies {

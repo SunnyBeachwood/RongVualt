@@ -8,7 +8,6 @@ package me.zhanghai.android.files.filelist
 import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
@@ -84,6 +83,12 @@ class FileListAdapter(
         get() = _nameEllipsize
         set(value) {
             _nameEllipsize = value
+            notifyItemRangeChanged(0, itemCount, PAYLOAD_STATE_CHANGED)
+        }
+
+    var fontSize: FileListFontSize = FileListFontSize.fromSp(FileListFontSize.DEFAULT_SP)
+        set(value) {
+            field = value
             notifyItemRangeChanged(0, itemCount, PAYLOAD_STATE_CHANGED)
         }
 
@@ -200,7 +205,7 @@ class FileListAdapter(
                     )
                 }
             }
-            popupMenu = PopupMenu(menuButton.context, menuButton)
+            popupMenu = PopupMenu(itemLayout.context, itemLayout)
                 .apply { inflate(R.menu.file_item) }
         }
     }
@@ -214,7 +219,16 @@ class FileListAdapter(
         val isDirectory = file.attributes.isDirectory
         val isEnabled = isFileSelectable(file) || isDirectory
         holder.itemLayout.isEnabled = isEnabled
-        holder.menuButton.isEnabled = isEnabled
+        val density = holder.itemLayout.resources.displayMetrics.density
+        holder.itemLayout.layoutParams = holder.itemLayout.layoutParams.apply {
+            height = (fontSize.rowHeightDp * density).toInt()
+        }
+        holder.iconLayout.layoutParams = holder.iconLayout.layoutParams.apply {
+            width = (fontSize.iconSlotDp * density).toInt()
+            height = (fontSize.iconSlotDp * density).toInt()
+        }
+        holder.nameText.textSize = fontSize.nameSp
+        holder.descriptionText?.textSize = fontSize.metadataSp
         val menu = holder.popupMenu.menu
         val path = file.path
         val hasPickOptions = pickOptions != null
@@ -243,21 +257,8 @@ class FileListAdapter(
                 }
             }
             setOnLongClickListener {
-                if (listener.onFileLongClick(file)) {
-                    true
-                } else {
-                    if (selectedFiles.isEmpty()) {
-                        selectFile(file)
-                    } else {
-                        listener.openFile(file)
-                    }
-                    true
-                }
-            }
-        }
-        holder.menuButton.setOnClickListener {
-            if (!listener.onFileMenuRequested(file)) {
-                holder.popupMenu.show()
+                if (!listener.onFileLongClick(file)) holder.popupMenu.show()
+                true
             }
         }
         holder.iconLayout.setOnClickListener { selectFile(file) }
@@ -329,16 +330,16 @@ class FileListAdapter(
             }
         }
         holder.nameText.text = file.name
-        holder.descriptionText?.text = if (isDirectory) {
-            null
-        } else {
+        holder.descriptionText?.text = runCatching {
             val context = holder.descriptionText!!.context
             val lastModificationTime = attributes.lastModifiedTime().toInstant()
                 .formatShort(context)
-            val size = attributes.fileSize.formatHumanReadable(context)
-            val descriptionSeparator = context.getString(R.string.file_item_description_separator)
-            listOf(lastModificationTime, size).joinToString(descriptionSeparator)
-        }
+            if (isDirectory) lastModificationTime else {
+                val size = attributes.fileSize.formatHumanReadable(context)
+                val descriptionSeparator = context.getString(R.string.file_item_description_separator)
+                "$lastModificationTime$descriptionSeparator$size"
+            }
+        }.getOrNull()
         val isArchivePath = path.isArchivePath
         menu.findItem(R.id.action_copy)
             .setTitle(if (isArchivePath) R.string.file_item_action_extract else R.string.copy)
@@ -440,8 +441,7 @@ class FileListAdapter(
         val appIconBadgeImage: ImageView,
         val badgeImage: ImageView,
         val nameText: TextView,
-        val descriptionText: TextView?,
-        val menuButton: ImageButton
+        val descriptionText: TextView?
     ) : RecyclerView.ViewHolder(root) {
         constructor(binding: FileItemListBinding) : this(
             binding.root,
@@ -455,8 +455,7 @@ class FileListAdapter(
             binding.appIconBadgeImage,
             binding.badgeImage,
             binding.nameText,
-            binding.descriptionText,
-            binding.menuButton
+            binding.descriptionText
         )
 
         constructor(binding: FileItemGridBinding) : this(
@@ -471,8 +470,7 @@ class FileListAdapter(
             binding.appIconBadgeImage,
             binding.badgeImage,
             binding.nameText,
-            null,
-            binding.menuButton
+            null
         )
 
         lateinit var popupMenu: PopupMenu

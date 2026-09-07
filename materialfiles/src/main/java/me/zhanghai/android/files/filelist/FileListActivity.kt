@@ -62,11 +62,9 @@ class FileListActivity : AppActivity() {
     }
 
     override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
-        if (fragment is DualPaneFileListFragment && fragment.onKeyShortcut(keyCode, event)) {
-            return true
-        }
-        if (fragment is FileListFragment && fragment.onKeyShortcut(keyCode, event)) {
-            return true
+        when (val currentFragment = fragment) {
+            is DualPaneFileListFragment -> if (currentFragment.onKeyShortcut(keyCode, event)) return true
+            is FileListFragment -> if (currentFragment.onKeyShortcut(keyCode, event)) return true
         }
         return super.onKeyUp(keyCode, event)
     }

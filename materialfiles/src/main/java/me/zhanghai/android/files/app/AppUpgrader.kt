@@ -35,6 +35,9 @@ private var lastVersionCode: Int
 
 fun upgradeApp() {
     upgradeAppFrom(lastVersionCode)
+    // This migration is type-sensitive and must also run for installs whose
+    // stored app version predates the current version-code sequence.
+    migrateFileListFontSizeSetting()
     lastVersionCode = VERSION_CODE_LATEST
 }
 

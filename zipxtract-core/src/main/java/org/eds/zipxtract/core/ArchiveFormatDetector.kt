@@ -132,7 +132,7 @@ object ArchiveFormatDetector {
                 count >= ISO_MAGIC_OFFSET + ISO_MAGIC_LENGTH &&
                     String(header, ISO_MAGIC_OFFSET, ISO_MAGIC_LENGTH, Charsets.US_ASCII) == "CD001" ->
                     ArchiveProbe(ArchiveFormat.GENERIC, source.displayName)
-                header.startsWith(byteArrayOf(0x1f, 0x8b)) ||
+                header.startsWith(byteArrayOf(0x1f.toByte(), 0x8b.toByte())) ||
                 header.startsWith(byteArrayOf(0x42, 0x5a, 0x68)) ||
                     header.startsWith(byteArrayOf(0xfd.toByte(), 0x37, 0x7a, 0x58, 0x5a, 0x00)) ||
                     header.startsWith(byteArrayOf(0x28, 0xb5.toByte(), 0x2f, 0xfd.toByte())) ||

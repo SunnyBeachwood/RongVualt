@@ -18,5 +18,5 @@ object ArchiveEditPolicy {
     ): Boolean = probe.format == ArchiveFormat.SEVEN_ZIP &&
         probe.encryption == ArchiveEncryption.NONE &&
         providerSupportsReplacement &&
-        password.isNullOrEmpty()
+        (password?.isEmpty() != false)
 }
