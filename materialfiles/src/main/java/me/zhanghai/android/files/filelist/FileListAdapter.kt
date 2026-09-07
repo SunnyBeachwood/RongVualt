@@ -5,6 +5,8 @@
 
 package me.zhanghai.android.files.filelist
 
+import android.animation.ValueAnimator
+import android.os.Build
 import android.text.TextUtils
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
@@ -17,6 +19,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import coil.dispose
 import coil.load
 import java8.nio.file.Path
@@ -41,6 +44,7 @@ import me.zhanghai.android.files.ui.CheckableForegroundLinearLayout
 import me.zhanghai.android.files.ui.CheckableItemBackground
 import me.zhanghai.android.files.util.isMaterial3Theme
 import me.zhanghai.android.files.util.layoutInflater
+import me.zhanghai.android.files.util.dpToDimensionPixelSize
 import me.zhanghai.android.files.util.valueCompat
 import java.util.Locale
 
@@ -155,13 +159,28 @@ class FileListAdapter(
     }
 
     fun attachSwipeSelection(recyclerView: RecyclerView) {
-        recyclerView.addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
-            private val touchSlop = ViewConfiguration.get(recyclerView.context).scaledTouchSlop
-            private var downX = 0f
-            private var downY = 0f
-            private var downView: View? = null
-            private var handled = false
+        val touchSlop = ViewConfiguration.get(recyclerView.context).scaledTouchSlop
+        var downX = 0f
+        var downY = 0f
+        var downView: View? = null
+        var nameView: TextView? = null
+        var handled = false
+        var moved = false
+        var verticalGesture = false
 
+        fun resetNameView(animate: Boolean) {
+            val view = nameView ?: return
+            view.animate().cancel()
+            if (animate && shouldAnimateSelection()) {
+                view.animate().translationX(0f).setDuration(160L)
+                    .setInterpolator(FastOutSlowInInterpolator()).start()
+            } else {
+                view.translationX = 0f
+            }
+            nameView = null
+        }
+
+        recyclerView.addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
             override fun onInterceptTouchEvent(recyclerView: RecyclerView, event: MotionEvent): Boolean {
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
@@ -169,13 +188,32 @@ class FileListAdapter(
                         downY = event.y
                         downView = recyclerView.findChildViewUnder(downX, downY)
                         handled = false
+                        moved = false
+                        verticalGesture = false
                     }
                     MotionEvent.ACTION_MOVE -> {
-                        val child = downView ?: return false
-                        if (handled || _viewType != FileViewType.LIST) return handled
+                        if (_viewType != FileViewType.LIST) return handled
                         val deltaX = event.x - downX
                         val deltaY = event.y - downY
-                        if (kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX)) return false
+                        if (kotlin.math.abs(deltaY) > touchSlop &&
+                            kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX)
+                        ) {
+                            verticalGesture = true
+                            moved = true
+                            resetNameView(animate = false)
+                            return false
+                        }
+                        if (verticalGesture || kotlin.math.abs(deltaX) <= touchSlop) return handled
+                        moved = true
+                        val child = downView
+                        if (child == null) return false
+                        if (nameView == null) {
+                            nameView = (recyclerView.getChildViewHolder(child) as? ViewHolder)?.nameText
+                        }
+                        nameView?.translationX = deltaX.coerceIn(
+                            -recyclerView.context.dpToDimensionPixelSize(24).toFloat(),
+                            recyclerView.context.dpToDimensionPixelSize(24).toFloat(),
+                        )
                         val threshold = maxOf(touchSlop * 2, child.width / 4)
                         if (kotlin.math.abs(deltaX) >= threshold) {
                             val position = recyclerView.getChildAdapterPosition(child)
@@ -183,13 +221,22 @@ class FileListAdapter(
                                 listener.onFileSwipeSelect(getItem(position))
                                 child.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                 handled = true
+                                resetNameView(animate = true)
                                 return true
                             }
                         }
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        if (event.actionMasked == MotionEvent.ACTION_UP &&
+                            downView == null && !moved
+                        ) {
+                            listener.onPaneBackgroundClick()
+                        }
+                        resetNameView(animate = true)
                         downView = null
                         handled = false
+                        moved = false
+                        verticalGesture = false
                     }
                 }
                 return handled
@@ -303,7 +350,27 @@ class FileListAdapter(
         menu.findItem(R.id.action_cut).isVisible = !hasPickOptions && !isReadOnly
         menu.findItem(R.id.action_copy).isVisible = !hasPickOptions
         val checked = file in selectedFiles
+        val selectionChanged = payloads.any { it === PAYLOAD_STATE_CHANGED } &&
+            holder.itemLayout.isChecked != checked
+        holder.itemLayout.animate().cancel()
+        holder.itemLayout.alpha = 1f
+        holder.itemLayout.scaleX = 1f
+        holder.itemLayout.scaleY = 1f
         holder.itemLayout.isChecked = checked
+        if (selectionChanged && shouldAnimateSelection()) {
+            holder.itemLayout.apply {
+                alpha = 0.82f
+                scaleX = 0.985f
+                scaleY = 0.985f
+                animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(160L)
+                    .setInterpolator(FastOutSlowInInterpolator())
+                    .start()
+            }
+        }
         holder.nameText.apply {
             if (isSingleLineCompat) {
                 val nameEllipsize = nameEllipsize
@@ -484,6 +551,17 @@ class FileListAdapter(
     override val isAnimationEnabled: Boolean
         get() = Settings.FILE_LIST_ANIMATION.valueCompat
 
+    override fun onViewRecycled(holder: ViewHolder) {
+        holder.itemLayout.animate().cancel()
+        holder.itemLayout.alpha = 1f
+        holder.itemLayout.scaleX = 1f
+        holder.itemLayout.scaleY = 1f
+        super.onViewRecycled(holder)
+    }
+
+    private fun shouldAnimateSelection(): Boolean = Settings.FILE_LIST_ANIMATION.valueCompat &&
+        (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled())
+
     companion object {
         private val PAYLOAD_STATE_CHANGED = Any()
 
@@ -567,6 +645,8 @@ class FileListAdapter(
 
         /** Return true when a host handled long-press interaction itself. */
         fun onFileLongClick(file: FileItem): Boolean = false
+
+        fun onPaneBackgroundClick() = Unit
 
         fun onFileSwipeSelect(file: FileItem) = Unit
     }

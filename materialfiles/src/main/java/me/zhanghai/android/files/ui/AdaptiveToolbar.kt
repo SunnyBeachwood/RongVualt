@@ -1,43 +1,69 @@
 package me.zhanghai.android.files.ui
 
 import android.content.Context
-import android.text.TextUtils
 import android.util.AttributeSet
 import android.util.TypedValue
+import android.view.Gravity
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
+import androidx.core.widget.TextViewCompat
+import me.zhanghai.android.files.filelist.BreadcrumbData
+import me.zhanghai.android.files.filelist.BreadcrumbLayout
+import me.zhanghai.android.files.util.dpToDimensionPixelSize
+import me.zhanghai.android.files.util.getColorByAttr
 
-/** Toolbar whose built-in title and subtitle scale to the space left by navigation and actions. */
+/** A toolbar header that keeps the path scrollable and the storage summary fully visible. */
 class AdaptiveToolbar @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = androidx.appcompat.R.attr.toolbarStyle,
 ) : Toolbar(context, attrs, defStyleAttr) {
-    fun refreshTextSizing() {
-        post {
-            findTextView(title)?.let { titleView ->
-                titleView.maxLines = 1
-                titleView.ellipsize = TextUtils.TruncateAt.MIDDLE
-                titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-            }
-            findTextView(subtitle)?.let { subtitleView ->
-                // Toolbar's own layout does not reliably remeasure framework text auto-size
-                // after a subtitle update. A compact fixed size plus two lines leaves room for
-                // the complete storage value on narrow dual-pane screens.
-                subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-                subtitleView.maxLines = 2
-                subtitleView.ellipsize = null
-                subtitleView.setHorizontallyScrolling(false)
-            }
-        }
+    private val breadcrumbLayout = BreadcrumbLayout(context).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, context.dpToDimensionPixelSize(40)
+        )
+    }
+    private val summaryText = TextView(context).apply {
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        setTextColor(context.getColorByAttr(android.R.attr.textColorSecondary))
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+        maxLines = 2
+        setHorizontallyScrolling(false)
+        ellipsize = null
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 8, 12, 1, TypedValue.COMPLEX_UNIT_SP)
+    }
+    private val headerContent = LinearLayout(context).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(breadcrumbLayout)
+        addView(summaryText)
     }
 
-    private fun findTextView(text: CharSequence?): TextView? {
-        if (text.isNullOrEmpty()) return null
-        return (0 until childCount)
-            .asSequence()
-            .map { getChildAt(it) }
-            .filterIsInstance<TextView>()
-            .firstOrNull { it.text.toString() == text.toString() }
+    init {
+        super.setTitle(null)
+        super.setSubtitle(null)
+        addView(
+            headerContent,
+            LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.CENTER_VERTICAL
+            }
+        )
+    }
+
+    fun setBreadcrumbData(data: BreadcrumbData) = breadcrumbLayout.setData(data)
+
+    fun setBreadcrumbListener(listener: BreadcrumbLayout.Listener) = breadcrumbLayout.setListener(listener)
+
+    fun setStorageSummary(summary: CharSequence) {
+        summaryText.text = summary
+    }
+
+    /** Keep AppCompat's ActionBar title from competing with the custom header. */
+    fun clearBuiltInText() {
+        super.setTitle(null)
+        super.setSubtitle(null)
     }
 }

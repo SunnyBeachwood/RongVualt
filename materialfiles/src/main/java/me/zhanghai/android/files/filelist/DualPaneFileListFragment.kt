@@ -5,6 +5,7 @@
 
 package me.zhanghai.android.files.filelist
 
+import android.animation.ValueAnimator
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
@@ -52,6 +53,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -266,6 +268,8 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         activity.setTitle(R.string.file_list_title)
         activity.setSupportActionBar(toolbar)
         toolbar.logo = null
+        toolbar.clearBuiltInText()
+        toolbar.setBreadcrumbListener(ActivePaneBreadcrumbListener())
         if (savedInstanceState == null) {
             navigationFragment = NavigationFragment()
             childFragmentManager.commit {
@@ -440,7 +444,10 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             rightLayoutManager = layoutManager
         }
         viewModel.currentPathLiveData.observe(viewLifecycleOwner) { onPanePathChanged(pane, it) }
-        viewModel.breadcrumbLiveData.observe(viewLifecycleOwner) { binding.breadcrumbLayout.setData(it) }
+        viewModel.breadcrumbLiveData.observe(viewLifecycleOwner) { breadcrumb ->
+            binding.breadcrumbLayout.setData(breadcrumb)
+            if (shellViewModel.activePane == pane) toolbar.setBreadcrumbData(breadcrumb)
+        }
         viewModel.viewTypeLiveData.observe(viewLifecycleOwner) { onPaneViewTypeChanged(pane, it) }
         viewModel.sortOptionsLiveData.observe(viewLifecycleOwner) { onPaneSortChanged(pane, it) }
         viewModel.viewSortPathSpecificLiveData.observe(viewLifecycleOwner) { invalidateOptionsMenu() }
@@ -536,7 +543,8 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         // value is dispatched.  The non-null ViewModel convenience accessor is
         // not valid during that cold-start interval.
         val currentPath = viewModel.currentPathLiveData.value ?: return
-        toolbar.title = currentPath.toUserFriendlyString()
+        toolbar.clearBuiltInText()
+        viewModel.breadcrumbLiveData.value?.let(toolbar::setBreadcrumbData)
         val files = viewModel.fileListLiveData.value?.value
         val directories = files?.count { it.attributes.isDirectory } ?: 0
         val regular = files?.count { !it.attributes.isDirectory } ?: 0
@@ -546,11 +554,10 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val used = (total - free).coerceAtLeast(0)
         val usedText = if (total > 0) used.asFileSize().formatHumanReadable(requireContext()) else "-"
         val totalText = if (total > 0) total.asFileSize().formatHumanReadable(requireContext()) else "-"
-        toolbar.subtitle = getString(
+        toolbar.setStorageSummary(getString(
             R.string.file_list_toolbar_summary_format,
             directories, regular, usedText, totalText,
-        )
-        toolbar.refreshTextSizing()
+        ))
     }
 
     private fun invalidateOptionsMenu() {
@@ -709,6 +716,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
         paneContainer.requestLayout()
         updateActiveDivider()
+        updateActivePaneVisual(animate = false)
         updateSpanCount(PaneId.LEFT)
         updateSpanCount(PaneId.RIGHT)
         renderActionDock()
@@ -724,6 +732,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         if (shellViewModel.activePane == pane) return
         shellViewModel.activePane = pane
         updateActiveDivider()
+        updateActivePaneVisual(animate = true)
         if (!isDualPaneVisible()) updateLayoutMode()
         updatePaneHeader(PaneId.LEFT)
         updatePaneHeader(PaneId.RIGHT)
@@ -747,6 +756,34 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             else intArrayOf(outline, primary),
         )
         ViewCompat.setElevation(divider, 4.dp().toFloat())
+    }
+
+    /** Gives the current pane a small, non-disruptive physical lift in dual-pane mode. */
+    private fun updateActivePaneVisual(animate: Boolean) {
+        if (!this::leftPane.isInitialized || !this::rightPane.isInitialized) return
+        val dual = isDualPaneVisible()
+        val canAnimate = animate && Settings.FILE_LIST_ANIMATION.valueCompat &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled()) &&
+            paneContainer.isLaidOut
+        listOf(PaneId.LEFT to leftPane.root, PaneId.RIGHT to rightPane.root).forEach { (pane, view) ->
+            val active = dual && shellViewModel.activePane == pane
+            val scale = if (active) 1.01f else 1f
+            val lift = if (active) 6.dp().toFloat() else 0f
+            view.animate().cancel()
+            if (canAnimate) {
+                view.animate()
+                    .scaleX(scale)
+                    .scaleY(scale)
+                    .translationZ(lift)
+                    .setDuration(180L)
+                    .setInterpolator(FastOutSlowInInterpolator())
+                    .start()
+            } else {
+                view.scaleX = scale
+                view.scaleY = scale
+                view.translationZ = lift
+            }
+        }
     }
 
     private fun navigateTo(pane: PaneId, path: Path, recordHistory: Boolean = true) {
@@ -1022,6 +1059,16 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         override fun openInNewTask(path: Path) = this@DualPaneFileListFragment.openInNewTask(path)
     }
 
+    /** The toolbar breadcrumb always represents the currently active pane. */
+    private inner class ActivePaneBreadcrumbListener : BreadcrumbLayout.Listener {
+        override fun navigateTo(path: Path) =
+            this@DualPaneFileListFragment.navigateTo(shellViewModel.activePane, path)
+
+        override fun copyPath(path: Path) = this@DualPaneFileListFragment.copyPath(path)
+
+        override fun openInNewTask(path: Path) = this@DualPaneFileListFragment.openInNewTask(path)
+    }
+
     private inner class PaneAdapterListener(private val pane: PaneId) : FileListAdapter.Listener {
         override fun clearSelectedFiles() = clearSelectedFiles(pane)
 
@@ -1076,6 +1123,8 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
 
         override fun onFileSwipeSelect(file: FileItem) = selectFileBySwipe(pane, file)
+
+        override fun onPaneBackgroundClick() = activatePane(pane)
     }
 
     private fun clearSelectedFiles(pane: PaneId) {
