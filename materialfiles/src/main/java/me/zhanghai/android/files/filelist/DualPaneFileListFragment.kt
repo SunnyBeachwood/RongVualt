@@ -35,7 +35,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.Toolbar
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
@@ -94,6 +93,7 @@ import me.zhanghai.android.files.provider.linux.isLinuxPath
 import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.terminal.Terminal
 import me.zhanghai.android.files.ui.CoordinatorScrollingFrameLayout
+import me.zhanghai.android.files.ui.AdaptiveToolbar
 import me.zhanghai.android.files.ui.DrawerLayoutOnBackPressedCallback
 import me.zhanghai.android.files.ui.FixQueryChangeSearchView
 import me.zhanghai.android.files.ui.ScrollingViewOnApplyWindowInsetsListener
@@ -177,7 +177,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     private lateinit var root: View
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var paneContainer: LinearLayout
-    private lateinit var toolbar: Toolbar
+    private lateinit var toolbar: AdaptiveToolbar
     private lateinit var actionDock: LinearLayout
     private lateinit var navigationFragment: NavigationFragment
     private lateinit var leftPane: PaneBinding
@@ -416,6 +416,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         )
         binding.recyclerView.layoutManager = layoutManager
         binding.recyclerView.adapter = adapter
+        adapter.attachSwipeSelection(binding.recyclerView)
         binding.recyclerView.setHasFixedSize(true)
         val fastScroller = ThemedFastScroller.create(binding.recyclerView)
         binding.recyclerView.setOnApplyWindowInsetsListener(
@@ -549,6 +550,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             R.string.file_list_toolbar_summary_format,
             directories, regular, usedText, totalText,
         )
+        toolbar.refreshTextSizing()
     }
 
     private fun invalidateOptionsMenu() {
@@ -582,7 +584,10 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         } else if (files != null) {
             paneDiagnostics.remove(pane)
         }
-        if (files != null) updateAdapterFileList(pane) else adapter(pane).clear()
+        if (files != null) {
+            model(pane).selectionRangeAnchorPath = null
+            updateAdapterFileList(pane)
+        } else adapter(pane).clear()
         updatePaneHeader(pane)
         if (stateful.value != null) {
             maybeRestorePaneScroll(pane)
@@ -1024,6 +1029,16 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
 
         override fun selectFiles(files: FileItemSet, selected: Boolean) = selectFiles(pane, files, selected)
 
+        override fun replaceSelectedFiles(files: FileItemSet) {
+            model(pane).selectionRangeAnchorPath = null
+            model(pane.other()).clearSelectedFiles()
+            shellViewModel.activePane = pane
+            model(pane).replaceSelectedFiles(files)
+            updatePaneHeader(PaneId.LEFT)
+            updatePaneHeader(PaneId.RIGHT)
+            renderActionDock()
+        }
+
         override fun openFile(file: FileItem) = openFile(pane, file)
 
         override fun openFileWith(file: FileItem) = this@DualPaneFileListFragment.openFileWith(file)
@@ -1059,6 +1074,8 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             showEntryActionPanel(pane, file)
             return true
         }
+
+        override fun onFileSwipeSelect(file: FileItem) = selectFileBySwipe(pane, file)
     }
 
     private fun clearSelectedFiles(pane: PaneId) {
@@ -1067,6 +1084,9 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     }
 
     private fun selectFile(pane: PaneId, file: FileItem, selected: Boolean) {
+        if (!selected && model(pane).selectionRangeAnchorPath == file.path) {
+            model(pane).selectionRangeAnchorPath = null
+        }
         if (selected) {
             model(pane.other()).clearSelectedFiles()
             shellViewModel.activePane = pane
@@ -1075,6 +1095,23 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         updatePaneHeader(PaneId.LEFT)
         updatePaneHeader(PaneId.RIGHT)
         renderActionDock()
+    }
+
+    private fun selectFileBySwipe(pane: PaneId, file: FileItem) {
+        val viewModel = model(pane)
+        if (file in viewModel.selectedFiles) return
+        val anchor = viewModel.selectionRangeAnchorPath?.takeIf { adapter(pane).hasFile(it) }
+            ?.let { anchorPath ->
+                (0 until adapter(pane).itemCount).asSequence()
+                    .map { adapter(pane).getItem(it) }
+                    .firstOrNull { it.path == anchorPath }
+            }
+        if (anchor == null) {
+            selectFile(pane, file, true)
+            viewModel.selectionRangeAnchorPath = file.path
+            return
+        }
+        selectFiles(pane, adapter(pane).selectableFilesInRange(anchor, file), true)
     }
 
     private fun selectFiles(pane: PaneId, files: FileItemSet, selected: Boolean) {
@@ -1171,30 +1208,52 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val pane = shellViewModel.activePane
         val selected = if (hasSelection(pane)) model(pane).selectedFiles else null
         if (selected != null && selected.isNotEmpty()) {
-            val copyButton = addDockButton(R.drawable.copy_icon_control_normal_24dp, R.string.file_list_action_copy_to_other) {
+            actionDock.orientation = LinearLayout.VERTICAL
+            val selectionRow = LinearLayout(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                orientation = LinearLayout.HORIZONTAL
+            }
+            val operationRow = LinearLayout(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                orientation = LinearLayout.HORIZONTAL
+            }
+            actionDock.addView(selectionRow)
+            actionDock.addView(operationRow)
+            addDockButton(selectionRow, R.drawable.check_icon_control_normal_24dp, R.string.select_all) {
+                adapter(pane).selectAllFiles()
+            }
+            addDockButton(selectionRow, R.drawable.dual_swap_horiz_24dp, R.string.file_list_action_invert_selection) {
+                adapter(pane).invertSelectedFiles()
+            }
+            addDockButton(selectionRow, R.drawable.close_icon_control_normal_24dp, R.string.file_list_action_cancel_selection) {
+                clearSelectedFiles(pane)
+            }
+            val copyButton = addDockButton(operationRow, R.drawable.copy_icon_control_normal_24dp, R.string.file_list_action_copy_to_other) {
                 transferToOther(pane, false)
             }
             transferBlockReason(pane, false)?.let {
                 copyButton.isEnabled = false
                 copyButton.contentDescription = getString(it)
             }
-            val moveButton = addDockButton(R.drawable.arrow_end_icon_white_24dp, R.string.file_list_action_move_to_other) {
+            val moveButton = addDockButton(operationRow, R.drawable.arrow_end_icon_white_24dp, R.string.file_list_action_move_to_other) {
                 transferToOther(pane, true)
             }
             transferBlockReason(pane, true)?.let {
                 moveButton.isEnabled = false
                 moveButton.contentDescription = getString(it)
             }
-            addDockButton(R.drawable.edit_icon, R.string.rename) {
+            addDockButton(operationRow, R.drawable.edit_icon, R.string.rename) {
                 if (selected.size == 1) RenameFileDialogFragment.show(selected.single(), this)
             }.isEnabled = selected.size == 1 && selected.all { !it.path.fileSystem.isReadOnly }
-            addDockButton(R.drawable.delete_icon_control_normal_24dp, R.string.delete) {
+            addDockButton(operationRow, R.drawable.delete_icon_control_normal_24dp, R.string.delete) {
                 confirmDeleteFiles(pane, selected)
             }.apply { isEnabled = selected.all { !it.path.fileSystem.isReadOnly } }
-            addDockButton(R.drawable.close_icon_control_normal_24dp, R.string.file_list_action_cancel_selection) {
-                clearSelectedFiles(pane)
-            }
         } else {
+            actionDock.orientation = LinearLayout.HORIZONTAL
             val currentPath = model(pane).currentPathLiveData.value
             val back = addDockButton(R.drawable.dual_arrow_back_24dp, R.string.file_list_action_back) {
                 model(pane).currentPathLiveData.value?.let { goBack(pane, it) }
@@ -1217,7 +1276,15 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
     }
 
-    private fun addDockButton(icon: Int, text: Int, action: () -> Unit): MaterialButton {
+    private fun addDockButton(icon: Int, text: Int, action: () -> Unit): MaterialButton =
+        addDockButton(actionDock, icon, text, action)
+
+    private fun addDockButton(
+        parent: LinearLayout,
+        icon: Int,
+        text: Int,
+        action: () -> Unit,
+    ): MaterialButton {
         val button = MaterialButton(requireContext()).apply {
             layoutParams = LinearLayout.LayoutParams(0, 56.dp(), 1f)
             minWidth = 0
@@ -1247,7 +1314,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             ).withAlpha(32)
             contentDescription = getString(text)
         }
-        actionDock.addView(button)
+        parent.addView(button)
         return button
     }
 

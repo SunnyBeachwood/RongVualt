@@ -6,7 +6,10 @@
 package me.zhanghai.android.files.filelist
 
 import android.text.TextUtils
+import android.view.HapticFeedbackConstants
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -137,6 +140,70 @@ class FileListAdapter(
         listener.selectFiles(files, true)
     }
 
+    fun invertSelectedFiles() {
+        val files = (0..<itemCount).map { getItem(it) }
+        val inverted = FileListSelection.inverted(files, selectedFiles, ::isFileSelectable)
+        listener.replaceSelectedFiles(fileItemSetOf(*inverted.toTypedArray()))
+    }
+
+    fun hasFile(path: Path): Boolean = path in filePositionMap
+
+    fun selectableFilesInRange(anchor: FileItem, target: FileItem): FileItemSet {
+        val files = (0..<itemCount).map { getItem(it) }
+        return fileItemSetOf(*FileListSelection.range(files, anchor, target, ::isFileSelectable)
+            .toTypedArray())
+    }
+
+    fun attachSwipeSelection(recyclerView: RecyclerView) {
+        recyclerView.addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
+            private val touchSlop = ViewConfiguration.get(recyclerView.context).scaledTouchSlop
+            private var downX = 0f
+            private var downY = 0f
+            private var downView: View? = null
+            private var handled = false
+
+            override fun onInterceptTouchEvent(recyclerView: RecyclerView, event: MotionEvent): Boolean {
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downX = event.x
+                        downY = event.y
+                        downView = recyclerView.findChildViewUnder(downX, downY)
+                        handled = false
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val child = downView ?: return false
+                        if (handled || _viewType != FileViewType.LIST) return handled
+                        val deltaX = event.x - downX
+                        val deltaY = event.y - downY
+                        if (kotlin.math.abs(deltaY) > kotlin.math.abs(deltaX)) return false
+                        val threshold = maxOf(touchSlop * 2, child.width / 4)
+                        if (kotlin.math.abs(deltaX) >= threshold) {
+                            val position = recyclerView.getChildAdapterPosition(child)
+                            if (position != RecyclerView.NO_POSITION) {
+                                listener.onFileSwipeSelect(getItem(position))
+                                child.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                                handled = true
+                                return true
+                            }
+                        }
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        downView = null
+                        handled = false
+                    }
+                }
+                return handled
+            }
+
+            override fun onTouchEvent(recyclerView: RecyclerView, event: MotionEvent) {
+                if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                    downView = null
+                    handled = false
+                }
+            }
+        })
+    }
+
     private fun isFileSelectable(file: FileItem): Boolean {
         val pickOptions = pickOptions ?: return true
         return when (pickOptions.mode) {
@@ -244,10 +311,6 @@ class FileListAdapter(
                 isSelected = nameEllipsize == TextUtils.TruncateAt.MARQUEE
             }
         }
-        if (payloads.isNotEmpty()) {
-            return
-        }
-        bindViewHolderAnimation(holder)
         holder.itemLayout.apply {
             setOnClickListener {
                 if (selectedFiles.isEmpty()) {
@@ -262,6 +325,10 @@ class FileListAdapter(
             }
         }
         holder.iconLayout.setOnClickListener { selectFile(file) }
+        if (payloads.isNotEmpty()) {
+            return
+        }
+        bindViewHolderAnimation(holder)
         val iconRes = file.mimeType.iconRes
         holder.iconImage.apply {
             isVisible = true
@@ -480,6 +547,7 @@ class FileListAdapter(
         fun clearSelectedFiles()
         fun selectFile(file: FileItem, selected: Boolean)
         fun selectFiles(files: FileItemSet, selected: Boolean)
+        fun replaceSelectedFiles(files: FileItemSet) = Unit
         fun openFile(file: FileItem)
         fun openFileWith(file: FileItem)
         fun cutFile(file: FileItem)
@@ -499,5 +567,7 @@ class FileListAdapter(
 
         /** Return true when a host handled long-press interaction itself. */
         fun onFileLongClick(file: FileItem): Boolean = false
+
+        fun onFileSwipeSelect(file: FileItem) = Unit
     }
 }

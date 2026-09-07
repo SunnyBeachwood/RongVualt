@@ -147,6 +147,9 @@ class FileListViewModel : ViewModel() {
     val selectedFiles: FileItemSet
         get() = _selectedFilesLiveData.valueCompat
 
+    /** The first item selected by horizontal swipe in this pane. */
+    var selectionRangeAnchorPath: Path? = null
+
     fun selectFile(file: FileItem, selected: Boolean) {
         selectFiles(fileItemSetOf(file), selected)
     }
@@ -184,6 +187,7 @@ class FileListViewModel : ViewModel() {
     }
 
     fun clearSelectedFiles() {
+        selectionRangeAnchorPath = null
         val selectedFiles = _selectedFilesLiveData.valueCompat
         if (selectedFiles.isEmpty()) {
             return

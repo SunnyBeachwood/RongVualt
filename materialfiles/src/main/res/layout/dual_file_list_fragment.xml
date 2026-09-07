@@ -23,10 +23,11 @@
             android:background="?colorAppBarSurface"
             android:theme="?actionBarTheme">
 
-            <androidx.appcompat.widget.Toolbar
+            <me.zhanghai.android.files.ui.AdaptiveToolbar
                 android:id="@+id/dualToolbar"
                 android:layout_width="match_parent"
-                android:layout_height="?actionBarSize"
+                android:layout_height="wrap_content"
+                android:minHeight="?actionBarSize"
                 android:paddingStart="@dimen/file_list_toolbar_padding_start"
                 android:paddingEnd="@dimen/file_list_toolbar_padding_end_with_overflow"
                 app:navigationIcon="@drawable/menu_icon_control_normal_24dp"
