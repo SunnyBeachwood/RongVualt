@@ -69,4 +69,12 @@ class DualPaneFileListViewModelTest {
         assertTrue(state.layoutMode.isDualPane(360))
         assertEquals(FileListLayoutMode.DUAL, state.layoutMode)
     }
+
+    @Test
+    fun recentAccessDockStartsCollapsedAndKeepsItsUiState() {
+        val state = DualPaneFileListViewModel()
+        assertFalse(state.isRecentAccessExpanded)
+        state.isRecentAccessExpanded = true
+        assertTrue(state.isRecentAccessExpanded)
+    }
 }

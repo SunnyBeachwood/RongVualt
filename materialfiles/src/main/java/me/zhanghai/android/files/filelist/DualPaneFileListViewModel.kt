@@ -12,6 +12,7 @@ import java.util.ArrayDeque
 /** Session state shared by the two file-pane controllers. */
 class DualPaneFileListViewModel : ViewModel() {
     var activePane: PaneId = PaneId.LEFT
+    var isRecentAccessExpanded: Boolean = false
 
     // Normal file-manager sessions start as two panes. The Fragment restores the
     // application preference immediately after construction.

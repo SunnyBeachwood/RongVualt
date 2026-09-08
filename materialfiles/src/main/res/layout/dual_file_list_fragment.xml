@@ -45,41 +45,117 @@
             android:orientation="horizontal"
             android:baselineAligned="false">
 
-            <include
-                android:id="@+id/leftPane"
-                layout="@layout/dual_file_pane"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/leftPaneSurface"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1" />
+                android:layout_weight="1"
+                android:layout_margin="2dp"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                app:cardUseCompatPadding="true">
+
+                <include
+                    android:id="@+id/leftPane"
+                    layout="@layout/dual_file_pane"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </com.google.android.material.card.MaterialCardView>
 
             <View
                 android:id="@+id/dualPaneDivider"
                 android:layout_width="1dp"
                 android:layout_height="match_parent"
-            android:background="?colorOutlineVariant"
-            android:elevation="1dp" />
+                android:background="?colorOutlineVariant" />
 
-            <include
-                android:id="@+id/rightPane"
-                layout="@layout/dual_file_pane"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/rightPaneSurface"
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
-                android:layout_weight="1" />
+                android:layout_weight="1"
+                android:layout_margin="2dp"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"
+                app:cardUseCompatPadding="true">
+
+                <include
+                    android:id="@+id/rightPane"
+                    layout="@layout/dual_file_pane"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <LinearLayout
-            android:id="@+id/dualActionDock"
+        <me.zhanghai.android.files.ui.ExpandableActionDockLayout
+            android:id="@+id/dualDockContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:minHeight="64dp"
-            android:gravity="center"
-            android:orientation="horizontal"
             android:background="?colorSurface"
             android:elevation="@dimen/design_appbar_elevation"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp" />
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/dualActionDock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="64dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
+
+            <LinearLayout
+                android:id="@+id/dualRecentAccessPanel"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/file_list_recent_access"
+                        android:textAppearance="?textAppearanceTitleSmall" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/dualRecentAccessClear"
+                        style="?attr/borderlessButtonStyle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/file_list_recent_access_clear" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/dualRecentAccessList"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:paddingBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/dualRecentAccessEmpty"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="@string/file_list_recent_access_empty"
+                    android:textAppearance="?textAppearanceBodyMedium"
+                    android:textColor="?colorOnSurfaceVariant"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </me.zhanghai.android.files.ui.ExpandableActionDockLayout>
     </LinearLayout>
 
     <me.zhanghai.android.files.ui.NavigationFrameLayout

@@ -188,9 +188,11 @@
                 android:id="@+id/paneRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:clipToPadding="false"
-                android:paddingBottom="16dp"
-                tools:listitem="@layout/file_item_list" />
+            android:clipToPadding="false"
+            android:paddingBottom="16dp"
+            android:fadeScrollbars="true"
+            android:scrollbars="vertical"
+            tools:listitem="@layout/file_item_list" />
         </androidx.swiperefreshlayout.widget.ThemedSwipeRefreshLayout>
     </me.zhanghai.android.files.ui.CoordinatorScrollingFrameLayout>
 </LinearLayout>

@@ -283,6 +283,10 @@
     <string name="file_list_parent_directory">返回上一级</string>
     <string name="file_list_action_back">后退</string>
     <string name="file_list_action_forward">前进</string>
+    <string name="file_list_recent_access">最近访问</string>
+    <string name="file_list_recent_access_clear">清除记录</string>
+    <string name="file_list_recent_access_empty">暂无访问过的文件或文件夹</string>
+    <string name="file_list_recent_access_unavailable">此项目已无法访问</string>
     <string name="file_list_action_new">新建</string>
     <string name="file_list_action_copy_to_other">复制到另一侧</string>
     <string name="file_list_action_move_to_other">移动到另一侧</string>
