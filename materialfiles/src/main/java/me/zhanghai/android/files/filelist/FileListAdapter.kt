@@ -28,7 +28,6 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.coil.AppIconPackageName
 import me.zhanghai.android.files.compat.foregroundCompat
 import me.zhanghai.android.files.compat.getDrawableCompat
-import me.zhanghai.android.files.compat.isSingleLineCompat
 import me.zhanghai.android.files.databinding.FileItemGridBinding
 import me.zhanghai.android.files.databinding.FileItemListBinding
 import me.zhanghai.android.files.file.FileItem
@@ -90,6 +89,14 @@ class FileListAdapter(
         get() = _nameEllipsize
         set(value) {
             _nameEllipsize = value
+            notifyItemRangeChanged(0, itemCount, PAYLOAD_STATE_CHANGED)
+        }
+
+    private var _nameMaxLines: Int = 2
+    var nameMaxLines: Int
+        get() = _nameMaxLines
+        set(value) {
+            _nameMaxLines = value.coerceIn(1, 3)
             notifyItemRangeChanged(0, itemCount, PAYLOAD_STATE_CHANGED)
         }
 
@@ -372,10 +379,18 @@ class FileListAdapter(
             }
         }
         holder.nameText.apply {
-            if (isSingleLineCompat) {
-                val nameEllipsize = nameEllipsize
+            val maxLines = nameMaxLines
+            if (maxLines == 1) {
+                isSingleLine = true
                 ellipsize = nameEllipsize
                 isSelected = nameEllipsize == TextUtils.TruncateAt.MARQUEE
+            } else {
+                isSingleLine = false
+                this.maxLines = maxLines
+                ellipsize = if (nameEllipsize == TextUtils.TruncateAt.MARQUEE) {
+                    TextUtils.TruncateAt.END
+                } else nameEllipsize
+                isSelected = false
             }
         }
         holder.itemLayout.apply {

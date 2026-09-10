@@ -105,7 +105,19 @@ class IntegerSettingLiveData(
         sharedPreferences: SharedPreferences,
         key: String,
         defaultValue: Int
-    ): Int = sharedPreferences.getInt(key, defaultValue)
+    ): Int {
+        // List-style preferences persist their entry values as strings.  Keep
+        // integer settings tolerant of that representation so an XML default
+        // (or an older build) cannot prevent the whole application from
+        // initializing with a ClassCastException.
+        return when (val value = sharedPreferences.all[key]) {
+            is Number -> value.toInt()
+            is String -> value.toIntOrNull()?.also { migratedValue ->
+                sharedPreferences.edit { putInt(key, migratedValue) }
+            } ?: defaultValue
+            else -> defaultValue
+        }
+    }
 
     override fun putValue(sharedPreferences: SharedPreferences, key: String, value: Int) {
         sharedPreferences.edit { putInt(key, value) }

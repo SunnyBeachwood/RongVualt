@@ -813,6 +813,12 @@
         <item>Ellipsize the end</item>
         <item>Marquee</item>
     </string-array>
+    <string name="settings_file_name_max_lines_title">File name lines</string>
+    <string-array name="settings_file_name_max_lines_entries">
+        <item>1 line (scroll)</item>
+        <item>2 lines</item>
+        <item>3 lines</item>
+    </string-array>
     <string name="settings_file_list_font_size_title">File list text size</string>
     <string name="settings_file_list_font_size_summary">%1$d sp</string>
     <string name="settings_file_list_font_size_range">Adjust from %1$d to %2$d sp</string>

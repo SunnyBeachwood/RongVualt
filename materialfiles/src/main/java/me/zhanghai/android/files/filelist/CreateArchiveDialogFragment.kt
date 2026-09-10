@@ -9,6 +9,7 @@ import android.app.Dialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.view.WindowManager
 import android.widget.EditText
 import android.widget.RadioGroup
 import android.widget.ArrayAdapter
@@ -28,7 +29,6 @@ import me.zhanghai.android.files.databinding.NameDialogNameIncludeBinding
 import me.zhanghai.android.files.util.ParcelableArgs
 import me.zhanghai.android.files.util.args
 import me.zhanghai.android.files.util.putArgs
-import me.zhanghai.android.files.util.setTextWithSelection
 import me.zhanghai.android.files.util.show
 import me.zhanghai.android.files.util.takeIfNotEmpty
 import me.zhanghai.android.libarchive.Archive
@@ -49,19 +49,25 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
+        // Keep the archive form at its full height when the keyboard opens; the
+        // dialog is panned upward while its NestedScrollView remains usable.
+        dialog.window?.setSoftInputMode(
+            WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
+                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
+        )
 
         if (savedInstanceState == null) {
             val files = args.files
-            var name: String? = null
+            var sourceName: String? = null
             if (files.size == 1) {
-                name = files.single().path.fileName.toString()
+                sourceName = files.single().path.fileName.toString()
             } else {
                 val parent = files.mapTo(mutableSetOf()) { it.path.parent }.singleOrNull()
                 if (parent != null && parent.nameCount > 0) {
-                    name = parent.fileName.toString()
+                    sourceName = parent.fileName.toString()
                 }
             }
-            name?.let { binding.nameEdit.setTextWithSelection(it) }
+            initialArchiveSourceName = sourceName
         }
         val sourceParents = args.files.mapNotNull { it.path.parent }.distinct()
         val targetText = sourceParents.singleOrNull()?.toString()
@@ -71,6 +77,7 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
         binding.typeGroup.setOnCheckedChangeListener { _, _ ->
             updatePasswordLayoutVisibility()
             updateAdvancedOptionVisibility()
+            updateArchiveNameExtension()
         }
         binding.root.findViewById<com.google.android.material.button.MaterialButton>(R.id.advancedButton)
             .setOnClickListener {
@@ -86,11 +93,13 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
                 id: Long,
             ) {
                 updateAdvancedOptionVisibility()
+                updateArchiveNameExtension()
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
         configureSpinners()
+        initialArchiveSourceName?.let { setArchiveName(it) }
         updatePasswordLayoutVisibility()
         updateAdvancedOptionVisibility()
         if (savedInstanceState?.getBoolean(KEY_ADVANCED) == true) {
@@ -114,15 +123,50 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
         Binding.inflate(inflater)
 
     override val name: String
-        get() {
-            val extension = when (val checkedId = binding.typeGroup.checkedRadioButtonId) {
-                R.id.zipRadio -> "zip"
-                R.id.tarXzRadio -> tarExtension()
-                R.id.sevenZRadio -> "7z"
-                else -> throw AssertionError(checkedId)
-            }
-            return "${super.name}.$extension"
+        get() = normalizeArchiveName(super.name)
+
+    private var initialArchiveSourceName: String? = null
+
+    private fun selectedArchiveExtension(): String = when (val checkedId = binding.typeGroup.checkedRadioButtonId) {
+        R.id.zipRadio -> "zip"
+        R.id.tarXzRadio -> tarExtension()
+        R.id.sevenZRadio -> "7z"
+        else -> throw AssertionError(checkedId)
+    }
+
+    private fun archiveBaseName(value: String): String {
+        val trimmed = value.trim()
+        val lower = trimmed.lowercase()
+        val known = ARCHIVE_EXTENSIONS.firstOrNull { lower.endsWith(".$it") }
+        if (known != null) return trimmed.dropLast(known.length + 1)
+        val dot = trimmed.lastIndexOf('.')
+        return if (dot > 0) trimmed.substring(0, dot) else trimmed
+    }
+
+    private fun setArchiveName(sourceName: String) {
+        val base = archiveBaseName(sourceName)
+        val fullName = "$base.${selectedArchiveExtension()}"
+        binding.nameEdit.setText(fullName)
+        binding.nameEdit.setSelection(0, base.length.coerceAtMost(fullName.length))
+    }
+
+    private fun updateArchiveNameExtension() {
+        val current = binding.nameEdit.text?.toString().orEmpty()
+        if (current.isBlank()) return
+        setArchiveName(current)
+    }
+
+    private fun normalizeArchiveName(value: String): String {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) return trimmed
+        val extension = selectedArchiveExtension()
+        val suffix = ".${extension.lowercase()}"
+        return if (trimmed.lowercase().endsWith(suffix)) {
+            trimmed
+        } else {
+            "${archiveBaseName(trimmed)}.$extension"
         }
+    }
 
     private val isPasswordSupported: Boolean
         get() = when (val checkedId = binding.typeGroup.checkedRadioButtonId) {
@@ -249,6 +293,9 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
 
     companion object {
         private const val KEY_ADVANCED = "zipxtract_advanced_options"
+        private val ARCHIVE_EXTENSIONS = listOf(
+            "tar.lzma", "tar.zst", "tar.bz2", "tar.gz", "tar.xz", "7z", "zip", "tar",
+        )
 
         fun show(files: FileItemSet, fragment: Fragment) {
             CreateArchiveDialogFragment().putArgs(Args(files)).show(fragment)

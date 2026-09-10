@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<resources>
+    <!-- Keep the selected hue visible without retaining light surfaces in night mode. -->
+    <style name="Theme.MaterialFiles.Material3.color_primary"><item name="colorSurface">#151A22</item><item name="colorSurfaceContainerLow">#151A22</item><item name="colorSurfaceContainerHigh">#202936</item><item name="colorAppBarSurface">#151A22</item><item name="android:colorBackground">#151A22</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_red"><item name="colorSurface">#2B1719</item><item name="colorSurfaceContainerLow">#2B1719</item><item name="colorSurfaceContainerHigh">#402124</item><item name="colorAppBarSurface">#2B1719</item><item name="android:colorBackground">#2B1719</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_pink"><item name="colorSurface">#2A171F</item><item name="colorSurfaceContainerLow">#2A171F</item><item name="colorSurfaceContainerHigh">#3E202D</item><item name="colorAppBarSurface">#2A171F</item><item name="android:colorBackground">#2A171F</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_purple"><item name="colorSurface">#271A2B</item><item name="colorSurfaceContainerLow">#271A2B</item><item name="colorSurfaceContainerHigh">#3A2540</item><item name="colorAppBarSurface">#271A2B</item><item name="android:colorBackground">#271A2B</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_deep_purple"><item name="colorSurface">#211A2D</item><item name="colorSurfaceContainerLow">#211A2D</item><item name="colorSurfaceContainerHigh">#312644</item><item name="colorAppBarSurface">#211A2D</item><item name="android:colorBackground">#211A2D</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_indigo"><item name="colorSurface">#191E32</item><item name="colorSurfaceContainerLow">#191E32</item><item name="colorSurfaceContainerHigh">#252D48</item><item name="colorAppBarSurface">#191E32</item><item name="android:colorBackground">#191E32</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_blue"><item name="colorSurface">#152238</item><item name="colorSurfaceContainerLow">#152238</item><item name="colorSurfaceContainerHigh">#203451</item><item name="colorAppBarSurface">#152238</item><item name="android:colorBackground">#152238</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_light_blue" parent="Theme.MaterialFiles.Material3.material_blue" />
+    <style name="Theme.MaterialFiles.Material3.material_cyan" parent="Theme.MaterialFiles.Material3.material_blue" />
+    <style name="Theme.MaterialFiles.Material3.material_teal"><item name="colorSurface">#142824</item><item name="colorSurfaceContainerLow">#142824</item><item name="colorSurfaceContainerHigh">#1D3C35</item><item name="colorAppBarSurface">#142824</item><item name="android:colorBackground">#142824</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_green"><item name="colorSurface">#162619</item><item name="colorSurfaceContainerLow">#162619</item><item name="colorSurfaceContainerHigh">#214027</item><item name="colorAppBarSurface">#162619</item><item name="android:colorBackground">#162619</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_light_green" parent="Theme.MaterialFiles.Material3.material_green" />
+    <style name="Theme.MaterialFiles.Material3.material_lime" parent="Theme.MaterialFiles.Material3.material_green" />
+    <style name="Theme.MaterialFiles.Material3.material_yellow"><item name="colorSurface">#292615</item><item name="colorSurfaceContainerLow">#292615</item><item name="colorSurfaceContainerHigh">#403C1D</item><item name="colorAppBarSurface">#292615</item><item name="android:colorBackground">#292615</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_amber" parent="Theme.MaterialFiles.Material3.material_yellow" />
+    <style name="Theme.MaterialFiles.Material3.material_orange"><item name="colorSurface">#2D1E16</item><item name="colorSurfaceContainerLow">#2D1E16</item><item name="colorSurfaceContainerHigh">#452D20</item><item name="colorAppBarSurface">#2D1E16</item><item name="android:colorBackground">#2D1E16</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_deep_orange" parent="Theme.MaterialFiles.Material3.material_orange" />
+    <style name="Theme.MaterialFiles.Material3.material_brown"><item name="colorSurface">#251C18</item><item name="colorSurfaceContainerLow">#251C18</item><item name="colorSurfaceContainerHigh">#3A2A23</item><item name="colorAppBarSurface">#251C18</item><item name="android:colorBackground">#251C18</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_grey"><item name="colorSurface">#1D1D1D</item><item name="colorSurfaceContainerLow">#1D1D1D</item><item name="colorSurfaceContainerHigh">#2B2B2B</item><item name="colorAppBarSurface">#1D1D1D</item><item name="android:colorBackground">#1D1D1D</item></style>
+    <style name="Theme.MaterialFiles.Material3.material_blue_grey" parent="Theme.MaterialFiles.Material3.material_grey" />
+</resources>

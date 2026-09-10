@@ -75,8 +75,17 @@ object CustomThemeHelper {
         // map that base back to the legacy family when an existing user has
         // explicitly disabled Material 3.
         val customThemeBaseName = if (Settings.MATERIAL_DESIGN_3.valueCompat) {
-            if (baseThemeName.contains(material3ThemeName)) baseThemeName
+            val material3Base = if (baseThemeName.contains(material3ThemeName)) baseThemeName
             else baseThemeName.replaceFirst(defaultThemeName, material3ThemeName)
+            // Material 3's DynamicColors parent otherwise ignores the app's
+            // selected accent and leaves all surfaces tied to the system seed.
+            // Keep the existing shared black overlay, while normal themes use
+            // the matching low-saturation surface overlay below.
+            if (Settings.BLACK_NIGHT_MODE.valueCompat) material3Base else {
+                val themeColorName =
+                    resources.getResourceEntryName(Settings.THEME_COLOR.valueCompat.resourceId)
+                "$material3Base.$themeColorName"
+            }
         } else {
             val legacyBaseName = if (baseThemeName.contains(material3ThemeName)) {
                 baseThemeName.replaceFirst(material3ThemeName, defaultThemeName)

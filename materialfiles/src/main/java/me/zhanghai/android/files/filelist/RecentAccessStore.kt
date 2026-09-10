@@ -12,6 +12,7 @@ data class RecentAccessEntry(
     val title: String,
     val isDirectory: Boolean,
     val accessedAt: Long,
+    val displayPath: String = uri,
 )
 
 class RecentAccessStore(context: Context) {
@@ -28,6 +29,7 @@ class RecentAccessStore(context: Context) {
                         item.getString("title"),
                         item.getBoolean("directory"),
                         item.getLong("accessedAt"),
+                        item.optString("path", item.getString("uri")),
                     )
                 )
             }
@@ -36,7 +38,8 @@ class RecentAccessStore(context: Context) {
 
     fun record(path: Path, isDirectory: Boolean) {
         val entry = RecentAccessEntry(
-            path.toUri().toString(), path.name, isDirectory, System.currentTimeMillis()
+            path.toUri().toString(), path.name, isDirectory, System.currentTimeMillis(),
+            path.toUserFriendlyString(),
         )
         save(merge(entries(), entry))
     }
@@ -52,6 +55,7 @@ class RecentAccessStore(context: Context) {
                     .put("title", entry.title)
                     .put("directory", entry.isDirectory)
                     .put("accessedAt", entry.accessedAt)
+                    .put("path", entry.displayPath)
             )
         }
         preferences.edit { putString(KEY_ENTRIES, array.toString()) }

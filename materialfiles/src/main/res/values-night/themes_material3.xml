@@ -11,17 +11,32 @@
         <item name="colorSurface">@android:color/black</item>
         <item name="colorSurfaceContainerLow">@android:color/black</item>
         <item name="colorSurfaceContainerHigh">@android:color/black</item>
+        <item name="colorAppBarSurface">@android:color/black</item>
+        <item name="android:colorBackground">@android:color/black</item>
+        <item name="colorOnSurface">@android:color/white</item>
+        <item name="colorOnSurfaceVariant">#CAC4D0</item>
+        <item name="colorOutlineVariant">#49454F</item>
     </style>
     <style name="Theme.MaterialFiles.Material3.Translucent.Black">
         <item name="colorPrimaryDark">@color/color_primary_dark_black</item>
         <item name="colorSurface">@android:color/black</item>
         <item name="colorSurfaceContainerLow">@android:color/black</item>
         <item name="colorSurfaceContainerHigh">@android:color/black</item>
+        <item name="colorAppBarSurface">@android:color/black</item>
+        <item name="android:colorBackground">@android:color/black</item>
+        <item name="colorOnSurface">@android:color/white</item>
+        <item name="colorOnSurfaceVariant">#CAC4D0</item>
+        <item name="colorOutlineVariant">#49454F</item>
     </style>
     <style name="Theme.MaterialFiles.Material3.Immersive.Black">
         <item name="colorPrimaryDark">@color/color_primary_dark_black</item>
         <item name="colorSurface">@android:color/black</item>
         <item name="colorSurfaceContainerLow">@android:color/black</item>
         <item name="colorSurfaceContainerHigh">@android:color/black</item>
+        <item name="colorAppBarSurface">@android:color/black</item>
+        <item name="android:colorBackground">@android:color/black</item>
+        <item name="colorOnSurface">@android:color/white</item>
+        <item name="colorOnSurfaceVariant">#CAC4D0</item>
+        <item name="colorOutlineVariant">#49454F</item>
     </style>
 </resources>

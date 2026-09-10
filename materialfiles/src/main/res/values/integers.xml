@@ -20,4 +20,5 @@
     <integer name="create_archive_type_seven_z_visibility">@integer/visibility_gone</integer>
 
     <integer name="pref_default_value_file_list_font_size">16</integer>
+    <integer name="pref_default_value_file_name_max_lines">2</integer>
 </resources>

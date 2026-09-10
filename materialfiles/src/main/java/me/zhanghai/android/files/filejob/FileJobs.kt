@@ -171,6 +171,16 @@ internal fun FileJob.postArchiveEngineNotification(
     completedEntries: Long = 0,
     totalEntries: Long = 0,
 ) {
+    ArchiveJobProgressRegistry.update(
+        ArchiveJobProgress(
+            id = id,
+            title = title,
+            completedBytes = completedBytes,
+            totalBytes = totalBytes,
+            completedEntries = completedEntries,
+            totalEntries = totalEntries,
+        )
+    )
     val max: Int
     val progress: Int
     if (totalBytes > 0 && totalBytes <= Int.MAX_VALUE) {
@@ -190,6 +200,12 @@ internal fun FileJob.postArchiveEngineNotification(
         progress = completedEntries.coerceIn(0, totalEntries).toInt()
     }
     postNotification(title, null, null, null, max, progress, totalBytes <= 0 && totalEntries <= 0, true)
+}
+
+internal fun FileJob.announceArchiveJob(title: CharSequence) {
+    ArchiveJobProgressRegistry.update(
+        ArchiveJobProgress(id, title, 0L, 0L, 0L, 0L)
+    )
 }
 
 private const val PROGRESS_INTERVAL_MILLIS = 200L

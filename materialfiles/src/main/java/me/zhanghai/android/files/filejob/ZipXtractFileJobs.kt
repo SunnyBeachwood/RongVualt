@@ -54,6 +54,7 @@ class ZipXtractExtractJob(
     @Throws(IOException::class)
     override fun run() {
         try {
+            announceArchiveJob("Extracting archive")
             withPrivateEngine { engine ->
                 sources.forEach { source ->
                     val cancellation = CancellationBridge()
@@ -162,6 +163,7 @@ class ZipXtractCreateJob(
     @Throws(IOException::class)
     override fun run() {
         try {
+            announceArchiveJob("Creating ${archiveFile.fileName}")
             val inputEntries = collectArchiveInputs(sources)
             val archiveExisted = archiveFile.exists(LinkOption.NOFOLLOW_LINKS)
             var successful = false

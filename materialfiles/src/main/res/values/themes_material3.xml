@@ -7,7 +7,7 @@
 
 <resources>
 
-    <style name="Platform.V21.Theme.MaterialFiles.Material3" parent="Theme.Material3.DynamicColors.DayNight.NoActionBar">
+    <style name="Platform.V21.Theme.MaterialFiles.Material3" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimaryDark">@color/system_window_scrim_compat</item>
     </style>
     <style name="Platform.Theme.MaterialFiles.Material3" parent="Platform.V21.Theme.MaterialFiles.Material3" />

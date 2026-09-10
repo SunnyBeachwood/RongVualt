@@ -54,6 +54,14 @@
             android:entryValues="@array/pref_entry_values_file_name_ellipsize"
             app:useSimpleSummaryProvider="true" />
 
+        <rikka.preference.SimpleMenuPreference
+            android:key="@string/pref_key_file_name_max_lines"
+            android:title="@string/settings_file_name_max_lines_title"
+            android:defaultValue="2"
+            android:entries="@array/settings_file_name_max_lines_entries"
+            android:entryValues="@array/pref_entry_values_file_name_max_lines"
+            app:useSimpleSummaryProvider="true" />
+
         <me.zhanghai.android.files.settings.FileListFontSizePreference
             android:key="@string/pref_key_file_list_font_size"
             android:title="@string/settings_file_list_font_size_title"

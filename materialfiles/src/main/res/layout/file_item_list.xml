@@ -74,14 +74,15 @@
         android:duplicateParentState="true"
         android:orientation="vertical">
 
-        <!-- Lint says android:ellipsize="middle" and android:maxLines="1" crashes. -->
+        <!-- Runtime changes this to one line for marquee or two/three lines. -->
         <TextView
             android:id="@+id/nameText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:duplicateParentState="true"
             android:marqueeRepeatLimit="marquee_forever"
-            android:singleLine="true"
+            android:ellipsize="end"
+            android:maxLines="2"
             android:textAppearance="?textAppearanceListItem"
             android:textSize="16sp" />
 

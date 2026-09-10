@@ -40,6 +40,7 @@ abstract class FileJob {
             service.showToast(e.toString())
             result = FileJobResult(id, e)
         } finally {
+            ArchiveJobProgressRegistry.finish(id)
             service.notificationManager.cancel(id)
         }
         return result

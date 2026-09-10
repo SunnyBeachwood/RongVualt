@@ -155,6 +155,12 @@ object Settings {
             TextUtils.TruncateAt::class.java
         )
 
+    val FILE_NAME_MAX_LINES: SettingLiveData<Int> =
+        IntegerSettingLiveData(
+            R.string.pref_key_file_name_max_lines,
+            R.integer.pref_default_value_file_name_max_lines,
+        )
+
     val STANDARD_DIRECTORY_SETTINGS: SettingLiveData<List<StandardDirectorySettings>> =
         ParcelValueSettingLiveData(R.string.pref_key_standard_directory_settings, emptyList())
 
