@@ -124,6 +124,48 @@ class IntegerSettingLiveData(
     }
 }
 
+/**
+ * Integer value backed by a string preference entry.
+ *
+ * AndroidX list preferences persist their entry values as strings, while the
+ * early RongVualt builds stored the same value as an integer.  Reading both
+ * forms here lets the preference screen migrate old installations before a
+ * [ListPreference] attempts its string-only read.
+ */
+class StringIntegerSettingLiveData(
+    nameSuffix: String?,
+    @StringRes keyRes: Int,
+    keySuffix: String?,
+    @IntegerRes defaultValueRes: Int
+) : SettingLiveData<Int>(nameSuffix, keyRes, keySuffix, defaultValueRes) {
+    constructor(@StringRes keyRes: Int, @IntegerRes defaultValueRes: Int) : this(
+        null, keyRes, null, defaultValueRes
+    )
+
+    init {
+        init()
+    }
+
+    override fun getDefaultValue(@IntegerRes defaultValueRes: Int): Int =
+        application.getInteger(defaultValueRes)
+
+    override fun getValue(
+        sharedPreferences: SharedPreferences,
+        key: String,
+        defaultValue: Int
+    ): Int = when (val value = sharedPreferences.all[key]) {
+        is Number -> value.toInt().also { migratedValue ->
+            sharedPreferences.edit { putString(key, migratedValue.toString()) }
+        }
+        is String -> value.toIntOrNull() ?: defaultValue
+        else -> defaultValue
+    }
+
+    override fun putValue(sharedPreferences: SharedPreferences, key: String, value: Int) {
+        sharedPreferences.edit { putString(key, value.toString()) }
+    }
+}
+
 class LongSettingLiveData(
     nameSuffix: String?,
     @StringRes keyRes: Int,

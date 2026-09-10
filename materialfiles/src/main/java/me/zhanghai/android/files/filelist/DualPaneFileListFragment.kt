@@ -855,24 +855,17 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
     }
 
-    /**
-     * Both the Material and the user-selected theme-color modes expose a
-     * primary role. Derive a restrained pane/background tint from it instead
-     * of relying on a CardView default, which otherwise remains unchanged in
-     * the legacy Material theme family.
-     */
+    /** Keep every browser surface on the selected theme's same base surface. */
     private fun updateDualSurfaceColors() {
         val surface = MaterialColors.getColor(
             root, com.google.android.material.R.attr.colorSurface
         )
-        val primary = MaterialColors.getColor(root, androidx.appcompat.R.attr.colorPrimary, surface)
-        val paneSurface = MaterialColors.layer(surface, primary, 0.075f)
-        root.findViewById<View>(R.id.dualContentRoot).setBackgroundColor(paneSurface)
-        dockContainer.setBackgroundColor(paneSurface)
-        leftPaneSurface.setCardBackgroundColor(paneSurface)
-        rightPaneSurface.setCardBackgroundColor(paneSurface)
-        leftPane.root.setBackgroundColor(paneSurface)
-        rightPane.root.setBackgroundColor(paneSurface)
+        root.findViewById<View>(R.id.dualContentRoot).setBackgroundColor(surface)
+        dockContainer.setBackgroundColor(surface)
+        leftPaneSurface.setCardBackgroundColor(surface)
+        rightPaneSurface.setCardBackgroundColor(surface)
+        leftPane.root.setBackgroundColor(surface)
+        rightPane.root.setBackgroundColor(surface)
     }
 
     private fun navigateTo(pane: PaneId, path: Path, recordHistory: Boolean = true) {

@@ -156,7 +156,7 @@ object Settings {
         )
 
     val FILE_NAME_MAX_LINES: SettingLiveData<Int> =
-        IntegerSettingLiveData(
+        StringIntegerSettingLiveData(
             R.string.pref_key_file_name_max_lines,
             R.integer.pref_default_value_file_name_max_lines,
         )

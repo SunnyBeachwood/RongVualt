@@ -512,7 +512,7 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
         val source = binding.textEdit.text.toString()
         val replaced = source.replace(query, replacement, ignoreCase = !caseSensitive)
         if (source != replaced) {
-            binding.textEdit.text.replace(0, binding.textEdit.length(), replaced)
+            binding.textEdit.text!!.replace(0, binding.textEdit.length(), replaced)
             viewModel.isTextChanged.value = true
             highlighter?.refresh()
         }

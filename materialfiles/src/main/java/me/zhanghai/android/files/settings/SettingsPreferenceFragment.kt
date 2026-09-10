@@ -27,6 +27,10 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     }
 
     override fun onCreatePreferencesFix(savedInstanceState: Bundle?, rootKey: String?) {
+        // The list preference below only accepts strings.  Force migration of
+        // the integer representation written by 1.3 before it is inflated so
+        // Settings remains reachable immediately after an upgrade.
+        Settings.FILE_NAME_MAX_LINES.value
         addPreferencesFromResource(R.xml.settings)
 
         localePreference = preferenceScreen.findPreference(getString(R.string.pref_key_locale))!!
