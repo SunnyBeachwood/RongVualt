@@ -12,6 +12,15 @@ to CMake until its entire transitive closure is present and reviewed.
 | Apache FtpServer | `org.apache.ftpserver:ftpserver-core:1.2.1` | Apache-2.0 | User-enabled local FTP listener | source declaration and attribution added; protocol and lifecycle tests remain pending |
 | Apache MINA | `org.apache.mina:mina-core:2.2.4` | Apache-2.0 | FtpServer transport dependency | version is pinned to the FtpServer 1.2.1 release line; build verification remains pending |
 
+## Markor editor algorithms
+
+The embedded Markdown editor reuses the selection-formatting, list-continuation
+and Markdown-highlighting rules from Markor commit
+`8d657fd20fff71719d782a3bc375c6f982d09b19`. The imported source files are
+Apache-2.0/public-domain compatible portions only; Markor's application,
+storage, settings and multi-format UI are not embedded. Copyright headers and
+the upstream license notices remain in each adapted source file.
+
 ## ZipXtract archive engines (1.3.0)
 
 | Component | Locked version | License | Scope | Status |

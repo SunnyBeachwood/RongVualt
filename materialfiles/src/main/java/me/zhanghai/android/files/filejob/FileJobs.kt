@@ -206,6 +206,10 @@ internal fun FileJob.announceArchiveJob(title: CharSequence) {
     ArchiveJobProgressRegistry.update(
         ArchiveJobProgress(id, title, 0L, 0L, 0L, 0L)
     )
+    // Some archive engines do their first progress callback only after a
+    // lengthy scan. Start the foreground notification here so compression and
+    // extraction are visible (and cancellable) from their first moment.
+    postNotification(title, null, null, null, 0, 0, true, true)
 }
 
 private const val PROGRESS_INTERVAL_MILLIS = 200L

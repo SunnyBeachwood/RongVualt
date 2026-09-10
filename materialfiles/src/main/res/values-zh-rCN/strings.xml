@@ -46,6 +46,8 @@
     <string name="system_default">系统默认</string>
     <string name="unknown">未知</string>
     <string name="view">查看</string>
+    <string name="undo">撤销</string>
+    <string name="redo">重做</string>
 
     <!-- android.R.string.app_not_found -->
     <string name="activity_not_found">未找到可处理此操作的应用</string>
@@ -316,10 +318,17 @@
     <string name="file_create_archive_advanced">高级选项</string>
     <string name="file_create_archive_compression">压缩方式</string>
     <string name="file_create_archive_compression_level">压缩级别</string>
-    <string name="file_create_archive_split_size">ZIP 分卷大小（KiB，可选）</string>
+    <string name="file_create_archive_password_confirm">确认密码</string>
+    <string name="file_create_archive_password_error_empty">密码不能为空</string>
+    <string name="file_create_archive_password_error_mismatch">两次输入的密码不一致</string>
+    <string name="file_create_archive_encryption">加密方式</string>
+    <string name="file_create_archive_encrypt_filenames">加密文件名（7z 头部加密）</string>
+    <string name="file_create_archive_legacy_encryption_warning">旧版 ZIP 加密强度较低，仅建议为兼容旧软件时使用。</string>
+    <string name="file_create_archive_zip_filename_visible">ZIP 加密不会隐藏文件名。</string>
+    <string name="file_create_archive_split_size">分卷大小（KiB，可选）</string>
     <string name="file_create_archive_7z_threads">7z 线程数</string>
     <string name="file_create_archive_7z_solid">创建固实 7z 压缩包</string>
-    <string name="file_create_archive_large_split_title">ZIP 分卷数量较多</string>
+    <string name="file_create_archive_large_split_title">归档分卷数量较多</string>
     <string name="file_create_archive_large_split_message">此归档可能生成超过 100 个分卷，是否继续？</string>
     <string name="file_list_breadcrumb_action_open_in_new_task">在新窗口中打开</string>
     <string name="file_list_select_title_format">%1$,d</string>
@@ -617,6 +626,27 @@
     <string name="text_editor_reload_message">您确定要重新加载吗？对此文档未保存的变更将丢失。</string>
     <string name="text_editor_encoding">编码</string>
     <string name="text_editor_close_message">您确定要舍弃对此文档未保存的变更吗？</string>
+    <string name="markdown_preview">预览</string>
+    <string name="markdown_edit_source">编辑源码</string>
+    <string name="markdown_search_replace">查找和替换</string>
+    <string name="markdown_find">查找</string>
+    <string name="markdown_replace_with">替换为</string>
+    <string name="markdown_case_sensitive">区分大小写</string>
+    <string name="markdown_find_next">查找下一个</string>
+    <string name="markdown_replace_all">全部替换</string>
+    <string name="markdown_action_heading">标题</string>
+    <string name="markdown_action_bold">粗体</string>
+    <string name="markdown_action_italic">斜体</string>
+    <string name="markdown_action_strike">删除线</string>
+    <string name="markdown_action_quote">引用</string>
+    <string name="markdown_action_code">代码</string>
+    <string name="markdown_action_code_block">代码块</string>
+    <string name="markdown_action_link">链接</string>
+    <string name="markdown_action_image">图片</string>
+    <string name="markdown_action_unordered">列表</string>
+    <string name="markdown_action_ordered">有序</string>
+    <string name="markdown_action_task">任务</string>
+    <string name="markdown_search_not_found">未找到匹配文本</string>
 
     <string name="ftp_server_title">FTP 服务器</string>
     <string name="ftp_server_state_title">状态</string>

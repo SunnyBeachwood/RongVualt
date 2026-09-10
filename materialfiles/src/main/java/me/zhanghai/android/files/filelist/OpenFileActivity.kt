@@ -16,12 +16,10 @@ import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.file.isMarkdownFile
 import me.zhanghai.android.files.filejob.FileJobService
 import me.zhanghai.android.files.provider.archive.isArchivePath
-import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.createViewIntent
 import me.zhanghai.android.files.util.extraPath
 import me.zhanghai.android.files.util.startActivitySafe
-import me.zhanghai.android.files.util.valueCompat
-import me.zhanghai.android.files.viewer.markdown.MarkdownViewerActivity
+import me.zhanghai.android.files.viewer.text.TextEditorActivity
 
 class OpenFileActivity : AppActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,8 +35,8 @@ class OpenFileActivity : AppActivity() {
     }
 
     private fun openFile(path: Path, mimeType: MimeType) {
-        if (isMarkdownFile(path, mimeType) && Settings.MARKDOWN_RENDERING_ENABLED.valueCompat) {
-            startActivity(MarkdownViewerActivity.createIntent(path))
+        if (isMarkdownFile(path, mimeType)) {
+            startActivity(TextEditorActivity.createIntent(path))
         } else if (path.isArchivePath) {
             FileJobService.open(path, mimeType, false, this)
         } else {

@@ -46,6 +46,8 @@
     <string name="system_default">System default</string>
     <string name="unknown">Unknown</string>
     <string name="view">View</string>
+    <string name="undo">Undo</string>
+    <string name="redo">Redo</string>
 
     <!-- android.R.string.app_not_found -->
     <string name="activity_not_found">No application found to handle this action</string>
@@ -262,13 +264,20 @@
     <string name="file_create_archive_type_tar_xz">TAR</string>
     <string name="file_create_archive_type_7z">.7z</string>
     <string name="file_create_archive_password">Password (optional)</string>
+    <string name="file_create_archive_password_confirm">Confirm password</string>
+    <string name="file_create_archive_password_error_empty">Password cannot be empty</string>
+    <string name="file_create_archive_password_error_mismatch">Passwords do not match</string>
+    <string name="file_create_archive_encryption">Encryption</string>
+    <string name="file_create_archive_encrypt_filenames">Encrypt file names (7z header encryption)</string>
+    <string name="file_create_archive_legacy_encryption_warning">Legacy ZIP encryption is weaker and should only be used for compatibility.</string>
+    <string name="file_create_archive_zip_filename_visible">ZIP encryption does not hide file names.</string>
     <string name="file_create_archive_advanced">Advanced options</string>
     <string name="file_create_archive_compression">Compression</string>
     <string name="file_create_archive_compression_level">Compression level</string>
-    <string name="file_create_archive_split_size">ZIP split size (KiB, optional)</string>
+    <string name="file_create_archive_split_size">Split volume size (KiB, optional)</string>
     <string name="file_create_archive_7z_threads">7z threads</string>
     <string name="file_create_archive_7z_solid">Solid 7z archive</string>
-    <string name="file_create_archive_large_split_title">Many ZIP volumes</string>
+    <string name="file_create_archive_large_split_title">Many archive volumes</string>
     <string name="file_create_archive_large_split_message">This archive may create more than 100 volumes. Continue?</string>
     <string name="file_add_bookmark_success">Bookmark added</string>
     <string name="file_create_file_title">New file</string>
@@ -763,6 +772,27 @@
     <string name="text_editor_reload_message">Are you sure you want to reload? Unsaved changes to this document will be lost.</string>
     <string name="text_editor_encoding">Encoding</string>
     <string name="text_editor_close_message">Are you sure you want to discard unsaved changes to this document?</string>
+    <string name="markdown_preview">Preview</string>
+    <string name="markdown_edit_source">Edit source</string>
+    <string name="markdown_search_replace">Find and replace</string>
+    <string name="markdown_find">Find</string>
+    <string name="markdown_replace_with">Replace with</string>
+    <string name="markdown_case_sensitive">Case sensitive</string>
+    <string name="markdown_find_next">Find next</string>
+    <string name="markdown_replace_all">Replace all</string>
+    <string name="markdown_action_heading">H1</string>
+    <string name="markdown_action_bold">B</string>
+    <string name="markdown_action_italic">I</string>
+    <string name="markdown_action_strike">S</string>
+    <string name="markdown_action_quote">Quote</string>
+    <string name="markdown_action_code">Code</string>
+    <string name="markdown_action_code_block">Block</string>
+    <string name="markdown_action_link">Link</string>
+    <string name="markdown_action_image">Image</string>
+    <string name="markdown_action_unordered">List</string>
+    <string name="markdown_action_ordered">1.</string>
+    <string name="markdown_action_task">Task</string>
+    <string name="markdown_search_not_found">No matching text</string>
 
     <string name="ftp_server_title">FTP server</string>
     <string name="ftp_server_state_title">Status</string>

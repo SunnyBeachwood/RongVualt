@@ -70,9 +70,15 @@ abstract class NameDialogFragment : AppCompatDialogFragment() {
         if (!isNameValid(name)) {
             return
         }
+        if (!canSubmit()) {
+            return
+        }
         onOk(name)
         dismiss()
     }
+
+    /** Allows forms with additional fields to prevent dismissal on validation errors. */
+    protected open fun canSubmit(): Boolean = true
 
     protected open val name: String
         get() = binding.nameEdit.text.toString().trim()

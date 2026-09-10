@@ -91,6 +91,23 @@
                     android:inputType="textPassword" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/passwordConfirmLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="?dialogPreferredPadding"
+                android:layout_marginEnd="?dialogPreferredPadding"
+                android:hint="@string/file_create_archive_password_confirm"
+                android:visibility="gone">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/passwordConfirmEdit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:saveEnabled="false"
+                    android:inputType="textPassword" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/advancedButton"
                 style="@style/Widget.Material3.Button.TextButton"
@@ -142,10 +159,50 @@
                     android:layout_height="wrap_content"
                     android:visibility="gone" />
 
+                <TextView
+                    android:id="@+id/zipEncryptionLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/file_create_archive_encryption" />
+
                 <Spinner
                     android:id="@+id/encryptionSpinner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />
+
+                <TextView
+                    android:id="@+id/encryptionWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/file_create_archive_legacy_encryption_warning"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/zipFilenameWarning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/file_create_archive_zip_filename_visible"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/sevenZEncryptionLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/file_create_archive_encryption"
+                    android:visibility="gone" />
+
+                <Spinner
+                    android:id="@+id/sevenZEncryptionSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone" />
+
+                <CheckBox
+                    android:id="@+id/sevenZEncryptHeadersCheck"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/file_create_archive_encrypt_filenames"
+                    android:visibility="gone" />
 
                 <Spinner
                     android:id="@+id/tarCompressionSpinner"

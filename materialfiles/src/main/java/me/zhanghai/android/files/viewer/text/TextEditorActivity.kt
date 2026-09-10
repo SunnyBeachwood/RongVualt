@@ -8,19 +8,13 @@ package me.zhanghai.android.files.viewer.text
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.View
 import androidx.fragment.app.commit
 import java.net.URI
 import java8.nio.file.Paths
 import me.zhanghai.android.files.app.AppActivity
-import me.zhanghai.android.files.file.asMimeTypeOrNull
-import me.zhanghai.android.files.file.isMarkdownFile
-import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.extraPath
 import me.zhanghai.android.files.util.putArgs
-import me.zhanghai.android.files.util.valueCompat
-import me.zhanghai.android.files.viewer.markdown.MarkdownViewerFragment
 
 class TextEditorActivity : AppActivity() {
     private var textEditorFragment: TextEditorFragment? = null
@@ -37,23 +31,8 @@ class TextEditorActivity : AppActivity() {
                 intent.extraPath = runCatching { Paths.get(URI.create(uri.toString())) }.getOrNull()
             }
         }
-        val path = intent.extraPath
-        if (path != null && !intent.getBooleanExtra(EXTRA_FORCE_TEXT_EDITOR, false) &&
-            isMarkdownFile(path, intent.type?.asMimeTypeOrNull()) &&
-            Settings.MARKDOWN_RENDERING_ENABLED.valueCompat) {
-            // Keep an externally granted content URI in this activity.  URI grants received
-            // through ACTION_VIEW are tied to the receiving activity, so redirecting to a
-            // second activity can drop the caller's temporary read permission.
-            findViewById<View>(android.R.id.content)
-            if (savedInstanceState == null) {
-                supportFragmentManager.commit {
-                    add(android.R.id.content, MarkdownViewerFragment())
-                }
-            }
-            return
-        }
         // Calls ensureSubDecor().
-        findViewById<View>(android.R.id.content)
+        findViewById<android.view.View>(android.R.id.content)
         if (savedInstanceState == null) {
             textEditorFragment = TextEditorFragment().putArgs(TextEditorFragment.Args(intent))
             supportFragmentManager.commit { add(android.R.id.content, textEditorFragment!!) }

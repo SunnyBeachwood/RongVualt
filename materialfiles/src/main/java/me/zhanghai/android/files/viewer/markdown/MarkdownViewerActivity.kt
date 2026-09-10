@@ -5,34 +5,26 @@
 package me.zhanghai.android.files.viewer.markdown
 
 import android.os.Bundle
-import android.view.View
-import androidx.fragment.app.commit
 import java8.nio.file.Path
 import me.zhanghai.android.files.app.AppActivity
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.extraPath
+import me.zhanghai.android.files.viewer.text.TextEditorActivity
 
 class MarkdownViewerActivity : AppActivity() {
-    private lateinit var fragment: MarkdownViewerFragment
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (intent.extraPath == null) {
+        val path = intent.extraPath
+        if (path == null) {
             finish()
             return
         }
-        findViewById<View>(android.R.id.content)
-        if (savedInstanceState == null) {
-            fragment = MarkdownViewerFragment()
-            supportFragmentManager.commit { add(android.R.id.content, fragment) }
-        } else {
-            fragment = supportFragmentManager.findFragmentById(android.R.id.content)
-                as MarkdownViewerFragment
-        }
+        // Kept as a compatibility entry point for old internal intents. The
+        // actual UI now lives in the unified text editor so source and preview
+        // share one buffer and one unsaved-change state.
+        startActivity(TextEditorActivity.createIntent(path))
+        finish()
     }
-
-    override fun onSupportNavigateUp(): Boolean = fragment.onSupportNavigateUp() ||
-        super.onSupportNavigateUp()
 
     companion object {
         fun createIntent(path: Path) = MarkdownViewerActivity::class.createIntent().apply {

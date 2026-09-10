@@ -56,6 +56,9 @@ class FileListAdapter(
     var viewType: FileViewType
         get() = _viewType
         set(value) {
+            if (this::_viewType.isInitialized && _viewType == value) {
+                return
+            }
             _viewType = value
             if (!isSearching) {
                 super.replace(list, true)
@@ -341,8 +344,14 @@ class FileListAdapter(
         val isEnabled = isFileSelectable(file) || isDirectory
         holder.itemLayout.isEnabled = isEnabled
         val density = holder.itemLayout.resources.displayMetrics.density
+        // The base row already accommodates a two-line name plus metadata.
+        // Add one text line for each requested line beyond that instead of
+        // clipping the third line inside a fixed-height RecyclerView row.
+        val extraNameLines = (nameMaxLines - 2).coerceAtLeast(0)
+        val rowHeightDp = fontSize.rowHeightDp +
+            (extraNameLines * (fontSize.nameSp * 1.25f).toInt())
         holder.itemLayout.layoutParams = holder.itemLayout.layoutParams.apply {
-            height = (fontSize.rowHeightDp * density).toInt()
+            height = (rowHeightDp * density).toInt()
         }
         holder.iconLayout.layoutParams = holder.iconLayout.layoutParams.apply {
             width = (fontSize.iconSlotDp * density).toInt()
@@ -382,14 +391,19 @@ class FileListAdapter(
             val maxLines = nameMaxLines
             if (maxLines == 1) {
                 isSingleLine = true
-                ellipsize = nameEllipsize
+                ellipsize = if (nameEllipsize == TextUtils.TruncateAt.MARQUEE) {
+                    TextUtils.TruncateAt.MARQUEE
+                } else {
+                    null
+                }
                 isSelected = nameEllipsize == TextUtils.TruncateAt.MARQUEE
             } else {
                 isSingleLine = false
                 this.maxLines = maxLines
-                ellipsize = if (nameEllipsize == TextUtils.TruncateAt.MARQUEE) {
-                    TextUtils.TruncateAt.END
-                } else nameEllipsize
+                // Android only supports marquee for a single line. Multi-line
+                // names always end with an ellipsis when their visible lines
+                // are exhausted, never clip or scroll a hidden suffix.
+                ellipsize = null
                 isSelected = false
             }
         }
@@ -478,7 +492,7 @@ class FileListAdapter(
                 setImageDrawable(null)
             }
         }
-        holder.nameText.text = file.name
+        bindFileName(holder.nameText, file.name)
         holder.descriptionText?.text = runCatching {
             val context = holder.descriptionText!!.context
             val lastModificationTime = attributes.lastModifiedTime().toInstant()
@@ -550,6 +564,64 @@ class FileListAdapter(
                 else -> false
             }
         }
+    }
+
+    private fun bindFileName(nameView: TextView, name: String) {
+        nameView.text = name
+        // A marquee must retain the real filename. All other modes produce a
+        // measured display string so the suffix is never lost to TextView's
+        // built-in START/MIDDLE/END truncation.
+        if (nameMaxLines == 1 && nameEllipsize == TextUtils.TruncateAt.MARQUEE) return
+        nameView.post {
+            if (nameView.text != name || nameView.width <= nameView.compoundPaddingLeft +
+                nameView.compoundPaddingRight) return@post
+            nameView.text = ellipsizeFileNameKeepingExtension(
+                name,
+                nameView.paint,
+                nameView.width - nameView.compoundPaddingLeft - nameView.compoundPaddingRight,
+                nameMaxLines,
+                nameEllipsize,
+            )
+        }
+    }
+
+    private fun ellipsizeFileNameKeepingExtension(
+        name: String,
+        paint: android.graphics.Paint,
+        lineWidth: Int,
+        maxLines: Int,
+        where: TextUtils.TruncateAt,
+    ): String {
+        val capacity = lineWidth.toFloat() * maxLines.coerceAtLeast(1)
+        if (paint.measureText(name) <= capacity) return name
+        val extensionStart = name.lastIndexOf('.').takeIf { it > 0 } ?: name.length
+        val stem = name.substring(0, extensionStart)
+        val extension = name.substring(extensionStart)
+        val ellipsis = "…"
+        val stemCapacity = (capacity - paint.measureText(extension) - paint.measureText(ellipsis))
+            .coerceAtLeast(0f)
+        if (stemCapacity == 0f) return "$ellipsis$extension"
+        return when (where) {
+            TextUtils.TruncateAt.START -> "$ellipsis${tailThatFits(stem, paint, stemCapacity)}$extension"
+            TextUtils.TruncateAt.MIDDLE -> {
+                val first = headThatFits(stem, paint, stemCapacity / 2f)
+                val last = tailThatFits(stem.drop(first.length), paint, stemCapacity / 2f)
+                "$first$ellipsis$last$extension"
+            }
+            else -> "${headThatFits(stem, paint, stemCapacity)}$ellipsis$extension"
+        }
+    }
+
+    private fun headThatFits(text: String, paint: android.graphics.Paint, width: Float): String {
+        var end = text.length
+        while (end > 0 && paint.measureText(text, 0, end) > width) --end
+        return text.substring(0, end)
+    }
+
+    private fun tailThatFits(text: String, paint: android.graphics.Paint, width: Float): String {
+        var start = 0
+        while (start < text.length && paint.measureText(text, start, text.length) > width) ++start
+        return text.substring(start)
     }
 
     override fun getPopupText(view: View, position: Int): CharSequence {

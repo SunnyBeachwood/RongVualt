@@ -179,6 +179,11 @@ data class ArchiveCreateOptions(
     val zipSplitSizeBytes: Long? = null,
     /** Set only after the UI has shown its >100-volume confirmation. */
     val allowLargeZipSplit: Boolean = false,
+    val sevenZipSplitSizeBytes: Long? = null,
+    /** Set only after the UI has shown its >100-volume confirmation. */
+    val allowLargeSevenZipSplit: Boolean = false,
+    /** 7z encrypts the archive header (including names) when enabled. */
+    val sevenZipEncryptHeaders: Boolean = false,
     val sevenZipCompressionLevel: Int = 5,
     val sevenZipSolid: Boolean = false,
     val sevenZipThreadCount: Int = 2,
@@ -201,6 +206,20 @@ fun ArchiveCreateOptions.validate(format: ArchiveFormat, password: CharArray?, i
         require(estimatedVolumes <= 100L || allowLargeZipSplit) {
             "More than 100 ZIP volumes requires explicit confirmation"
         }
+    }
+    if (format == ArchiveFormat.SEVEN_ZIP && sevenZipSplitSizeBytes != null) {
+        require(sevenZipSplitSizeBytes >= 64L * 1024L) { "7z split size must be at least 64 KiB" }
+        val estimatedVolumes = if (inputBytes <= 0L) 0L else
+            ((inputBytes - 1L) / sevenZipSplitSizeBytes) + 1L
+        require(estimatedVolumes <= 100L || allowLargeSevenZipSplit) {
+            "More than 100 7z volumes requires explicit confirmation"
+        }
+    }
+    if (format != ArchiveFormat.ZIP && zipSplitSizeBytes != null) {
+        throw UnsupportedArchiveException("ZIP split options are only valid for ZIP")
+    }
+    if (format != ArchiveFormat.SEVEN_ZIP && sevenZipSplitSizeBytes != null) {
+        throw UnsupportedArchiveException("7z split options are only valid for 7z")
     }
     if (format == ArchiveFormat.ZIP && zipEncryption !in setOf(
             ArchiveEncryption.NONE,
@@ -226,6 +245,14 @@ fun ArchiveCreateOptions.validate(format: ArchiveFormat, password: CharArray?, i
         password?.isNotEmpty() == true
     ) {
         throw UnsupportedArchiveException("A ZIP password requires an encryption mode")
+    }
+    if (format != ArchiveFormat.SEVEN_ZIP && sevenZipEncryptHeaders) {
+        throw UnsupportedArchiveException("7z header encryption is only valid for 7z")
+    }
+    if (format == ArchiveFormat.SEVEN_ZIP && sevenZipEncryptHeaders &&
+        password?.isNotEmpty() != true
+    ) {
+        throw ArchivePasswordException("A 7z header-encryption password is required")
     }
 }
 

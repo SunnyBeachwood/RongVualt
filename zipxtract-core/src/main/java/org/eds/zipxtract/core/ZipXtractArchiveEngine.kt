@@ -136,12 +136,13 @@ class ZipXtractArchiveEngine(
             val destination = if (request.createContainingDirectory) {
                 request.destination.resolve(
                     ArchiveNames.containingDirectoryName(request.source.displayName, probe.format)
-                ).also { if (!it.exists()) it.createDirectory() }
+                )
             } else {
-                request.destination.also { if (!it.exists()) it.createDirectory() }
+                request.destination
             }
             when (probe.format) {
                 ArchiveFormat.ZIP -> withStagedVolumes(request.source, probe) { primary, volumes ->
+                    destination.ensureDirectory()
                     if (isSevenZipZipVolume(request.source.displayName)) {
                         extractSevenZip(primary, volumes, destination, request, listener, ArchiveFormat.ZIP)
                     } else {
@@ -149,12 +150,17 @@ class ZipXtractArchiveEngine(
                     }
                 }
                 ArchiveFormat.SEVEN_ZIP, ArchiveFormat.RAR -> withStagedVolumes(request.source, probe) { primary, volumes ->
+                    destination.ensureDirectory()
                     extractSevenZip(primary, volumes, destination, request, listener, probe.format)
                 }
-                ArchiveFormat.TAR, ArchiveFormat.COMPRESSED_TAR ->
+                ArchiveFormat.TAR, ArchiveFormat.COMPRESSED_TAR -> {
+                    destination.ensureDirectory()
                     extractTar(request.source, destination, request, listener)
-                ArchiveFormat.COMPRESSED_STREAM ->
+                }
+                ArchiveFormat.COMPRESSED_STREAM -> {
+                    destination.ensureDirectory()
                     extractCompressedStream(request.source, destination, request, listener)
+                }
                 else -> throw UnsupportedArchiveException("Unsupported archive format: ${request.source.displayName}")
             }
         } catch (e: ZipException) {
@@ -816,30 +822,72 @@ class ZipXtractArchiveEngine(
     }
 
     private fun createSevenZip(request: CreateArchiveRequest, listener: ArchiveProgressListener?) {
+        val splitSize = request.options.sevenZipSplitSizeBytes
         val output = tempStore.newFile("zipxtract-create-", ".7z")
-        RandomAccessFile(output, "rw").use { randomAccess ->
-            val archive = SevenZip.openOutArchive7z()
-            try {
-                archive.setLevel(request.options.sevenZipCompressionLevel.coerceIn(0, 9))
-                archive.setSolid(request.options.sevenZipSolid)
-                archive.setSolidSize(8192)
-                archive.setThreadCount(request.options.sevenZipThreadCount.coerceAtLeast(1))
-                if (request.password?.isNotEmpty() == true) archive.setHeaderEncryption(true)
-                val callback = SevenZipCreateCallback(request, listener)
-                try {
-                    archive.createArchive(
-                        RandomAccessFileOutStream(randomAccess),
-                        request.sources.size,
-                        callback,
-                    )
-                } finally {
-                    callback.close()
-                }
-            } finally {
-                archive.close()
-            }
+        val splitOutput = splitSize?.let {
+            SevenZipSplitOutputStream(
+                tempStore.operationDirectory(),
+                output.name,
+                it,
+            )
         }
-        copyFileToTarget(output, request.destination, overwrite = false)
+        try {
+            if (splitOutput == null) {
+                RandomAccessFile(output, "rw").use { randomAccess ->
+                    createSevenZipArchive(
+                        RandomAccessFileOutStream(randomAccess), request, listener,
+                    )
+                }
+                copyFileToTarget(output, request.destination, overwrite = false)
+            } else {
+                createSevenZipArchive(splitOutput, request, listener)
+                splitOutput.close()
+                publishSevenZipParts(splitOutput.parts(), request.destination)
+            }
+        } finally {
+            runCatching { splitOutput?.close() }
+        }
+    }
+
+    private fun createSevenZipArchive(
+        output: ISequentialOutStream,
+        request: CreateArchiveRequest,
+        listener: ArchiveProgressListener?,
+    ) {
+        val archive = SevenZip.openOutArchive7z()
+        try {
+            archive.setLevel(request.options.sevenZipCompressionLevel.coerceIn(0, 9))
+            archive.setSolid(request.options.sevenZipSolid)
+            archive.setSolidSize(8192)
+            archive.setThreadCount(request.options.sevenZipThreadCount.coerceAtLeast(1))
+            if (request.password?.isNotEmpty() == true) {
+                archive.setHeaderEncryption(request.options.sevenZipEncryptHeaders)
+            }
+            val callback = SevenZipCreateCallback(request, listener)
+            try {
+                archive.createArchive(output, request.sources.size, callback)
+            } finally {
+                callback.close()
+            }
+        } finally {
+            archive.close()
+        }
+    }
+
+    private fun publishSevenZipParts(parts: List<File>, target: ArchiveTarget) {
+        if (parts.isEmpty()) throw ArchiveException("7z creation produced no output")
+        val copied = mutableListOf<ArchiveTarget>()
+        try {
+            parts.forEachIndexed { index, part ->
+                val name = "${target.displayName}.${(index + 1).toString().padStart(3, '0')}"
+                val destination = target.resolveSibling(name)
+                copyFileToTarget(part, destination, overwrite = false)
+                copied += destination
+            }
+        } catch (error: Throwable) {
+            copied.forEach { runCatching { it.deleteIfExists() } }
+            throw error
+        }
     }
 
     private fun updateSevenZip(
@@ -1022,6 +1070,51 @@ private class SevenZipCreateCallback(
     override fun close() {
         streams.forEach { runCatching { it.close() } }
         streams.clear()
+    }
+}
+
+/** Sequential sink that emits the standard 7z numbered-volume convention. */
+private class SevenZipSplitOutputStream(
+    private val directory: File,
+    private val baseName: String,
+    private val volumeSize: Long,
+) : ISequentialOutStream, Closeable {
+    private val outputFiles = mutableListOf<File>()
+    private var output: BufferedOutputStream? = null
+    private var currentBytes = 0L
+    private var nextIndex = 1
+
+    override fun write(data: ByteArray): Int {
+        return try {
+            var offset = 0
+            while (offset < data.size) {
+                if (output == null || currentBytes == volumeSize) openNext()
+                val remaining = (volumeSize - currentBytes).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+                val count = minOf(remaining, data.size - offset)
+                output!!.write(data, offset, count)
+                currentBytes += count
+                offset += count
+            }
+            data.size
+        } catch (error: IOException) {
+            throw SevenZipException("Unable to write 7z volume", error)
+        }
+    }
+
+    fun parts(): List<File> = outputFiles.toList()
+
+    override fun close() {
+        output?.close()
+        output = null
+    }
+
+    private fun openNext() {
+        output?.close()
+        val file = File(directory, "$baseName.${nextIndex.toString().padStart(3, '0')}")
+        nextIndex++
+        outputFiles += file
+        output = BufferedOutputStream(FileOutputStream(file))
+        currentBytes = 0L
     }
 }
 

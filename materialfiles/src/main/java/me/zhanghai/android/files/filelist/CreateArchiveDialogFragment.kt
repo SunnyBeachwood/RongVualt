@@ -79,6 +79,10 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
             updateAdvancedOptionVisibility()
             updateArchiveNameExtension()
         }
+        binding.root.findViewById<Spinner>(R.id.encryptionSpinner).onItemSelectedListener =
+            simpleSelectionListener { updatePasswordLayoutVisibility(); updateAdvancedOptionVisibility() }
+        binding.root.findViewById<Spinner>(R.id.sevenZEncryptionSpinner).onItemSelectedListener =
+            simpleSelectionListener { updatePasswordLayoutVisibility(); updateAdvancedOptionVisibility() }
         binding.root.findViewById<com.google.android.material.button.MaterialButton>(R.id.advancedButton)
             .setOnClickListener {
                 val advanced = binding.root.findViewById<View>(R.id.advancedLayout)
@@ -168,15 +172,10 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
         }
     }
 
-    private val isPasswordSupported: Boolean
-        get() = when (val checkedId = binding.typeGroup.checkedRadioButtonId) {
-            R.id.zipRadio -> true
-            R.id.tarXzRadio, R.id.sevenZRadio -> binding.typeGroup.checkedRadioButtonId == R.id.sevenZRadio
-            else -> throw AssertionError(checkedId)
-        }
-
     private fun updatePasswordLayoutVisibility() {
-        binding.passwordLayout.isGone = !isPasswordSupported
+        val visible = isEncryptionEnabled
+        binding.passwordLayout.isGone = !visible
+        binding.root.findViewById<TextInputLayout>(R.id.passwordConfirmLayout).isGone = !visible
     }
 
     private fun updateAdvancedOptionVisibility() {
@@ -189,15 +188,24 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
         binding.root.findViewById<Spinner>(R.id.compressionLevelSpinner).isVisible = zip
         binding.root.findViewById<View>(R.id.sevenZLevelLabel).isVisible = sevenZip
         binding.root.findViewById<Spinner>(R.id.sevenZLevelSpinner).isVisible = sevenZip
+        binding.root.findViewById<View>(R.id.zipEncryptionLabel).isVisible = zip
         binding.root.findViewById<Spinner>(R.id.encryptionSpinner).isVisible = zip
+        binding.root.findViewById<View>(R.id.encryptionWarning).isVisible =
+            zip && binding.root.findViewById<Spinner>(R.id.encryptionSpinner).selectedItemPosition in 1..2
+        binding.root.findViewById<View>(R.id.zipFilenameWarning).isVisible =
+            zip && binding.root.findViewById<Spinner>(R.id.encryptionSpinner).selectedItemPosition != 0
+        binding.root.findViewById<TextView>(R.id.sevenZEncryptionLabel).isVisible = sevenZip
+        binding.root.findViewById<Spinner>(R.id.sevenZEncryptionSpinner).isVisible = sevenZip
         binding.root.findViewById<Spinner>(R.id.tarCompressionSpinner).isVisible = tar
         binding.root.findViewById<View>(R.id.tarZstdLevelLabel).isVisible =
             tar && selectedSpinnerValue(R.id.tarCompressionSpinner) == "tar.zst"
         binding.root.findViewById<Spinner>(R.id.tarZstdLevelSpinner).isVisible =
             tar && selectedSpinnerValue(R.id.tarCompressionSpinner) == "tar.zst"
-        binding.root.findViewById<View>(R.id.splitSizeLayout).isVisible = zip
+        binding.root.findViewById<View>(R.id.splitSizeLayout).isVisible = zip || sevenZip
         binding.root.findViewById<View>(R.id.sevenZThreadLayout).isVisible = sevenZip
         binding.root.findViewById<View>(R.id.sevenZSolidCheck).isVisible = sevenZip
+        binding.root.findViewById<View>(R.id.sevenZEncryptHeadersCheck).isVisible =
+            sevenZip && selectedSpinnerValue(R.id.sevenZEncryptionSpinner) != "None"
     }
 
     private fun configureSpinners() {
@@ -206,9 +214,11 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
         setSpinner(R.id.sevenZLevelSpinner, listOf("0", "1", "3", "5", "7", "9"), 3)
         setSpinner(
             R.id.encryptionSpinner,
-            listOf("None", "Zip Standard", "Zip Strong", "AES-128", "AES-256"),
-            0,
+            listOf("None", "Zip Standard (legacy)", "Zip Strong (legacy)", "AES-128", "AES-256 (recommended)"),
+            4,
         )
+        setSpinner(R.id.sevenZEncryptionSpinner, listOf("None", "AES-256"), 1)
+        binding.root.findViewById<android.widget.CheckBox>(R.id.sevenZEncryptHeadersCheck).isChecked = true
         // Selecting TAR starts with a plain tar archive; compression is an
         // explicit advanced choice, matching the documented defaults.
         setSpinner(R.id.tarCompressionSpinner, listOf("tar", "tar.gz", "tar.bz2", "tar.xz", "tar.lzma", "tar.zst"), 0)
@@ -227,10 +237,16 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
     private fun selectedSpinnerValue(id: Int): String =
         binding.root.findViewById<Spinner>(id).selectedItem?.toString().orEmpty()
 
+    private fun simpleSelectionListener(onSelected: () -> Unit) =
+        object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = onSelected()
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+
     private fun tarExtension(): String = selectedSpinnerValue(R.id.tarCompressionSpinner).ifBlank { "tar" }
 
     private fun createOptions(): ArchiveCreateOptions {
-        val encryption = when (binding.root.findViewById<Spinner>(R.id.encryptionSpinner).selectedItemPosition) {
+        val zipEncryption = when (binding.root.findViewById<Spinner>(R.id.encryptionSpinner).selectedItemPosition) {
             1 -> ArchiveEncryption.ZIP_STANDARD
             2 -> ArchiveEncryption.ZIP_STANDARD_STRONG
             3 -> ArchiveEncryption.AES
@@ -248,15 +264,18 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
             "tar.zst" -> TarCompression.ZSTD
             else -> TarCompression.NONE
         }
+        val sevenZipSplit = splitKiB?.coerceAtLeast(64L)?.times(1024L)
         return ArchiveCreateOptions(
             zipCompression = if (binding.root.findViewById<Spinner>(R.id.compressionSpinner).selectedItemPosition == 0) {
                 ZipCompression.STORE
             } else ZipCompression.DEFLATE,
             zipCompressionLevel = binding.root.findViewById<Spinner>(R.id.compressionLevelSpinner)
                 .selectedItemPosition.coerceIn(0, 9),
-            zipEncryption = encryption,
+            zipEncryption = zipEncryption,
             zipAesKeyBits = if (binding.root.findViewById<Spinner>(R.id.encryptionSpinner).selectedItemPosition == 3) 128 else 256,
-            zipSplitSizeBytes = splitKiB?.coerceAtLeast(64L)?.times(1024L),
+            zipSplitSizeBytes = if (binding.typeGroup.checkedRadioButtonId == R.id.zipRadio) sevenZipSplit else null,
+            sevenZipSplitSizeBytes = if (binding.typeGroup.checkedRadioButtonId == R.id.sevenZRadio) sevenZipSplit else null,
+            sevenZipEncryptHeaders = binding.root.findViewById<android.widget.CheckBox>(R.id.sevenZEncryptHeadersCheck).isChecked,
             sevenZipCompressionLevel = listOf(0, 1, 3, 5, 7, 9).getOrElse(
                 binding.root.findViewById<Spinner>(R.id.sevenZLevelSpinner).selectedItemPosition,
             ) { 5 },
@@ -269,6 +288,30 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
         )
     }
 
+    private val isEncryptionEnabled: Boolean
+        get() = when (binding.typeGroup.checkedRadioButtonId) {
+            R.id.zipRadio -> binding.root.findViewById<Spinner>(R.id.encryptionSpinner).selectedItemPosition != 0
+            R.id.sevenZRadio -> binding.root.findViewById<Spinner>(R.id.sevenZEncryptionSpinner).selectedItemPosition != 0
+            else -> false
+        }
+
+    override fun canSubmit(): Boolean {
+        if (!isEncryptionEnabled) return true
+        val password = binding.passwordEdit.text?.toString().orEmpty()
+        val confirmation = binding.root.findViewById<EditText>(R.id.passwordConfirmEdit).text?.toString().orEmpty()
+        val confirmLayout = binding.root.findViewById<TextInputLayout>(R.id.passwordConfirmLayout)
+        if (password.isEmpty()) {
+            binding.passwordLayout.error = getString(R.string.file_create_archive_password_error_empty)
+            return false
+        }
+        if (password != confirmation) {
+            confirmLayout.error = getString(R.string.file_create_archive_password_error_mismatch)
+            return false
+        }
+        confirmLayout.error = null
+        return true
+    }
+
     override fun onOk(name: String) {
         val format = when (val checkedId = binding.typeGroup.checkedRadioButtonId) {
             R.id.zipRadio -> ArchiveFormat.ZIP
@@ -276,7 +319,7 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
             R.id.sevenZRadio -> ArchiveFormat.SEVEN_ZIP
             else -> throw AssertionError(checkedId)
         }
-        val password = if (isPasswordSupported) {
+        val password = if (isEncryptionEnabled) {
             binding.passwordEdit.text!!.toString().takeIfNotEmpty()
         } else {
             null
@@ -288,6 +331,7 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
             // soon as the dialog hands it off so the UI does not retain the
             // passphrase after dismissal.
             binding.passwordEdit.text?.clear()
+            binding.root.findViewById<EditText>(R.id.passwordConfirmEdit).text?.clear()
         }
     }
 

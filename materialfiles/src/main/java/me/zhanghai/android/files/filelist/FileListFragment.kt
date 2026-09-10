@@ -75,7 +75,6 @@ import me.zhanghai.android.files.file.asMimeTypeOrNull
 import me.zhanghai.android.files.file.extension
 import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.file.isApk
-import me.zhanghai.android.files.file.isMarkdownFile
 import me.zhanghai.android.files.file.loadFileItem
 import me.zhanghai.android.files.viewer.text.TextEditorActivity
 import me.zhanghai.android.files.file.isImage
@@ -143,7 +142,6 @@ import me.zhanghai.android.files.util.valueCompat
 import me.zhanghai.android.files.util.viewModels
 import me.zhanghai.android.files.util.withChooser
 import me.zhanghai.android.files.viewer.image.ImageViewerActivity
-import me.zhanghai.android.files.viewer.markdown.MarkdownViewerActivity
 import org.eds.zipxtract.core.ArchiveCreateOptions
 import org.eds.zipxtract.core.ArchiveEditPolicy
 import org.eds.zipxtract.core.ArchiveFormat
@@ -1265,15 +1263,23 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         options: ArchiveCreateOptions,
         password: String?,
     ) {
-        val splitSize = options.zipSplitSizeBytes
+        val splitSize = when (format) {
+            ArchiveFormat.ZIP -> options.zipSplitSizeBytes
+            ArchiveFormat.SEVEN_ZIP -> options.sevenZipSplitSizeBytes
+            else -> null
+        }
+        val allowLargeSplit = when (format) {
+            ArchiveFormat.ZIP -> options.allowLargeZipSplit
+            ArchiveFormat.SEVEN_ZIP -> options.allowLargeSevenZipSplit
+            else -> true
+        }
         val estimatedBytes = files.sumOf { it.attributes.size().coerceAtLeast(0L) }
         val estimatedVolumes = if (splitSize == null || splitSize <= 0L || estimatedBytes <= 0L) {
             0L
         } else {
             ((estimatedBytes - 1L) / splitSize) + 1L
         }
-        if (format == ArchiveFormat.ZIP && splitSize != null &&
-            estimatedVolumes > 100L && !options.allowLargeZipSplit
+        if (splitSize != null && estimatedVolumes > 100L && !allowLargeSplit
         ) {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.file_create_archive_large_split_title)
@@ -1284,7 +1290,11 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                         files,
                         name,
                         format,
-                        options.copy(allowLargeZipSplit = true),
+                        if (format == ArchiveFormat.ZIP) {
+                            options.copy(allowLargeZipSplit = true)
+                        } else {
+                            options.copy(allowLargeSevenZipSplit = true)
+                        },
                         password,
                     )
                 }
@@ -1504,12 +1514,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             return
         }
         if (file.shouldOpenInTextEditor()) {
-            val intent = if (isMarkdownFile(file.path, file.mimeType) &&
-                Settings.MARKDOWN_RENDERING_ENABLED.valueCompat) {
-                MarkdownViewerActivity.createIntent(file.path)
-            } else {
-                TextEditorActivity.createIntent(file.path)
-            }
+            val intent = TextEditorActivity.createIntent(file.path)
             startActivity(intent)
             return
         }

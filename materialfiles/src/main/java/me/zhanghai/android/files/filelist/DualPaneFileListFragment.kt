@@ -51,6 +51,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
@@ -82,7 +83,6 @@ import me.zhanghai.android.files.file.extension
 import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.file.isApk
 import me.zhanghai.android.files.file.isImage
-import me.zhanghai.android.files.file.isMarkdownFile
 import me.zhanghai.android.files.file.loadFileItem
 import me.zhanghai.android.files.filejob.FileJobService
 import me.zhanghai.android.files.filejob.FileJobResult
@@ -129,7 +129,6 @@ import me.zhanghai.android.files.util.valueCompat
 import me.zhanghai.android.files.util.viewModels
 import me.zhanghai.android.files.util.withChooser
 import me.zhanghai.android.files.viewer.image.ImageViewerActivity
-import me.zhanghai.android.files.viewer.markdown.MarkdownViewerActivity
 import me.zhanghai.android.files.viewer.text.TextEditorActivity
 import org.eds.zipxtract.core.ArchiveCreateOptions
 import org.eds.zipxtract.core.ArchiveEditPolicy
@@ -835,6 +834,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     /** A zero-radius surface gives the active pane an even top, bottom and side shadow. */
     private fun updateActivePaneVisual(animate: Boolean) {
         if (!this::leftPane.isInitialized || !this::rightPane.isInitialized) return
+        updateDualSurfaceColors()
         val dual = isDualPaneVisible()
         val canAnimate = animate && Settings.FILE_LIST_ANIMATION.valueCompat &&
             (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled()) &&
@@ -853,6 +853,26 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 view.translationZ = lift
             }
         }
+    }
+
+    /**
+     * Both the Material and the user-selected theme-color modes expose a
+     * primary role. Derive a restrained pane/background tint from it instead
+     * of relying on a CardView default, which otherwise remains unchanged in
+     * the legacy Material theme family.
+     */
+    private fun updateDualSurfaceColors() {
+        val surface = MaterialColors.getColor(
+            root, com.google.android.material.R.attr.colorSurface
+        )
+        val primary = MaterialColors.getColor(root, androidx.appcompat.R.attr.colorPrimary, surface)
+        val paneSurface = MaterialColors.layer(surface, primary, 0.075f)
+        root.findViewById<View>(R.id.dualContentRoot).setBackgroundColor(paneSurface)
+        dockContainer.setBackgroundColor(paneSurface)
+        leftPaneSurface.setCardBackgroundColor(paneSurface)
+        rightPaneSurface.setCardBackgroundColor(paneSurface)
+        leftPane.root.setBackgroundColor(paneSurface)
+        rightPane.root.setBackgroundColor(paneSurface)
     }
 
     private fun navigateTo(pane: PaneId, path: Path, recordHistory: Boolean = true) {
@@ -1268,10 +1288,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
         recordRecentAccess(file.path, isDirectory = false)
         if (file.shouldOpenInTextEditor()) {
-            val intent = if (isMarkdownFile(file.path, file.mimeType) &&
-                Settings.MARKDOWN_RENDERING_ENABLED.valueCompat
-            ) MarkdownViewerActivity.createIntent(file.path)
-            else TextEditorActivity.createIntent(file.path)
+            val intent = TextEditorActivity.createIntent(file.path)
             startActivity(intent)
             return
         }
@@ -1385,7 +1402,9 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     }
 
     private fun renderArchiveProgress(progresses: List<ArchiveJobProgress>) {
-        if (!isAdded) return
+        if (!isAdded || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
+        val host = activity ?: return
+        if (host.isFinishing || host.isDestroyed) return
         val progress = progresses.lastOrNull { it.id !in hiddenArchiveProgressIds }
         if (progress == null) {
             archiveProgressDialog?.dismiss()
@@ -1398,25 +1417,26 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
         val currentDialog = archiveProgressDialog
         if (currentDialog == null || archiveProgressDialogId != progress.id) {
-            currentDialog?.dismiss()
-            val content = LinearLayout(requireContext()).apply {
+            runCatching {
+                currentDialog?.dismiss()
+                val content = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(24.dp(), 0, 24.dp(), 8.dp())
-            }
-            archiveProgressDetail = TextView(requireContext()).apply {
+                }
+                archiveProgressDetail = TextView(requireContext()).apply {
                 setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyLarge)
-            }.also { content.addView(it) }
-            archiveProgressBar = ProgressBar(
+                }.also { content.addView(it) }
+                archiveProgressBar = ProgressBar(
                 requireContext(), null, android.R.attr.progressBarStyleHorizontal
-            ).apply {
+                ).apply {
                 max = 100
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, 24.dp()
                 ).also { it.topMargin = 12.dp() }
-            }.also { content.addView(it) }
-            val id = progress.id
-            archiveProgressDialogId = id
-            archiveProgressDialog = MaterialAlertDialogBuilder(requireContext())
+                }.also { content.addView(it) }
+                val id = progress.id
+                archiveProgressDialogId = id
+                archiveProgressDialog = MaterialAlertDialogBuilder(requireContext())
                 .setTitle(progress.title)
                 .setView(content)
                 .setPositiveButton("Hide") { dialog, _ ->
@@ -1427,7 +1447,15 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 }
                 .setCancelable(false)
                 .create()
-            archiveProgressDialog!!.show()
+                archiveProgressDialog!!.show()
+            }.onFailure {
+                // The notification remains available if the host is changing
+                // windows; never let an invalid dialog token crash the app.
+                archiveProgressDialog = null
+                archiveProgressDialogId = null
+                archiveProgressBar = null
+                archiveProgressDetail = null
+            }
         } else {
             currentDialog.setTitle(progress.title)
         }
@@ -2209,13 +2237,21 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         options: ArchiveCreateOptions,
         password: String?
     ) {
-        val splitSize = options.zipSplitSizeBytes
+        val splitSize = when (format) {
+            ArchiveFormat.ZIP -> options.zipSplitSizeBytes
+            ArchiveFormat.SEVEN_ZIP -> options.sevenZipSplitSizeBytes
+            else -> null
+        }
+        val allowLargeSplit = when (format) {
+            ArchiveFormat.ZIP -> options.allowLargeZipSplit
+            ArchiveFormat.SEVEN_ZIP -> options.allowLargeSevenZipSplit
+            else -> true
+        }
         val estimatedBytes = files.sumOf { it.attributes.size().coerceAtLeast(0L) }
         val estimatedVolumes = if (splitSize == null || splitSize <= 0L || estimatedBytes <= 0L) {
             0L
         } else ((estimatedBytes - 1L) / splitSize) + 1L
-        if (format == ArchiveFormat.ZIP && splitSize != null && estimatedVolumes > 100L &&
-            !options.allowLargeZipSplit
+        if (splitSize != null && estimatedVolumes > 100L && !allowLargeSplit
         ) {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.file_create_archive_large_split_title)
@@ -2223,7 +2259,13 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok) { _, _ ->
                     archiveWithOptions(
-                        files, name, format, options.copy(allowLargeZipSplit = true), password
+                        files, name, format,
+                        if (format == ArchiveFormat.ZIP) {
+                            options.copy(allowLargeZipSplit = true)
+                        } else {
+                            options.copy(allowLargeSevenZipSplit = true)
+                        },
+                        password
                     )
                 }
                 .show()
