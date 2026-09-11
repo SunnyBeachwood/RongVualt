@@ -677,6 +677,11 @@
     <string name="settings_locale_title">语言</string>
     <string name="settings_theme_color_title">主题色</string>
     <string name="settings_theme_color_summary">应用中最常见的颜色</string>
+    <string name="settings_theme_color_source_title">配色来源</string>
+    <string-array name="settings_theme_color_source_entries">
+        <item>动态壁纸配色</item>
+        <item>手动主题色</item>
+    </string-array>
     <string name="settings_material_design_3_title">质感设计 3</string>
     <string name="settings_night_mode_title">夜间模式</string>
     <string-array name="settings_night_mode_entries">

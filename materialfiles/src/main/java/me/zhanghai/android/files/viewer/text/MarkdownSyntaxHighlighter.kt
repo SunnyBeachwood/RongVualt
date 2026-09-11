@@ -42,7 +42,10 @@ internal class MarkdownSyntaxHighlighter(private val editText: EditText) {
     private val appliedSpans = mutableListOf<Any>()
     private val primaryColor = editText.context.getColorByAttr(androidx.appcompat.R.attr.colorPrimary)
     private val codeBackground = ColorUtils.withAlpha(
-        editText.context.getColorByAttr(com.google.android.material.R.attr.colorPrimary),
+        // The embedded file manager and host can resolve different Material
+        // resource tables after R8. AppCompat's colorPrimary is present in
+        // both themes and avoids a runtime NoSuchFieldError here.
+        primaryColor,
         0x28
     )
 

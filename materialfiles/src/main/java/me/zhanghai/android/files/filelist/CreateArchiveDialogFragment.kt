@@ -215,9 +215,9 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
         setSpinner(
             R.id.encryptionSpinner,
             listOf("None", "Zip Standard (legacy)", "Zip Strong (legacy)", "AES-128", "AES-256 (recommended)"),
-            4,
+            0,
         )
-        setSpinner(R.id.sevenZEncryptionSpinner, listOf("None", "AES-256"), 1)
+        setSpinner(R.id.sevenZEncryptionSpinner, listOf("None", "AES-256"), 0)
         binding.root.findViewById<android.widget.CheckBox>(R.id.sevenZEncryptHeadersCheck).isChecked = true
         // Selecting TAR starts with a plain tar archive; compression is an
         // explicit advanced choice, matching the documented defaults.

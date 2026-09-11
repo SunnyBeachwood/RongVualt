@@ -23,6 +23,7 @@ import me.zhanghai.android.files.storage.FileSystemRoot
 import me.zhanghai.android.files.storage.PrimaryStorageVolume
 import me.zhanghai.android.files.storage.Storage
 import me.zhanghai.android.files.theme.custom.ThemeColor
+import me.zhanghai.android.files.theme.custom.ThemeColorSource
 import me.zhanghai.android.files.theme.night.NightMode
 import java.io.File
 
@@ -126,6 +127,13 @@ object Settings {
         EnumSettingLiveData(
             R.string.pref_key_theme_color, R.string.pref_default_value_theme_color,
             ThemeColor::class.java
+        )
+
+    val THEME_COLOR_SOURCE: SettingLiveData<ThemeColorSource> =
+        EnumSettingLiveData(
+            R.string.pref_key_theme_color_source,
+            R.string.pref_default_value_theme_color_source,
+            ThemeColorSource::class.java,
         )
 
     val MATERIAL_DESIGN_3: SettingLiveData<Boolean> =

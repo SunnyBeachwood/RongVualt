@@ -15,11 +15,18 @@
             android:key="@string/pref_key_locale"
             android:title="@string/settings_locale_title" />
 
+        <rikka.preference.SimpleMenuPreference
+            android:key="@string/pref_key_theme_color_source"
+            android:title="@string/settings_theme_color_source_title"
+            android:defaultValue="@string/pref_default_value_theme_color_source"
+            android:entries="@array/settings_theme_color_source_entries"
+            android:entryValues="@array/pref_entry_values_theme_color_source"
+            app:useSimpleSummaryProvider="true" />
+
         <me.zhanghai.android.files.theme.custom.ThemeColorPreference
             android:key="@string/pref_key_theme_color"
             android:title="@string/settings_theme_color_title"
             android:defaultValue="@string/pref_default_value_theme_color"
-            android:dependency="@string/pref_key_material_design_3"
             android:summary="@string/settings_theme_color_summary" />
 
         <SwitchPreferenceCompat

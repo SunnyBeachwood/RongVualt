@@ -10,13 +10,17 @@ import android.os.Bundle
 import me.zhanghai.android.files.R
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.custom.ThemeColor
+import me.zhanghai.android.files.theme.custom.ThemeColorSource
 import me.zhanghai.android.files.theme.night.NightMode
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.PreferenceFragmentCompat
 import androidx.preference.Preference
+import me.zhanghai.android.files.theme.custom.ThemeColorPreference
+import me.zhanghai.android.files.util.valueCompat
 
 class SettingsPreferenceFragment : PreferenceFragmentCompat() {
     private lateinit var localePreference: LocalePreference
+    private lateinit var themeColorPreference: ThemeColorPreference
 
     override fun onDisplayPreferenceDialog(preference: Preference) {
         if (preference is FileListFontSizePreference) {
@@ -34,6 +38,10 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         addPreferencesFromResource(R.xml.settings)
 
         localePreference = preferenceScreen.findPreference(getString(R.string.pref_key_locale))!!
+        themeColorPreference = preferenceScreen.findPreference(
+            getString(R.string.pref_key_theme_color)
+        )!!
+        updateThemeColorPreferenceVisibility()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             localePreference.setApplicationLocalesPre33 = { locales ->
                 val activity = requireActivity() as SettingsActivity
@@ -56,6 +64,7 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         //Settings.NIGHT_MODE.observe(viewLifecycleOwner) { NightModeHelper.sync() }
         //Settings.BLACK_NIGHT_MODE.observe(viewLifecycleOwner) { CustomThemeHelper.sync() }
         Settings.THEME_COLOR.observe(viewLifecycleOwner, this::onThemeColorChanged)
+        Settings.THEME_COLOR_SOURCE.observe(viewLifecycleOwner, this::onThemeColorSourceChanged)
         Settings.MATERIAL_DESIGN_3.observe(viewLifecycleOwner, this::onMaterialDesign3Changed)
         Settings.NIGHT_MODE.observe(viewLifecycleOwner, this::onNightModeChanged)
         Settings.BLACK_NIGHT_MODE.observe(viewLifecycleOwner, this::onBlackNightModeChanged)
@@ -65,8 +74,20 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         CustomThemeHelper.sync()
     }
 
-    private fun onMaterialDesign3Changed(isMaterialDesign3: Boolean) {
+    private fun onThemeColorSourceChanged(themeColorSource: ThemeColorSource) {
+        updateThemeColorPreferenceVisibility()
         CustomThemeHelper.sync()
+    }
+
+    private fun onMaterialDesign3Changed(isMaterialDesign3: Boolean) {
+        updateThemeColorPreferenceVisibility()
+        CustomThemeHelper.sync()
+    }
+
+    private fun updateThemeColorPreferenceVisibility() {
+        if (!this::themeColorPreference.isInitialized) return
+        themeColorPreference.isVisible = !Settings.MATERIAL_DESIGN_3.valueCompat ||
+            Settings.THEME_COLOR_SOURCE.valueCompat == ThemeColorSource.MANUAL
     }
 
     private fun onNightModeChanged(nightMode: NightMode) {

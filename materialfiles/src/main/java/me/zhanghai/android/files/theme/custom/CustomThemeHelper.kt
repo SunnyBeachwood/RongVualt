@@ -81,7 +81,10 @@ object CustomThemeHelper {
             // selected accent and leaves all surfaces tied to the system seed.
             // Keep the existing shared black overlay, while normal themes use
             // the matching low-saturation surface overlay below.
-            if (Settings.BLACK_NIGHT_MODE.valueCompat) material3Base else {
+            if (Settings.BLACK_NIGHT_MODE.valueCompat ||
+                Settings.THEME_COLOR_SOURCE.valueCompat == ThemeColorSource.DYNAMIC) {
+                material3Base
+            } else {
                 val themeColorName =
                     resources.getResourceEntryName(Settings.THEME_COLOR.valueCompat.resourceId)
                 "$material3Base.$themeColorName"
