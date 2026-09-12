@@ -165,15 +165,17 @@ private fun FileJob.postNotification(
  * ZipXtract jobs still share the foreground channel and cancel action.
  */
 internal fun FileJob.postArchiveEngineNotification(
+    operation: FileJobOperation,
     title: CharSequence,
     completedBytes: Long,
     totalBytes: Long,
     completedEntries: Long = 0,
     totalEntries: Long = 0,
 ) {
-    ArchiveJobProgressRegistry.update(
-        ArchiveJobProgress(
+    FileJobProgressRegistry.update(
+        FileJobProgress(
             id = id,
+            operation = operation,
             title = title,
             completedBytes = completedBytes,
             totalBytes = totalBytes,
@@ -202,9 +204,12 @@ internal fun FileJob.postArchiveEngineNotification(
     postNotification(title, null, null, null, max, progress, totalBytes <= 0 && totalEntries <= 0, true)
 }
 
-internal fun FileJob.announceArchiveJob(title: CharSequence) {
-    ArchiveJobProgressRegistry.update(
-        ArchiveJobProgress(id, title, 0L, 0L, 0L, 0L)
+internal fun FileJob.announceFileJob(operation: FileJobOperation, title: CharSequence) {
+    FileJobProgressRegistry.update(
+        FileJobProgress(
+            id, operation, title, 0L, 0L, 0L, 0L,
+            phase = FileJobProgressPhase.PREPARING,
+        )
     )
     // Some archive engines do their first progress callback only after a
     // lengthy scan. Start the foreground notification here so compression and
@@ -838,6 +843,10 @@ class CopyFileJob(private val sources: List<Path>, private val targetDirectory: 
     @Throws(IOException::class)
     override fun run() {
         val isExtract = sources.all { it.isArchivePath }
+        announceFileJob(
+            if (isExtract) FileJobOperation.EXTRACT else FileJobOperation.COPY,
+            if (isExtract) "Extracting" else "Copying",
+        )
         val scanInfo = scan(
             sources, if (isExtract) {
                 R.plurals.file_job_extract_scan_notification_title_format
@@ -1047,8 +1056,13 @@ private fun FileJob.create(path: Path, createDirectory: Boolean) {
 class DeleteFileJob(private val paths: List<Path>) : FileJob() {
     @Throws(IOException::class)
     override fun run() {
+        announceFileJob(
+            FileJobOperation.DELETE,
+            getString(R.string.file_job_delete_progress_preparing),
+        )
         val scanInfo = scan(paths, R.plurals.file_job_delete_scan_notification_title_format)
         val transferInfo = TransferInfo(scanInfo, null)
+        paths.firstOrNull()?.let { postDeleteProgress(transferInfo, it) }
         val actionAllInfo = ActionAllInfo()
         for (path in paths) {
             deleteRecursively(path, transferInfo, actionAllInfo)
@@ -1163,15 +1177,41 @@ private fun FileJob.delete(path: Path, transferInfo: TransferInfo?, actionAllInf
 }
 
 private fun FileJob.postDeleteNotification(transferInfo: TransferInfo, currentPath: Path) {
+    postDeleteProgress(transferInfo, currentPath)
     postTransferCountNotification(
         transferInfo, currentPath, R.string.file_job_delete_notification_title_one_format,
         R.plurals.file_job_delete_notification_title_multiple_format
     )
 }
 
+private fun FileJob.postDeleteProgress(transferInfo: TransferInfo, currentPath: Path) {
+    val fileCount = transferInfo.fileCount
+    val title = if (fileCount == 1) {
+        getString(R.string.file_job_delete_notification_title_one_format, getFileName(currentPath))
+    } else {
+        getQuantityString(
+            R.plurals.file_job_delete_notification_title_multiple_format,
+            fileCount,
+            fileCount,
+        )
+    }
+    FileJobProgressRegistry.update(
+        FileJobProgress(
+            id = id,
+            operation = FileJobOperation.DELETE,
+            title = title,
+            completedBytes = 0L,
+            totalBytes = 0L,
+            completedEntries = transferInfo.transferredFileCount.toLong(),
+            totalEntries = fileCount.toLong(),
+        )
+    )
+}
+
 class MoveFileJob(private val sources: List<Path>, private val targetDirectory: Path) : FileJob() {
     @Throws(IOException::class)
     override fun run() {
+        announceFileJob(FileJobOperation.MOVE, "Moving")
         val sourcesToMove = mutableListOf<Path>()
         for (source in sources) {
             val target = targetDirectory.resolveForeign(source.fileName)
@@ -1544,6 +1584,7 @@ private fun FileJob.postCopyMoveNotification(
     currentSource: Path,
     type: CopyMoveType
 ) {
+    postCopyMoveProgress(transferInfo, currentSource, type)
     postTransferSizeNotification(
         transferInfo, currentSource, type.getResourceId(
             R.string.file_job_copy_notification_title_one_format,
@@ -1553,6 +1594,36 @@ private fun FileJob.postCopyMoveNotification(
             R.plurals.file_job_copy_notification_title_multiple_format,
             R.plurals.file_job_extract_notification_title_multiple_format,
             R.plurals.file_job_move_notification_title_multiple_format
+        )
+    )
+}
+
+private fun FileJob.postCopyMoveProgress(
+    transferInfo: TransferInfo,
+    currentSource: Path,
+    type: CopyMoveType,
+) {
+    val operation = when (type) {
+        CopyMoveType.COPY -> FileJobOperation.COPY
+        CopyMoveType.EXTRACT -> FileJobOperation.EXTRACT
+        CopyMoveType.MOVE -> FileJobOperation.MOVE
+    }
+    val title = when (operation) {
+        FileJobOperation.COPY -> "Copying ${getFileName(currentSource)}"
+        FileJobOperation.MOVE -> "Moving ${getFileName(currentSource)}"
+        FileJobOperation.EXTRACT -> "Extracting ${getFileName(currentSource)}"
+        else -> getFileName(currentSource)
+    }
+    FileJobProgressRegistry.update(
+        FileJobProgress(
+            id = id,
+            operation = operation,
+            title = title,
+            completedBytes = transferInfo.transferredSize,
+            totalBytes = transferInfo.size,
+            completedEntries = transferInfo.transferredFileCount.toLong(),
+            totalEntries = transferInfo.fileCount.toLong(),
+            currentFile = getFileName(currentSource),
         )
     )
 }

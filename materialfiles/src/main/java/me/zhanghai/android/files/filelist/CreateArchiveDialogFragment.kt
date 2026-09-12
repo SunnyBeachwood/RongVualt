@@ -28,6 +28,7 @@ import me.zhanghai.android.files.databinding.CreateArchiveDialogBinding
 import me.zhanghai.android.files.databinding.NameDialogNameIncludeBinding
 import me.zhanghai.android.files.util.ParcelableArgs
 import me.zhanghai.android.files.util.args
+import me.zhanghai.android.files.util.configureSecurePasswordInput
 import me.zhanghai.android.files.util.putArgs
 import me.zhanghai.android.files.util.show
 import me.zhanghai.android.files.util.takeIfNotEmpty
@@ -55,6 +56,10 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
             WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
                 WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN
         )
+        dialog.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        binding.passwordEdit.configureSecurePasswordInput()
+        binding.root.findViewById<EditText>(R.id.passwordConfirmEdit)
+            .configureSecurePasswordInput()
 
         if (savedInstanceState == null) {
             val files = args.files
@@ -275,7 +280,15 @@ class CreateArchiveDialogFragment : FileNameDialogFragment() {
             zipAesKeyBits = if (binding.root.findViewById<Spinner>(R.id.encryptionSpinner).selectedItemPosition == 3) 128 else 256,
             zipSplitSizeBytes = if (binding.typeGroup.checkedRadioButtonId == R.id.zipRadio) sevenZipSplit else null,
             sevenZipSplitSizeBytes = if (binding.typeGroup.checkedRadioButtonId == R.id.sevenZRadio) sevenZipSplit else null,
-            sevenZipEncryptHeaders = binding.root.findViewById<android.widget.CheckBox>(R.id.sevenZEncryptHeadersCheck).isChecked,
+            // The checkbox starts checked even while 7z encryption is set to
+            // None, and it stays checked while hidden for ZIP/TAR. Header
+            // encryption is only meaningful for an encrypted 7z archive;
+            // leaking it into any other request makes validation reject an
+            // otherwise ordinary archive creation.
+            sevenZipEncryptHeaders =
+                binding.typeGroup.checkedRadioButtonId == R.id.sevenZRadio &&
+                    isEncryptionEnabled &&
+                    binding.root.findViewById<android.widget.CheckBox>(R.id.sevenZEncryptHeadersCheck).isChecked,
             sevenZipCompressionLevel = listOf(0, 1, 3, 5, 7, 9).getOrElse(
                 binding.root.findViewById<Spinner>(R.id.sevenZLevelSpinner).selectedItemPosition,
             ) { 5 },

@@ -11,6 +11,7 @@ import android.util.AttributeSet
 import androidx.annotation.AttrRes
 import androidx.annotation.StyleRes
 import com.takisoft.preferencex.EditTextPreference
+import me.zhanghai.android.files.util.configureSecurePasswordInput
 import androidx.preference.EditTextPreference as AndroidXEditTextPreference
 
 class PasswordPreference : EditTextPreference {
@@ -30,6 +31,7 @@ class PasswordPreference : EditTextPreference {
     ) : super(context, attrs, defStyleAttr, defStyleRes)
 
     init {
+        setOnBindEditTextListener { editText -> editText.configureSecurePasswordInput() }
         if (summaryProvider is AndroidXEditTextPreference.SimpleSummaryProvider) {
             summaryProvider = SimpleSummaryProvider
         }

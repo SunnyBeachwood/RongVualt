@@ -9,14 +9,21 @@ import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.CopyOnWriteArraySet
 
-/** Process-local progress snapshot for archive create/extract jobs. */
-data class ArchiveJobProgress(
+/** Process-local progress snapshot for foreground file jobs shown by the browser. */
+enum class FileJobOperation { COPY, MOVE, DELETE, ARCHIVE, EXTRACT }
+
+enum class FileJobProgressPhase { PREPARING, RUNNING, CANCELLING }
+
+data class FileJobProgress(
     val id: Int,
+    val operation: FileJobOperation,
     val title: CharSequence,
     val completedBytes: Long,
     val totalBytes: Long,
     val completedEntries: Long,
     val totalEntries: Long,
+    val currentFile: CharSequence? = null,
+    val phase: FileJobProgressPhase = FileJobProgressPhase.RUNNING,
 ) {
     val indeterminate: Boolean
         get() = totalBytes <= 0L && totalEntries <= 0L
@@ -34,16 +41,25 @@ data class ArchiveJobProgress(
 /**
  * Keeps foreground progress available while the service and the browser have
  * different lifecycles. Notifications remain the durable background surface;
- * this registry is only for the optional in-app progress dialog.
+ * this registry is only for the optional in-app progress dialog. Archive and
+ * delete jobs share it so the UI has one ordered progress surface.
  */
-object ArchiveJobProgressRegistry {
+object FileJobProgressRegistry {
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val values = LinkedHashMap<Int, ArchiveJobProgress>()
-    private val listeners = CopyOnWriteArraySet<(List<ArchiveJobProgress>) -> Unit>()
+    private val values = LinkedHashMap<Int, FileJobProgress>()
+    private val listeners = CopyOnWriteArraySet<(List<FileJobProgress>) -> Unit>()
 
-    fun update(progress: ArchiveJobProgress) {
+    fun update(progress: FileJobProgress) {
         mainHandler.post {
             values[progress.id] = progress
+            dispatch()
+        }
+    }
+
+    fun markCancelling(id: Int) {
+        mainHandler.post {
+            val progress = values[id] ?: return@post
+            values[id] = progress.copy(phase = FileJobProgressPhase.CANCELLING)
             dispatch()
         }
     }
@@ -55,12 +71,12 @@ object ArchiveJobProgressRegistry {
         }
     }
 
-    fun addListener(listener: (List<ArchiveJobProgress>) -> Unit) {
+    fun addListener(listener: (List<FileJobProgress>) -> Unit) {
         listeners += listener
         mainHandler.post { listener(values.values.toList()) }
     }
 
-    fun removeListener(listener: (List<ArchiveJobProgress>) -> Unit) {
+    fun removeListener(listener: (List<FileJobProgress>) -> Unit) {
         listeners -= listener
     }
 
@@ -69,3 +85,10 @@ object ArchiveJobProgressRegistry {
         listeners.forEach { listener -> runCatching { listener(snapshot) } }
     }
 }
+
+@Deprecated("Use FileJobProgress")
+typealias ArchiveJobProgress = FileJobProgress
+
+@Deprecated("Use FileJobProgressRegistry")
+val ArchiveJobProgressRegistry: FileJobProgressRegistry
+    get() = FileJobProgressRegistry

@@ -67,6 +67,21 @@
                     </me.zhanghai.android.files.ui.ScrollingChildEditText>
                 </me.zhanghai.android.fastscroll.FastScrollNestedScrollView>
 
+                <TextView
+                    android:id="@+id/lineNumbers"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="start|top"
+                    android:background="?colorSurfaceContainerLow"
+                    android:fontFamily="monospace"
+                    android:gravity="end"
+                    android:minWidth="44dp"
+                    android:paddingStart="6dp"
+                    android:paddingTop="16dp"
+                    android:paddingEnd="6dp"
+                    android:textColor="?colorOnSurfaceVariant"
+                    android:visibility="gone" />
+
                 <me.zhanghai.android.fastscroll.FastScrollNestedScrollView
                     android:id="@+id/previewScrollView"
                     android:layout_width="match_parent"

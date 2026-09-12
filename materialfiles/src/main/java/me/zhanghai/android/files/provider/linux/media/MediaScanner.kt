@@ -21,24 +21,56 @@ import me.zhanghai.android.files.provider.root.isRunningAsRoot
 import me.zhanghai.android.files.util.lazyReflectedMethod
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
 
 /*
  * @see com.android.internal.content.FileSystemProvider
  * @see com.android.providers.media.scan.ModernMediaScanner.java
  */
 object MediaScanner {
+    private const val BATCH_SIZE = 128
+    private val scanThread by lazy {
+        HandlerThread("RongVualtMediaScanner").apply { start() }
+    }
+    private val scanHandler by lazy { Handler(scanThread.looper) }
+    private val pendingScans = LinkedHashMap<String, Boolean>()
+    private var scanInFlight = false
+
     fun scan(file: File, isDeleted: Boolean = false) {
         if (isRunningAsRoot) {
             return
         }
-        MediaScannerConnection.scanFile(application, arrayOf(file.path), null) { _, _ ->
-            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q && isDeleted) {
-                // ModernMediaScanner has a bug on Android 10 that may prevent it from removing
-                // certain files after their deletion. This has been fixed on Android 11 by
-                // https://android.googlesource.com/platform/packages/providers/MediaProvider/+/637d133d90f49dd18bda5de219184bfa9d6c2deb
-                // , but we still have to work around it for Android 10 by always trying to delete
-                // the MediaStore entry ourselves.
-                deleteMediaStoreEntryAsync(file)
+        scanHandler.post {
+            pendingScans[file.path] = isDeleted
+            if (!scanInFlight) drainScanBatch()
+        }
+    }
+
+    /**
+     * MediaScannerConnection allocates a connection and callback graph for every invocation.
+     * Copying thousands of small files used to enqueue thousands of those graphs at once and
+     * could exhaust Android's 256 MiB app heap. Keep one bounded batch in flight instead.
+     */
+    private fun drainScanBatch() {
+        if (scanInFlight || pendingScans.isEmpty()) return
+        val batch = LinkedHashMap<String, Boolean>()
+        val iterator = pendingScans.iterator()
+        repeat(minOf(BATCH_SIZE, pendingScans.size)) {
+            val entry = iterator.next()
+            batch[entry.key] = entry.value
+            iterator.remove()
+        }
+        scanInFlight = true
+        val remaining = AtomicInteger(batch.size)
+        MediaScannerConnection.scanFile(application, batch.keys.toTypedArray(), null) { path, _ ->
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q && batch[path] == true) {
+                deleteMediaStoreEntryAsync(File(path))
+            }
+            if (remaining.decrementAndGet() == 0) {
+                scanHandler.post {
+                    scanInFlight = false
+                    drainScanBatch()
+                }
             }
         }
     }

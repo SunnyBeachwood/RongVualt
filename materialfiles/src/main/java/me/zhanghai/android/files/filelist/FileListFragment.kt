@@ -69,6 +69,7 @@ import me.zhanghai.android.files.databinding.FileListFragmentBottomBarIncludeBin
 import me.zhanghai.android.files.databinding.FileListFragmentContentIncludeBinding
 import me.zhanghai.android.files.databinding.FileListFragmentIncludeBinding
 import me.zhanghai.android.files.databinding.FileListFragmentSpeedDialIncludeBinding
+import me.zhanghai.android.files.databinding.ArchivePasswordDialogBinding
 import me.zhanghai.android.files.file.FileItem
 import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.file.asMimeTypeOrNull
@@ -92,11 +93,15 @@ import me.zhanghai.android.files.provider.archive.archiveFile
 import me.zhanghai.android.files.provider.document.isDocumentPath
 import me.zhanghai.android.files.provider.document.resolver.DocumentResolver
 import me.zhanghai.android.files.provider.archive.isArchivePath
+import me.zhanghai.android.files.provider.common.isEncrypted
 import me.zhanghai.android.files.provider.linux.isLinuxPath
 import me.zhanghai.android.files.settings.Settings
 import me.zhanghai.android.files.terminal.Terminal
 import me.zhanghai.android.files.ui.AppBarLayoutExpandHackListener
 import me.zhanghai.android.files.ui.CoordinatorAppBarLayout
+import me.zhanghai.android.files.util.configureSecurePasswordInput
+import me.zhanghai.android.files.util.hideTextInputLayoutErrorOnTextChange
+import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.ui.DrawerLayoutOnBackPressedCallback
 import me.zhanghai.android.files.ui.FixQueryChangeSearchView
 import me.zhanghai.android.files.ui.OverlayToolbarActionMode
@@ -960,24 +965,14 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             overlayActionMode.setMenuResource(R.menu.file_list_select)
             val menu = overlayActionMode.menu
             val isAnyFileReadOnly = files.any { it.path.fileSystem.isReadOnly }
-            menu.findItem(R.id.action_cut).isVisible = !isAnyFileReadOnly
             val areAllFilesArchivePaths = files.all { it.path.isArchivePath }
-            menu.findItem(R.id.action_copy)
-                .setIcon(
-                    if (areAllFilesArchivePaths) {
-                        R.drawable.extract_icon_control_normal_24dp
-                    } else {
-                        R.drawable.copy_icon_control_normal_24dp
-                    }
-                )
-                .setTitle(
-                    if (areAllFilesArchivePaths) {
-                        R.string.file_list_select_action_extract
-                    } else {
-                        R.string.copy
-                    }
-                )
-            menu.findItem(R.id.action_delete).isVisible = !isAnyFileReadOnly
+            // Archive entries are virtual, read-only paths. Do not expose a
+            // copy/move workflow for them: it used to fall back to the legacy
+            // archive filesystem and fail after the user chose a destination.
+            // Extraction is the only supported transfer operation.
+            menu.findItem(R.id.action_cut).isVisible = !isAnyFileReadOnly && !areAllFilesArchivePaths
+            menu.findItem(R.id.action_copy).isVisible = !areAllFilesArchivePaths
+            menu.findItem(R.id.action_delete).isVisible = !isAnyFileReadOnly && !areAllFilesArchivePaths
             val areAllFilesArchiveFiles = files.all { it.isArchiveFile }
             val isCurrentPathReadOnly = viewModel.currentPath.fileSystem.isReadOnly
             // Both in-place extraction actions create siblings in the current
@@ -987,10 +982,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
                 areAllFilesArchiveFiles && !isCurrentPathReadOnly
             menu.findItem(R.id.action_extract_here).isVisible =
                 areAllFilesArchiveFiles && !isCurrentPathReadOnly
-            menu.findItem(R.id.action_extract_choose).isVisible = areAllFilesArchiveFiles
-            menu.findItem(R.id.action_archive_delete_entries).isVisible =
-                areAllFilesArchivePaths && currentSevenZArchiveFile() != null && canEditCurrentArchive
-            menu.findItem(R.id.action_archive).isVisible = !isCurrentPathReadOnly
+            menu.findItem(R.id.action_extract_choose).isVisible =
+                areAllFilesArchiveFiles || areAllFilesArchivePaths
+            menu.findItem(R.id.action_archive_delete_entries).isVisible = false
+            menu.findItem(R.id.action_archive).isVisible = !isCurrentPathReadOnly && !areAllFilesArchivePaths
         }
         if (!overlayActionMode.isActive) {
             binding.appBarLayout.setExpanded(true)
@@ -1102,31 +1097,74 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     private fun extractFiles(files: FileItemSet) {
-        FileJobService.extractZipXtract(
-            makePathListForJob(files),
-            viewModel.currentPath,
-            createContainingDirectory = true,
-            context = requireContext(),
-        )
-        viewModel.selectFiles(files, false)
+        withArchivePasswordIfNeeded(files) { password ->
+            FileJobService.extractZipXtract(makePathListForJob(files), viewModel.currentPath,
+                createContainingDirectory = true, context = requireContext(), password = password)
+            viewModel.selectFiles(files, false)
+        }
     }
 
     private fun extractFilesHere(files: FileItemSet) {
-        FileJobService.extractZipXtract(
-            makePathListForJob(files),
-            viewModel.currentPath,
-            createContainingDirectory = false,
-            context = requireContext(),
-        )
-        viewModel.selectFiles(files, false)
+        withArchivePasswordIfNeeded(files) { password ->
+            FileJobService.extractZipXtract(makePathListForJob(files), viewModel.currentPath,
+                createContainingDirectory = false, context = requireContext(), password = password)
+            viewModel.selectFiles(files, false)
+        }
     }
 
+    private fun withArchivePasswordIfNeeded(files: FileItemSet, action: (CharArray?) -> Unit) {
+        val encrypted = files.firstOrNull { it.attributes.isEncrypted() }
+        if (encrypted == null) { action(null); return }
+        val binding = ArchivePasswordDialogBinding.inflate(requireContext().layoutInflater)
+        binding.passwordEdit.configureSecurePasswordInput()
+        binding.passwordEdit.hideTextInputLayoutErrorOnTextChange(binding.passwordLayout)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.file_action_archive_password_title)
+            .setMessage(getString(R.string.file_action_archive_password_message_format, encrypted.name))
+            .setView(binding.root).setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(android.R.string.cancel) { _, _ -> binding.passwordEdit.text?.clear() }.create()
+        dialog.setOnShowListener {
+            dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val value = binding.passwordEdit.text?.toString().orEmpty()
+                if (value.isEmpty()) {
+                    binding.passwordLayout.error = getString(R.string.file_action_archive_password_error_empty)
+                    return@setOnClickListener
+                }
+                binding.passwordEdit.text?.clear(); dialog.dismiss(); action(value.toCharArray())
+            }
+            binding.passwordEdit.requestFocus()
+        }
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.show()
+    }
+
+    private var pendingExtractionEntries: Pair<Path, Set<String>>? = null
+
     private fun chooseExtractionDirectory(files: FileItemSet) {
+        archiveEntrySelection(files)?.let {
+            pendingExtractionEntries = it
+            pendingExtractionSources = null
+            chooseExtractionDirectoryLauncher.launch(null)
+            return
+        }
         pendingExtractionSources = makePathListForJob(files)
         chooseExtractionDirectoryLauncher.launch(viewModel.currentPath)
     }
 
     private fun onExtractionDirectoryResult(path: Path?) {
+        val entries = pendingExtractionEntries
+        pendingExtractionEntries = null
+        if (entries != null) {
+            if (path != null) {
+                FileJobService.extractZipXtract(
+                    listOf(entries.first), path, createContainingDirectory = false,
+                    context = requireContext(), entries = entries.second,
+                )
+            }
+            viewModel.clearSelectedFiles()
+            return
+        }
         val sources = pendingExtractionSources ?: return
         pendingExtractionSources = null
         if (path == null) return
@@ -1461,7 +1499,18 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     private fun pasteFiles(targetDirectory: Path) {
         val pasteState = viewModel.pasteState
         if (viewModel.pasteState.copy) {
-            FileJobService.copy(
+            // Entries selected inside an opened archive are virtual, read-only
+            // ArchivePath instances. CopyFileJob reopens those through the
+            // legacy archive filesystem, which cannot reliably stream them on
+            // current Android devices. Extract from the physical archive via
+            // the provider-neutral engine instead, as the dual-pane transfer
+            // path already does.
+            archiveEntrySelection(pasteState.files)?.let { (archive, entries) ->
+                FileJobService.extractZipXtract(
+                    listOf(archive), targetDirectory, createContainingDirectory = false,
+                    context = requireContext(), entries = entries,
+                )
+            } ?: FileJobService.copy(
                 makePathListForJob(pasteState.files), targetDirectory, requireContext()
             )
         } else {
@@ -1470,6 +1519,22 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             )
         }
         viewModel.clearPasteState()
+    }
+
+    /** Returns the physical archive and selected entry names for archive-FS paths. */
+    private fun archiveEntrySelection(files: FileItemSet): Pair<Path, Set<String>>? {
+        if (files.isEmpty() || files.any { !it.path.isArchivePath }) return null
+        val roots = files.mapNotNull { it.path.root }.distinctBy { it.toString() }
+        if (roots.size != 1) return null
+        val root = roots.single()
+        val archive = runCatching { root.archiveFile }.getOrNull() ?: return null
+        val names = files.mapNotNull { file ->
+            runCatching { root.relativize(file.path) }.getOrNull()
+                ?.takeUnless { it.isAbsolute }
+                ?.toString()?.replace('\\', '/')?.trim('/')
+                ?.takeIf { it.isNotEmpty() }
+        }.toSet()
+        return if (names.isEmpty()) null else archive to names
     }
 
     private fun makePathListForJob(files: FileItemSet): List<Path> =
@@ -1652,12 +1717,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
     }
 
     override fun extractFile(file: FileItem) {
-        FileJobService.extractZipXtract(
-            listOf(file.path),
-            viewModel.currentPath,
-            createContainingDirectory = true,
-            context = requireContext(),
-        )
+        withArchivePasswordIfNeeded(fileItemSetOf(file)) { password ->
+            FileJobService.extractZipXtract(listOf(file.path), viewModel.currentPath,
+                createContainingDirectory = true, context = requireContext(), password = password)
+        }
     }
 
     override fun showCreateArchiveDialog(file: FileItem) {

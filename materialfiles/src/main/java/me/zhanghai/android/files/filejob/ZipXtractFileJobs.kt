@@ -54,7 +54,7 @@ class ZipXtractExtractJob(
     @Throws(IOException::class)
     override fun run() {
         try {
-            announceArchiveJob("Extracting archive")
+            announceFileJob(FileJobOperation.EXTRACT, "Extracting archive")
             withPrivateEngine { engine ->
                 sources.forEach { source ->
                     val cancellation = CancellationBridge()
@@ -124,6 +124,7 @@ class ZipXtractExtractJob(
                             ),
                             ArchiveProgressListener { progress ->
                                 postArchiveEngineNotification(
+                                    FileJobOperation.EXTRACT,
                                     "Extracting ${source.fileName}",
                                     progress.completedBytes,
                                     progress.totalBytes,
@@ -163,7 +164,7 @@ class ZipXtractCreateJob(
     @Throws(IOException::class)
     override fun run() {
         try {
-            announceArchiveJob("Creating ${archiveFile.fileName}")
+            announceFileJob(FileJobOperation.ARCHIVE, "Creating ${archiveFile.fileName}")
             val inputEntries = collectArchiveInputs(sources)
             val archiveExisted = archiveFile.exists(LinkOption.NOFOLLOW_LINKS)
             var successful = false
@@ -180,6 +181,7 @@ class ZipXtractCreateJob(
                         ),
                         ArchiveProgressListener { progress ->
                             postArchiveEngineNotification(
+                                FileJobOperation.ARCHIVE,
                                 "Creating ${archiveFile.fileName}",
                                 progress.completedBytes,
                                 progress.totalBytes,
@@ -213,6 +215,7 @@ class ZipXtractUpdate7zJob(
 ) : FileJob() {
     @Throws(IOException::class)
     override fun run() {
+        announceFileJob(FileJobOperation.ARCHIVE, "Updating ${archive.fileName}")
         if (!(archive.isLinuxPath || archive.isDocumentPath) || archive.fileSystem.isReadOnly) {
             throw IOException("7z editing requires a local or unlocked writable provider")
         }
@@ -279,6 +282,7 @@ class ZipXtractUpdate7zJob(
                     ),
                     ArchiveProgressListener { progress ->
                         postArchiveEngineNotification(
+                            FileJobOperation.ARCHIVE,
                             "Updating ${archive.fileName}",
                             progress.completedBytes,
                             progress.totalBytes,

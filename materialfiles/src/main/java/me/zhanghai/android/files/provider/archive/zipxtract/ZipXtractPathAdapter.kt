@@ -57,6 +57,7 @@ class PathArchiveSource(
 
 class PathArchiveTarget(
     val path: Path,
+    private val traversalBoundary: Path = path.parent?.normalize() ?: path.normalize(),
 ) : ArchiveTarget {
     override val displayName: String
         get() = path.fileName?.toString() ?: path.toString()
@@ -114,12 +115,20 @@ class PathArchiveTarget(
         JavaSeekableByteChannel(path.newByteChannel(*options))
     }.getOrNull()
 
-    override fun parent(): ArchiveTarget? = path.parent?.let(::PathArchiveTarget)
+    override fun parent(): ArchiveTarget? {
+        val normalized = path.normalize()
+        if (normalized == traversalBoundary) return null
+        return path.parent?.let { PathArchiveTarget(it, traversalBoundary) }
+    }
 
-    override fun resolve(name: String): ArchiveTarget = PathArchiveTarget(safeResolve(name))
+    override fun resolve(name: String): ArchiveTarget =
+        PathArchiveTarget(safeResolve(name), traversalBoundary)
 
     override fun resolveSibling(name: String): ArchiveTarget =
-        PathArchiveTarget(path.resolveSibling(ArchivePathPolicy.normalizeEntryName(name)).normalize())
+        PathArchiveTarget(
+            path.resolveSibling(ArchivePathPolicy.normalizeEntryName(name)).normalize(),
+            traversalBoundary,
+        )
             .also { sibling ->
                 path.parent?.normalize()?.let { parent ->
                     sibling.ensureNoSymbolicLink(parent, sibling.path)
@@ -142,10 +151,12 @@ class PathArchiveTarget(
     }
 
     internal fun ensureNoSymbolicLink(base: Path, candidate: Path) {
-        // Walk all ancestors, not only the newly-created suffix. A symlink
-        // already present in the selected destination's parent would
-        // otherwise redirect every extracted entry outside the user's chosen
-        // tree before the base-path check ever sees it.
+        // Walk from the candidate back through the selected destination only.
+        // Android exposes shared storage through the system `/sdcard` symlink;
+        // walking beyond [base] would reject every archive created there even
+        // though no path inside the user-selected destination is a link.
+        // Checking [base] itself and every descendant still prevents a link
+        // within that destination from redirecting archive output.
         var current: Path? = candidate
         while (current != null) {
             if (runCatching {
@@ -157,6 +168,7 @@ class PathArchiveTarget(
             ) {
                 throw IllegalArgumentException("Destination contains a symbolic link")
             }
+            if (current == base) break
             current = current.parent
         }
     }

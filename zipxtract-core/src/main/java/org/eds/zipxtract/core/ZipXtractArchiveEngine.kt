@@ -1035,9 +1035,13 @@ private class SevenZipCreateCallback(
     private val listener: ArchiveProgressListener?,
 ) : IOutCreateCallback<IOutItem7z>, ICryptoGetTextPassword, Closeable {
     private val total = request.sources.sumOf { it.size.coerceAtLeast(0L) }
-    private val streams = mutableListOf<InputStreamSequentialInStream>()
+    // 7-Zip asks for source streams sequentially. Retaining every stream until
+    // the archive completed kept thousands of FileChannel/buffer objects alive
+    // and exhausted Android's heap for large directories.
+    private var currentStream: InputStreamSequentialInStream? = null
 
     override fun setOperationResult(operationResultOk: Boolean) {
+        closeCurrentStream()
         if (!operationResultOk) throw SevenZipException("7-Zip creation failed")
     }
 
@@ -1059,17 +1063,22 @@ private class SevenZipCreateCallback(
     }
 
     override fun getStream(index: Int): ISequentialInStream? {
+        closeCurrentStream()
         val source = request.sources[index]
         if (source.isDirectory) return null
         val input = source.openInputStream ?: throw SevenZipException("Missing source stream")
-        return InputStreamSequentialInStream(input()).also { streams += it }
+        return InputStreamSequentialInStream(input()).also { currentStream = it }
     }
 
     override fun cryptoGetTextPassword(): String? = request.password?.concatToString()
 
     override fun close() {
-        streams.forEach { runCatching { it.close() } }
-        streams.clear()
+        closeCurrentStream()
+    }
+
+    private fun closeCurrentStream() {
+        currentStream?.let { runCatching { it.close() } }
+        currentStream = null
     }
 }
 

@@ -30,6 +30,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ImageView
+import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
@@ -86,8 +87,11 @@ import me.zhanghai.android.files.file.isImage
 import me.zhanghai.android.files.file.loadFileItem
 import me.zhanghai.android.files.filejob.FileJobService
 import me.zhanghai.android.files.filejob.FileJobResult
-import me.zhanghai.android.files.filejob.ArchiveJobProgress
-import me.zhanghai.android.files.filejob.ArchiveJobProgressRegistry
+import me.zhanghai.android.files.filejob.FileJobOperation
+import me.zhanghai.android.files.filejob.FileJobProgress
+import me.zhanghai.android.files.filejob.FileJobProgressPhase
+import me.zhanghai.android.files.filejob.FileJobProgressRegistry
+import me.zhanghai.android.files.databinding.ArchivePasswordDialogBinding
 import me.zhanghai.android.files.filelist.FileSortOptions.By
 import me.zhanghai.android.files.filelist.FileSortOptions.Order
 import me.zhanghai.android.files.fileproperties.FilePropertiesDialogFragment
@@ -137,6 +141,10 @@ import org.eds.zipxtract.core.PrivateArchiveTempStore
 import org.eds.zipxtract.core.ZipXtractArchiveEngine
 import me.zhanghai.android.files.provider.archive.zipxtract.PathArchiveSource
 import me.zhanghai.android.files.provider.common.isDirectory
+import me.zhanghai.android.files.provider.common.isEncrypted
+import me.zhanghai.android.files.util.configureSecurePasswordInput
+import me.zhanghai.android.files.util.hideTextInputLayoutErrorOnTextChange
+import me.zhanghai.android.files.util.layoutInflater
 import kotlin.math.roundToInt
 
 /**
@@ -240,7 +248,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             root.post { onFileJobResult(result) }
         }
     }
-    private val archiveProgressListener: (List<ArchiveJobProgress>) -> Unit = { progress ->
+    private val archiveProgressListener: (List<FileJobProgress>) -> Unit = { progress ->
         if (this::root.isInitialized) root.post { renderArchiveProgress(progress) }
     }
 
@@ -376,12 +384,12 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     override fun onStart() {
         super.onStart()
         FileJobService.addResultListener(fileJobResultListener)
-        ArchiveJobProgressRegistry.addListener(archiveProgressListener)
+        FileJobProgressRegistry.addListener(archiveProgressListener)
     }
 
     override fun onStop() {
         FileJobService.removeResultListener(fileJobResultListener)
-        ArchiveJobProgressRegistry.removeListener(archiveProgressListener)
+        FileJobProgressRegistry.removeListener(archiveProgressListener)
         archiveProgressDialog?.dismiss()
         archiveProgressDialog = null
         archiveProgressDialogId = null
@@ -460,6 +468,12 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         )
         binding.recyclerView.layoutManager = layoutManager
         binding.recyclerView.adapter = adapter
+        // FileListAdapter already owns the row animations. RecyclerView's
+        // predictive item animator can otherwise try to reattach a holder
+        // that is still participating in the previous layout when a file job
+        // and the directory observer refresh this pane at nearly the same
+        // time (for example immediately after creating an archive).
+        binding.recyclerView.itemAnimator = null
         adapter.attachSwipeSelection(binding.recyclerView)
         binding.recyclerView.setHasFixedSize(true)
         binding.recyclerView.isVerticalScrollBarEnabled = !isDualPaneVisible()
@@ -1394,7 +1408,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         }
     }
 
-    private fun renderArchiveProgress(progresses: List<ArchiveJobProgress>) {
+    private fun renderArchiveProgress(progresses: List<FileJobProgress>) {
         if (!isAdded || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return
         val host = activity ?: return
         if (host.isFinishing || host.isDestroyed) return
@@ -1432,15 +1446,31 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 archiveProgressDialog = MaterialAlertDialogBuilder(requireContext())
                 .setTitle(progress.title)
                 .setView(content)
-                .setPositiveButton("Hide") { dialog, _ ->
+                .setPositiveButton(R.string.hide) { dialog, _ ->
                     hiddenArchiveProgressIds += id
                     dialog.dismiss()
                     archiveProgressDialog = null
                     archiveProgressDialogId = null
                 }
+                .apply {
+                    if (progress.operation != FileJobOperation.DELETE) {
+                        setNegativeButton(android.R.string.cancel, null)
+                    }
+                }
                 .setCancelable(false)
                 .create()
                 archiveProgressDialog!!.show()
+                if (progress.operation != FileJobOperation.DELETE) {
+                    (archiveProgressDialog as? androidx.appcompat.app.AlertDialog)
+                        ?.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
+                        ?.setOnClickListener {
+                            if (FileJobService.cancelJob(id)) {
+                                FileJobProgressRegistry.markCancelling(id)
+                                it.isEnabled = false
+                                (it as? android.widget.Button)?.setText(R.string.file_job_cancelling)
+                            }
+                        }
+                }
             }.onFailure {
                 // The notification remains available if the host is changing
                 // windows; never let an invalid dialog token crash the app.
@@ -1452,7 +1482,20 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         } else {
             currentDialog.setTitle(progress.title)
         }
-        archiveProgressDetail?.text = progress.title
+        if (progress.phase == FileJobProgressPhase.CANCELLING) {
+            (archiveProgressDialog as? androidx.appcompat.app.AlertDialog)
+                ?.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)
+                ?.apply {
+                    isEnabled = false
+                    setText(R.string.file_job_cancelling)
+                }
+        }
+        archiveProgressDetail?.text = if (progress.totalEntries > 0L) {
+            "${progress.completedEntries} / ${progress.totalEntries}" +
+                (progress.percent?.let { "  ($it%)" } ?: "")
+        } else {
+            progress.title
+        }
         archiveProgressBar?.apply {
             isIndeterminate = progress.indeterminate
             progress.percent?.let { setProgress(it, true) }
@@ -1879,9 +1922,54 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     private fun entryActions(pane: PaneId, file: FileItem): List<EntryAction> {
         val readOnly = file.path.fileSystem.isReadOnly
         val archivePath = file.path.isArchivePath
+        if (archivePath) {
+            val files = fileItemSetOf(file)
+            val archiveDirectory = archiveEntrySelection(files)?.first?.parent
+            val otherDirectory = model(pane.other()).currentPath
+            return listOf(
+                EntryAction(
+                    getString(R.string.file_list_select_action_extract_here),
+                    R.drawable.extract_icon_control_normal_24dp,
+                    enabled = archiveDirectory != null &&
+                        !archiveDirectory.fileSystem.isReadOnly,
+                ) {
+                    archiveDirectory?.let {
+                        chooseArchiveEntryExtractionMode(pane, files, it, false)
+                    }
+                },
+                EntryAction(
+                    getString(R.string.file_list_select_action_extract_other_pane),
+                    R.drawable.extract_icon_control_normal_24dp,
+                    enabled = !otherDirectory.fileSystem.isReadOnly &&
+                        !otherDirectory.isArchivePath,
+                    disabledReason = if (otherDirectory.fileSystem.isReadOnly ||
+                        otherDirectory.isArchivePath
+                    ) R.string.file_list_action_destination_read_only else null,
+                ) {
+                    chooseArchiveEntryExtractionMode(pane, files, otherDirectory, true)
+                },
+                EntryAction(
+                    getString(R.string.file_item_action_properties),
+                    R.drawable.information_icon_white_24dp,
+                ) { FilePropertiesDialogFragment.show(file, this) },
+                EntryAction(
+                    getString(R.string.share),
+                    R.drawable.dual_share_24dp,
+                    enabled = !file.attributes.isDirectory,
+                ) { sharePath(file.path, file.mimeType) },
+            )
+        }
         val transferBlockCopy = transferBlockReasonForFile(pane, file, false)
         val transferBlockMove = transferBlockReasonForFile(pane, file, true)
-        return listOf(
+        val actions = mutableListOf<EntryAction>()
+        if (file.isArchiveFile) {
+            actions += EntryAction(
+                getString(R.string.file_list_select_action_extract),
+                R.drawable.extract_icon_control_normal_24dp,
+                enabled = !model(pane).currentPath.fileSystem.isReadOnly,
+            ) { extractFiles(pane, fileItemSetOf(file), false) }
+        }
+        actions += listOf(
             EntryAction(
                 getString(R.string.file_list_action_copy_short),
                 R.drawable.copy_icon_control_normal_24dp,
@@ -1921,6 +2009,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 enabled = file.attributes.isDirectory,
             ) { addBookmark(file.path) },
         )
+        return actions
     }
 
     private fun showSelectionActionPanel(
@@ -1932,6 +2021,43 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val snapshot = fileItemSetOf(*files.toTypedArray())
         val archiveFiles = snapshot.all { it.isArchiveFile }
         val archiveEntries = snapshot.all { it.path.isArchivePath }
+        if (archiveEntries) {
+            val archiveDirectory = archiveEntrySelection(snapshot)?.first?.parent
+            val otherDirectory = model(pane.other()).currentPath
+            showActionPanel(
+                getString(R.string.file_list_select_title_format, snapshot.size),
+                listOf(
+                    EntryAction(
+                        getString(R.string.file_list_select_action_extract_here),
+                        R.drawable.extract_icon_control_normal_24dp,
+                        enabled = archiveDirectory != null &&
+                            !archiveDirectory.fileSystem.isReadOnly,
+                    ) {
+                        archiveDirectory?.let {
+                            chooseArchiveEntryExtractionMode(pane, snapshot, it, false)
+                        }
+                    },
+                    EntryAction(
+                        getString(R.string.file_list_select_action_extract_other_pane),
+                        R.drawable.extract_icon_control_normal_24dp,
+                        enabled = !otherDirectory.fileSystem.isReadOnly &&
+                            !otherDirectory.isArchivePath,
+                        disabledReason = if (otherDirectory.fileSystem.isReadOnly ||
+                            otherDirectory.isArchivePath
+                        ) R.string.file_list_action_destination_read_only else null,
+                    ) {
+                        chooseArchiveEntryExtractionMode(pane, snapshot, otherDirectory, true)
+                    },
+                    EntryAction(
+                        getString(R.string.share),
+                        R.drawable.dual_share_24dp,
+                        enabled = snapshot.none { it.attributes.isDirectory },
+                    ) { shareFiles(snapshot, pane) },
+                ),
+                onDismiss,
+            )
+            return
+        }
         val copyReason = transferBlockReason(pane, false, snapshot)
         val moveReason = transferBlockReason(pane, true, snapshot)
         val actions = mutableListOf<EntryAction>()
@@ -1976,6 +2102,11 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             items += getString(R.string.file_list_select_action_extract_choose) to {
                 chooseExtractionDirectory(pane, files)
             }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.file_list_select_title_format, files.size))
+                .setItems(items.map { it.first }.toTypedArray()) { _, which -> items[which].second() }
+                .show()
+            return
         }
         if (archiveFiles) {
             items += getString(R.string.file_list_select_action_extract_here) to {
@@ -2103,12 +2234,137 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         model(pane).selectFiles(files, false)
     }
 
+    private fun extractArchiveEntries(
+        pane: PaneId,
+        files: FileItemSet,
+        targetDirectory: Path,
+        createContainingDirectory: Boolean,
+        activateDestination: Boolean = false,
+    ) {
+        val selection = archiveEntrySelection(files) ?: return
+        if (targetDirectory.fileSystem.isReadOnly || targetDirectory.isArchivePath) {
+            showToast(R.string.file_list_action_destination_read_only)
+            return
+        }
+        if (files.any { it.attributes.isEncrypted() }) {
+            showArchiveExtractionPasswordDialog(selection.first) { password ->
+                startArchiveEntryExtraction(
+                    pane,
+                    files,
+                    selection,
+                    targetDirectory,
+                    createContainingDirectory,
+                    activateDestination,
+                    password,
+                )
+            }
+            return
+        }
+        startArchiveEntryExtraction(
+            pane,
+            files,
+            selection,
+            targetDirectory,
+            createContainingDirectory,
+            activateDestination,
+            null,
+        )
+    }
+
+    private fun startArchiveEntryExtraction(
+        pane: PaneId,
+        files: FileItemSet,
+        selection: Pair<Path, Set<String>>,
+        targetDirectory: Path,
+        createContainingDirectory: Boolean,
+        activateDestination: Boolean,
+        password: CharArray?,
+    ) {
+        FileJobService.extractZipXtract(
+            listOf(selection.first),
+            targetDirectory,
+            createContainingDirectory = createContainingDirectory,
+            context = requireContext(),
+            entries = selection.second,
+            password = password,
+        )
+        model(pane).selectFiles(files, false)
+        if (activateDestination) activatePane(pane.other())
+    }
+
+    private fun showArchiveExtractionPasswordDialog(
+        archive: Path,
+        onPassword: (CharArray) -> Unit,
+    ) {
+        val passwordBinding = ArchivePasswordDialogBinding.inflate(requireContext().layoutInflater)
+        passwordBinding.passwordEdit.configureSecurePasswordInput()
+        passwordBinding.passwordEdit.hideTextInputLayoutErrorOnTextChange(passwordBinding.passwordLayout)
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.file_action_archive_password_title)
+            .setMessage(
+                getString(
+                    R.string.file_action_archive_password_message_format,
+                    archive.fileName,
+                )
+            )
+            .setView(passwordBinding.root)
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                passwordBinding.passwordEdit.text?.clear()
+            }
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener {
+                    val password = passwordBinding.passwordEdit.text?.toString().orEmpty()
+                    if (password.isEmpty()) {
+                        passwordBinding.passwordLayout.error =
+                            getString(R.string.file_action_archive_password_error_empty)
+                        return@setOnClickListener
+                    }
+                    val characters = password.toCharArray()
+                    passwordBinding.passwordEdit.text?.clear()
+                    dialog.dismiss()
+                    onPassword(characters)
+                }
+            passwordBinding.passwordEdit.requestFocus()
+        }
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.show()
+    }
+
+    private fun chooseArchiveEntryExtractionMode(
+        pane: PaneId,
+        files: FileItemSet,
+        targetDirectory: Path,
+        activateDestination: Boolean,
+    ) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.file_list_extract_mode_title)
+            .setItems(
+                arrayOf(
+                    getString(R.string.file_list_extract_mode_direct),
+                    getString(R.string.file_list_extract_mode_containing_directory),
+                )
+            ) { _, which ->
+                extractArchiveEntries(
+                    pane,
+                    files,
+                    targetDirectory,
+                    createContainingDirectory = which == 1,
+                    activateDestination = activateDestination,
+                )
+            }
+            .show()
+    }
+
     private fun chooseExtractionDirectory(pane: PaneId, files: FileItemSet) {
         archiveEntrySelection(files)?.let {
             pendingExtractionEntries = it
             pendingExtractionSources = null
             pendingExtractionPane = null
-            extractionDirectoryLauncher.launch(null)
+            extractionDirectoryLauncher.launch(it.first.parent)
             return
         }
         pendingExtractionPane = pane

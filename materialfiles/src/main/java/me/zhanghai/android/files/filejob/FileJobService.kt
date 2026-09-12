@@ -73,10 +73,15 @@ class FileJobService : Service() {
         }
     }
 
-    private fun cancelJob(id: Int) {
+    private fun cancelJob(id: Int): Boolean {
         synchronized(runningJobs) {
-            runningJobs.removeFirst { it.key.id == id }?.value?.cancel(true)
-            updateWakeWifiLockLocked()
+            // Keep the job registered until its worker has actually unwound.  Future.cancel()
+            // only requests interruption; removing it here would release the wake lock and make
+            // the UI believe cancellation had completed while an archive engine was still closing.
+            val future = runningJobs.entries.firstOrNull { it.key.id == id }?.value ?: return false
+            FileJobProgressRegistry.markCancelling(id)
+            future.cancel(true)
+            return true
         }
     }
 
@@ -271,9 +276,13 @@ class FileJobService : Service() {
         }
 
         @MainThread
-        fun cancelJob(id: Int) {
-            pendingJobs.removeFirst { it.id == id }
-            instance?.cancelJob(id)
+        fun cancelJob(id: Int): Boolean {
+            val pending = pendingJobs.removeFirst { it.id == id }
+            if (pending != null) {
+                FileJobProgressRegistry.finish(id)
+                return true
+            }
+            return instance?.cancelJob(id) == true
         }
     }
 }

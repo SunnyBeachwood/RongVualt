@@ -84,11 +84,30 @@ internal class LinuxPath : ByteStringListPath<LinuxPath>, RootablePath {
                 return@none false
             }
             val storageVolumeDirectory = it.pathFileCompat
-            if (!file.startsWith(storageVolumeDirectory)) {
+            // `/sdcard` is a symlink to the primary volume on Android. Keep
+            // its relative path when comparing it with the framework's
+            // `/storage/emulated/0` volume root; otherwise ordinary shared
+            // storage is incorrectly sent to the Root provider.
+            val fileInVolume = file.inStorageVolume(storageVolumeDirectory, it.isPrimaryCompat)
+                ?: return@none false
+            if (!fileInVolume.startsWith(storageVolumeDirectory)) {
                 return@none false
             }
-            return@none file.isAccessibleInStorageVolume(storageVolumeDirectory, isAttributeAccess)
+            return@none fileInVolume.isAccessibleInStorageVolume(
+                storageVolumeDirectory,
+                isAttributeAccess,
+            )
         }
+    }
+
+    private fun File.inStorageVolume(
+        storageVolumeDirectory: File,
+        isPrimary: Boolean,
+    ): File? {
+        if (startsWith(storageVolumeDirectory)) return this
+        val sharedStorageAlias = File("/sdcard")
+        if (!isPrimary || !startsWith(sharedStorageAlias)) return null
+        return storageVolumeDirectory.resolve(relativeTo(sharedStorageAlias).path)
     }
 
     private fun File.isAccessibleInStorageVolume(

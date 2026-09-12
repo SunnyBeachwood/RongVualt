@@ -49,7 +49,7 @@
             android:key="@string/pref_key_ftp_server_password"
             android:title="@string/ftp_server_password_title"
             android:dependency="@string/pref_key_ftp_server_anonymous_login"
-            android:inputType="textVisiblePassword"
+            android:inputType="textPassword"
             app:useSimpleSummaryProvider="true" />
 
         <me.zhanghai.android.files.settings.NonNegativeIntegerPreference

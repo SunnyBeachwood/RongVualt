@@ -33,6 +33,7 @@ import me.zhanghai.android.files.util.ParcelableParceler
 import me.zhanghai.android.files.util.ParcelableState
 import me.zhanghai.android.files.util.RemoteCallback
 import me.zhanghai.android.files.util.args
+import me.zhanghai.android.files.util.configureSecurePasswordInput
 import me.zhanghai.android.files.util.finish
 import me.zhanghai.android.files.util.getArgs
 import me.zhanghai.android.files.util.getState
@@ -65,6 +66,7 @@ class ArchivePasswordDialogFragment : AppCompatDialogFragment() {
             .setMessage(getMessage(args.path.archiveFile.fileName, context))
             .apply {
                 binding = ArchivePasswordDialogBinding.inflate(context.layoutInflater)
+                binding.passwordEdit.configureSecurePasswordInput()
                 binding.passwordEdit.hideTextInputLayoutErrorOnTextChange(binding.passwordLayout)
                 binding.passwordEdit.setOnEditorConfirmActionListener { onOk() }
                 if (savedInstanceState != null) {
@@ -83,6 +85,7 @@ class ArchivePasswordDialogFragment : AppCompatDialogFragment() {
                     getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener { onOk() }
                 }
                 window!!.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+                window!!.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
             }
     }
 

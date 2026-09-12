@@ -6,6 +6,33 @@
   -->
 
 <resources>
+    <string name="file_job_cancelling">Cancelling…</string>
+    <string name="text_editor_file_settings">File settings</string>
+    <string name="text_editor_wrap_words">Wrap words</string>
+    <string name="text_editor_line_numbers">Line numbers</string>
+    <string name="text_editor_syntax_highlighting">Syntax highlighting</string>
+    <string name="text_editor_auto_format">Auto format</string>
+    <string name="text_editor_font_size">Font size</string>
+    <string name="text_editor_share_path">Path</string>
+    <string name="text_editor_share_text">Plain text</string>
+    <string name="text_editor_share_file">File</string>
+    <string name="text_editor_share_html">HTML</string>
+    <string name="text_editor_share_html_source">HTML source</string>
+    <string name="text_editor_share_pdf">PDF</string>
+    <string name="text_editor_share_image">Full image</string>
+    <string name="text_editor_share_screenshot">Screenshot</string>
+    <string name="text_editor_share_calendar">Calendar event</string>
+    <string name="text_editor_info">Information</string>
+    <string name="text_editor_unsaved_title">Unsaved changes</string>
+    <string name="text_editor_unsaved_share_message">Save the current changes before using the file on disk?</string>
+    <string name="text_editor_use_disk_version">Use saved version</string>
+    <string name="text_editor_info_path">Path: %1$s</string>
+    <string name="text_editor_info_encoding">Encoding: %1$s</string>
+    <string name="text_editor_info_size">Size: %1$d bytes</string>
+    <string name="text_editor_info_modified">Modified: %1$s</string>
+    <string name="text_editor_info_lines">Lines: %1$d</string>
+    <string name="text_editor_info_words">Words: %1$d</string>
+    <string name="text_editor_info_characters">Characters: %1$d</string>
 
     <string name="app_name">Material Files</string>
 
@@ -122,6 +149,7 @@
         <item quantity="other">Preparing to delete %1$,d files</item>
     </plurals>
     <string name="file_job_delete_notification_title_one_format">Deleting “%1$s”</string>
+    <string name="file_job_delete_progress_preparing">Preparing to delete…</string>
     <plurals name="file_job_delete_notification_title_multiple_format">
         <item quantity="one">Deleting %1$,d file</item>
         <item quantity="other">Deleting %1$,d files</item>
@@ -369,6 +397,10 @@
     <string name="file_list_select_action_extract" translatable="false">@string/file_item_action_extract</string>
     <string name="file_list_select_action_extract_here">Extract here</string>
     <string name="file_list_select_action_extract_choose">Choose extraction folder</string>
+    <string name="file_list_select_action_extract_other_pane">Extract to other pane</string>
+    <string name="file_list_extract_mode_title">Extraction layout</string>
+    <string name="file_list_extract_mode_direct">Extract directly</string>
+    <string name="file_list_extract_mode_containing_directory">Extract into a folder</string>
     <string name="file_list_select_action_archive_delete_entries">Delete archive entries</string>
     <string name="file_list_select_action_archive" translatable="false">@string/file_item_action_archive</string>
     <string name="file_list_create_file_name_hint">File name</string>

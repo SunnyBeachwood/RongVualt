@@ -6,9 +6,12 @@
 package me.zhanghai.android.files.viewer.text
 
 import android.content.Intent
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
+import android.provider.CalendarContract
 import android.text.InputType
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -22,9 +25,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.view.children
+import androidx.core.view.ViewCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java8.nio.file.Path
@@ -43,6 +49,7 @@ import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.file.asMimeTypeOrNull
 import me.zhanghai.android.files.file.guessFromPath
 import me.zhanghai.android.files.file.isMarkdownFile
+import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.filelist.FileListActivity
 import me.zhanghai.android.files.filelist.OpenFileActivity
 import me.zhanghai.android.files.provider.common.readAttributes
@@ -60,6 +67,9 @@ import me.zhanghai.android.files.util.fadeOutUnsafe
 import me.zhanghai.android.files.util.isReady
 import me.zhanghai.android.files.util.showToast
 import me.zhanghai.android.files.util.startActivitySafe
+import me.zhanghai.android.files.util.createSendStreamIntent
+import me.zhanghai.android.files.util.createSendTextIntent
+import me.zhanghai.android.files.util.withChooser
 import me.zhanghai.android.files.util.valueCompat
 import me.zhanghai.android.files.util.viewModels
 import me.zhanghai.android.files.viewer.markdown.createMarkdownRenderer
@@ -86,29 +96,17 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
     private val rendererMutex = Mutex()
     private var highlighter: MarkdownSyntaxHighlighter? = null
     private var undoRedo: TextViewUndoRedo? = null
+    private var wrapWords = true
+    private var lineNumbersEnabled = false
+    private var syntaxHighlightingEnabled = true
+    private var autoFormatEnabled = true
+    private var editorFontSizeSp = 16
+    private var pendingAfterSave: (() -> Unit)? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setHasOptionsMenu(true)
         isPreviewVisible = savedInstanceState?.getBoolean(STATE_PREVIEW, false) ?: false
-
-        lifecycleScope.launchWhenStarted {
-            onBackPressedCallback = object : OnBackPressedCallback(false) {
-                override fun handleOnBackPressed() {
-                    ConfirmCloseDialogFragment.show(this@TextEditorFragment)
-                }
-            }
-            launch {
-                viewModel.isTextChanged.collect {
-                    onBackPressedCallback.isEnabled = viewModel.isTextChanged.value
-                    updateTitle()
-                }
-            }
-            addOnBackPressedCallback(onBackPressedCallback)
-            launch { viewModel.encoding.collect { onEncodingChanged(it) } }
-            launch { viewModel.textState.collect(::onTextStateChanged) }
-            launch { viewModel.writeFileState.collect { onWriteFileStateChanged(it) } }
-        }
     }
 
     override fun onCreateView(
@@ -127,6 +125,12 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
             return
         }
         argsFile = file
+        onBackPressedCallback = object : OnBackPressedCallback(false) {
+            override fun handleOnBackPressed() {
+                ConfirmCloseDialogFragment.show(this@TextEditorFragment)
+            }
+        }
+        addOnBackPressedCallback(onBackPressedCallback)
         isMarkdown = isMarkdownFile(file, args.intent.type?.asMimeTypeOrNull())
         if (isMarkdown && !args.intent.getBooleanExtra(EXTRA_FORCE_TEXT_EDITOR, false)) {
             isPreviewVisible = savedInstanceState?.getBoolean(STATE_PREVIEW)
@@ -153,20 +157,47 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
         binding.textEdit.doAfterTextChanged {
             if (isSettingText || viewModel.textState.value !is DataState.Success) return@doAfterTextChanged
             viewModel.isTextChanged.value = true
+            updateLineNumbers()
+            // TextView.lineCount is only final after the editor has been laid out. A large
+            // document can therefore initially produce just the visible/partially measured
+            // prefix; recalculate once the new text has a real layout.
+            binding.textEdit.post { updateLineNumbers() }
             if (isPreviewVisible) renderMarkdown(binding.textEdit.text.toString())
+        }
+        binding.textEdit.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            updateLineNumbers()
         }
         binding.textEdit.isEnabled = isWritable
 
         if (isMarkdown) {
             renderer = createMarkdownRenderer(requireContext(), file, this::onLinkClicked)
-            highlighter = MarkdownSyntaxHighlighter(binding.textEdit)
+            loadEditorPreferences()
+            if (syntaxHighlightingEnabled) highlighter = MarkdownSyntaxHighlighter(binding.textEdit)
             if (isWritable) {
-                binding.textEdit.filters = binding.textEdit.filters + MarkdownAutoFormatFilter()
+                updateAutoFormatFilter()
                 setupFormatActions()
             }
+            applyEditorPreferences()
+        }
+        binding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
+            binding.lineNumbers.translationY = -scrollY.toFloat()
         }
         setPreviewVisible(isPreviewVisible, restoreScroll = false)
         updateTitle()
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.isTextChanged.collect {
+                        onBackPressedCallback.isEnabled = it
+                        updateTitle()
+                    }
+                }
+                launch { viewModel.encoding.collect { onEncodingChanged(it) } }
+                launch { viewModel.textState.collect(::onTextStateChanged) }
+                launch { viewModel.writeFileState.collect(::onWriteFileStateChanged) }
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -230,6 +261,21 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
             onReload()
             true
         }
+        R.id.action_wrap_words -> { wrapWords = !wrapWords; applyEditorPreferences(); saveEditorPreferences(); true }
+        R.id.action_line_numbers -> { lineNumbersEnabled = !lineNumbersEnabled; applyEditorPreferences(); saveEditorPreferences(); true }
+        R.id.action_syntax_highlighting -> { toggleSyntaxHighlighting(); true }
+        R.id.action_auto_format -> { autoFormatEnabled = !autoFormatEnabled; updateAutoFormatFilter(); saveEditorPreferences(); requireActivity().invalidateOptionsMenu(); true }
+        R.id.action_font_size -> { showFontSizeDialog(); true }
+        R.id.action_share_path -> { shareText(argsFile.toString(), "text/plain"); true }
+        R.id.action_share_text -> { shareText(binding.textEdit.text.toString(), "text/plain"); true }
+        R.id.action_share_file -> { withSavedDiskVersion(::shareSourceFile); true }
+        R.id.action_share_html -> { shareText(MarkdownExport.toHtml(binding.textEdit.text.toString()), "text/html"); true }
+        R.id.action_share_html_source -> { shareText(MarkdownExport.toHtml(binding.textEdit.text.toString()), "text/plain"); true }
+        R.id.action_share_pdf -> { exportAndShare(ExportKind.PDF); true }
+        R.id.action_share_image -> { exportAndShare(ExportKind.IMAGE); true }
+        R.id.action_share_screenshot -> { exportAndShare(ExportKind.SCREENSHOT); true }
+        R.id.action_share_calendar -> { shareCalendarEvent(); true }
+        R.id.action_editor_info -> { withSavedDiskVersion(::showDocumentInfo); true }
         Menu.FIRST -> {
             viewModel.encoding.value = Charset.forName(item.titleCondensed!!.toString())
             true
@@ -261,28 +307,35 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
 
     private fun onTextStateChanged(state: DataState<String>) {
         updateTitle()
+        listOf(binding.progress, binding.errorText, binding.scrollView, binding.previewScrollView)
+            .forEach { it.animate().cancel() }
         when (state) {
             is DataState.Loading -> {
-                binding.progress.fadeInUnsafe()
-                binding.errorText.fadeOutUnsafe()
-                binding.scrollView.fadeOutUnsafe()
-                binding.previewScrollView.fadeOutUnsafe()
+                binding.progress.visibility = View.VISIBLE
+                binding.errorText.visibility = View.INVISIBLE
+                binding.scrollView.visibility = View.INVISIBLE
+                binding.previewScrollView.visibility = View.INVISIBLE
             }
             is DataState.Success -> {
-                binding.progress.fadeOutUnsafe()
-                binding.errorText.fadeOutUnsafe()
+                binding.progress.visibility = View.INVISIBLE
+                binding.errorText.visibility = View.INVISIBLE
                 if (!viewModel.isTextChanged.value) setText(state.data)
                 if (isPreviewVisible) renderMarkdown(binding.textEdit.text.toString())
-                else binding.scrollView.fadeInUnsafe()
+                else {
+                    binding.previewScrollView.visibility = View.GONE
+                    binding.scrollView.alpha = 1f
+                    binding.scrollView.visibility = View.VISIBLE
+                }
             }
             is DataState.Error -> {
                 state.throwable.printStackTrace()
                 renderJob?.cancel()
-                binding.progress.fadeOutUnsafe()
-                binding.errorText.fadeInUnsafe()
+                binding.progress.visibility = View.INVISIBLE
+                binding.errorText.alpha = 1f
+                binding.errorText.visibility = View.VISIBLE
                 binding.errorText.text = state.throwable.toString()
-                binding.scrollView.fadeOutUnsafe()
-                binding.previewScrollView.fadeOutUnsafe()
+                binding.scrollView.visibility = View.INVISIBLE
+                binding.previewScrollView.visibility = View.INVISIBLE
             }
         }
     }
@@ -294,6 +347,8 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
         isSettingText = false
         viewModel.isTextChanged.value = false
         highlighter?.refresh()
+        updateLineNumbers()
+        binding.textEdit.post { updateLineNumbers() }
     }
 
     private fun updateTitle() {
@@ -327,8 +382,12 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
                 showToast(R.string.text_editor_save_success)
                 viewModel.finishWritingFile()
                 viewModel.isTextChanged.value = false
+                pendingAfterSave?.also { pendingAfterSave = null }?.invoke()
             }
-            is ActionState.Error -> viewModel.finishWritingFile()
+            is ActionState.Error -> {
+                pendingAfterSave = null
+                viewModel.finishWritingFile()
+            }
         }
     }
 
@@ -343,32 +402,40 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
         menuBinding.previewItem.isVisible = isMarkdown && !isPreviewVisible
         menuBinding.editItem.isVisible = isMarkdown && isPreviewVisible
         menuBinding.searchItem.isVisible = viewModel.textState.value is DataState.Success
+        menuBinding.menu.findItem(R.id.action_wrap_words)?.isChecked = wrapWords
+        menuBinding.menu.findItem(R.id.action_line_numbers)?.isChecked = lineNumbersEnabled
+        menuBinding.menu.findItem(R.id.action_syntax_highlighting)?.isChecked = syntaxHighlightingEnabled
+        menuBinding.menu.findItem(R.id.action_auto_format)?.isChecked = autoFormatEnabled
     }
 
     private fun setupFormatActions() {
         binding.actionBar.removeAllViews()
         val actions = listOf(
-            R.string.markdown_action_heading to MarkdownFormatAction.HEADING,
-            R.string.markdown_action_bold to MarkdownFormatAction.BOLD,
-            R.string.markdown_action_italic to MarkdownFormatAction.ITALIC,
-            R.string.markdown_action_strike to MarkdownFormatAction.STRIKE,
-            R.string.markdown_action_quote to MarkdownFormatAction.QUOTE,
-            R.string.markdown_action_code to MarkdownFormatAction.INLINE_CODE,
-            R.string.markdown_action_code_block to MarkdownFormatAction.CODE_BLOCK,
-            R.string.markdown_action_link to MarkdownFormatAction.LINK,
-            R.string.markdown_action_image to MarkdownFormatAction.IMAGE,
-            R.string.markdown_action_unordered to MarkdownFormatAction.UNORDERED_LIST,
-            R.string.markdown_action_ordered to MarkdownFormatAction.ORDERED_LIST,
-            R.string.markdown_action_task to MarkdownFormatAction.TASK_LIST
+            Triple(R.string.markdown_action_heading, R.drawable.text_heading_24dp, MarkdownFormatAction.HEADING),
+            Triple(R.string.markdown_action_bold, R.drawable.text_bold_24dp, MarkdownFormatAction.BOLD),
+            Triple(R.string.markdown_action_italic, R.drawable.text_italic_24dp, MarkdownFormatAction.ITALIC),
+            Triple(R.string.markdown_action_strike, R.drawable.text_strike_24dp, MarkdownFormatAction.STRIKE),
+            Triple(R.string.markdown_action_quote, R.drawable.text_quote_24dp, MarkdownFormatAction.QUOTE),
+            Triple(R.string.markdown_action_code, R.drawable.text_code_24dp, MarkdownFormatAction.INLINE_CODE),
+            Triple(R.string.markdown_action_code_block, R.drawable.file_code_icon, MarkdownFormatAction.CODE_BLOCK),
+            Triple(R.string.markdown_action_link, R.drawable.text_link_24dp, MarkdownFormatAction.LINK),
+            Triple(R.string.markdown_action_image, R.drawable.text_image_24dp, MarkdownFormatAction.IMAGE),
+            Triple(R.string.markdown_action_unordered, R.drawable.text_list_24dp, MarkdownFormatAction.UNORDERED_LIST),
+            Triple(R.string.markdown_action_ordered, R.drawable.text_ordered_list_24dp, MarkdownFormatAction.ORDERED_LIST),
+            Triple(R.string.markdown_action_task, R.drawable.text_task_24dp, MarkdownFormatAction.TASK_LIST)
         )
-        actions.forEach { (label, action) ->
+        actions.forEach { (label, iconRes, action) ->
             val button = MaterialButton(requireContext()).apply {
-                text = getString(label)
+                text = null
+                icon = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, iconRes)
+                contentDescription = getString(label)
+                ViewCompat.setTooltipText(this, getString(label))
                 isAllCaps = false
-                minWidth = 0
+                minWidth = requireContext().dpToDimensionPixelSize(48)
                 minimumHeight = 0
-                setPadding(requireContext().dpToDimensionPixelSize(10), 0,
-                    requireContext().dpToDimensionPixelSize(10), 0)
+                iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                setPadding(requireContext().dpToDimensionPixelSize(12), 0,
+                    requireContext().dpToDimensionPixelSize(12), 0)
                 setOnClickListener {
                     if (!isWritable || isPreviewVisible) return@setOnClickListener
                     MarkdownFormatActions.apply(binding.textEdit, action)
@@ -395,6 +462,8 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
         binding.scrollView.visibility = if (visible) View.GONE else View.VISIBLE
         binding.previewScrollView.visibility = if (visible) View.VISIBLE else View.GONE
         binding.actionBarScrollView.visibility = if (!visible && isWritable) View.VISIBLE else View.GONE
+        binding.lineNumbers.visibility =
+            if (!visible && lineNumbersEnabled) View.VISIBLE else View.GONE
         if (visible) {
             renderMarkdown(binding.textEdit.text.toString())
             binding.previewScrollView.post { binding.previewScrollView.scrollTo(0, previewScrollY) }
@@ -415,16 +484,192 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
                 }
                 if (!isPreviewVisible || markdown != binding.textEdit.text.toString()) return@launch
                 currentRenderer.setParsedMarkdown(binding.markdownText, rendered)
-                binding.progress.fadeOutUnsafe()
-                binding.errorText.fadeOutUnsafe()
-                binding.previewScrollView.fadeInUnsafe()
+                binding.progress.visibility = View.INVISIBLE
+                binding.errorText.visibility = View.INVISIBLE
+                binding.previewScrollView.alpha = 1f
+                binding.previewScrollView.visibility = View.VISIBLE
             } catch (e: Exception) {
                 if (!isPreviewVisible) return@launch
-                binding.progress.fadeOutUnsafe()
-                binding.errorText.fadeInUnsafe()
+                binding.progress.visibility = View.INVISIBLE
+                binding.errorText.alpha = 1f
+                binding.errorText.visibility = View.VISIBLE
                 binding.errorText.text = e.toString()
-                binding.previewScrollView.fadeOutUnsafe()
+                binding.previewScrollView.visibility = View.INVISIBLE
             }
+        }
+    }
+
+    private fun preferenceKey(name: String): String =
+        "${argsFile.toAbsolutePath().normalize()}::$name"
+
+    private fun loadEditorPreferences() {
+        val preferences = requireContext().getSharedPreferences("text_editor_files", Context.MODE_PRIVATE)
+        wrapWords = preferences.getBoolean(preferenceKey("wrap"), true)
+        lineNumbersEnabled = preferences.getBoolean(preferenceKey("lines"), false)
+        syntaxHighlightingEnabled = preferences.getBoolean(preferenceKey("highlight"), true)
+        autoFormatEnabled = preferences.getBoolean(preferenceKey("auto"), true)
+        editorFontSizeSp = preferences.getInt(preferenceKey("size"), 16).coerceIn(10, 32)
+    }
+
+    private fun saveEditorPreferences() {
+        requireContext().getSharedPreferences("text_editor_files", Context.MODE_PRIVATE).edit()
+            .putBoolean(preferenceKey("wrap"), wrapWords)
+            .putBoolean(preferenceKey("lines"), lineNumbersEnabled)
+            .putBoolean(preferenceKey("highlight"), syntaxHighlightingEnabled)
+            .putBoolean(preferenceKey("auto"), autoFormatEnabled)
+            .putInt(preferenceKey("size"), editorFontSizeSp)
+            .apply()
+        requireActivity().invalidateOptionsMenu()
+    }
+
+    private fun applyEditorPreferences() {
+        binding.textEdit.setHorizontallyScrolling(!wrapWords)
+        binding.textEdit.setTextSize(TypedValue.COMPLEX_UNIT_SP, editorFontSizeSp.toFloat())
+        binding.markdownText.setTextSize(TypedValue.COMPLEX_UNIT_SP, editorFontSizeSp.toFloat())
+        binding.lineNumbers.setTextSize(TypedValue.COMPLEX_UNIT_SP, editorFontSizeSp.toFloat())
+        binding.lineNumbers.visibility = if (lineNumbersEnabled && !isPreviewVisible) View.VISIBLE else View.GONE
+        val horizontalPadding = requireContext().dpToDimensionPixelSize(16)
+        binding.textEdit.setPadding(
+            if (lineNumbersEnabled) requireContext().dpToDimensionPixelSize(56) else horizontalPadding,
+            horizontalPadding,
+            horizontalPadding,
+            horizontalPadding,
+        )
+        updateLineNumbers()
+        if (this::menuBinding.isInitialized) requireActivity().invalidateOptionsMenu()
+    }
+
+    private fun updateLineNumbers() {
+        if (!lineNumbersEnabled || !this::binding.isInitialized) return
+        val text = binding.textEdit.text ?: return
+        val layout = binding.textEdit.layout
+        val labels = if (layout == null || layout.lineCount <= 1 && text.indexOf('\n') >= 0) {
+            // The first call commonly happens before TextView has measured the loaded document.
+            (1..(text.count { it == '\n' } + 1)).joinToString("\n")
+        } else {
+            var sourceLine = 1
+            buildString {
+                for (visualLine in 0 until layout.lineCount.coerceAtLeast(1)) {
+                    if (visualLine > 0) append('\n')
+                    val start = layout.getLineStart(visualLine)
+                    val startsSourceLine = start == 0 || text.getOrNull(start - 1) == '\n'
+                    if (startsSourceLine) append(sourceLine++)
+                }
+            }
+        }
+        if (binding.lineNumbers.text.toString() != labels) binding.lineNumbers.text = labels
+    }
+
+    private fun updateAutoFormatFilter() {
+        binding.textEdit.filters = binding.textEdit.filters.filterNot { it is MarkdownAutoFormatFilter }
+            .let { filters ->
+                if (autoFormatEnabled && isWritable) filters + MarkdownAutoFormatFilter() else filters
+            }.toTypedArray()
+    }
+
+    private fun toggleSyntaxHighlighting() {
+        syntaxHighlightingEnabled = !syntaxHighlightingEnabled
+        highlighter?.dispose()
+        highlighter = if (syntaxHighlightingEnabled) MarkdownSyntaxHighlighter(binding.textEdit) else null
+        highlighter?.refresh()
+        saveEditorPreferences()
+    }
+
+    private fun showFontSizeDialog() {
+        val sizes = (10..32 step 2).toList()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.text_editor_font_size)
+            .setSingleChoiceItems(sizes.map { "$it sp" }.toTypedArray(), sizes.indexOf(editorFontSizeSp)) { dialog, which ->
+                editorFontSizeSp = sizes[which]
+                applyEditorPreferences()
+                saveEditorPreferences()
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun shareText(text: String, mimeType: String) {
+        val intent = if (mimeType == "text/plain") text.createSendTextIntent() else {
+            Intent(Intent.ACTION_SEND).setType(mimeType).putExtra(Intent.EXTRA_TEXT, text)
+        }
+        requireContext().startActivitySafe(intent.withChooser(getString(R.string.share)))
+    }
+
+    private fun shareSourceFile() {
+        requireContext().startActivitySafe(
+            argsFile.fileProviderUri.createSendStreamIntent(MimeType.guessFromPath(argsFile.toString()))
+                .withChooser(getString(R.string.share))
+        )
+    }
+
+    private fun withSavedDiskVersion(action: () -> Unit) {
+        if (!viewModel.isTextChanged.value) {
+            action()
+            return
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.text_editor_unsaved_title)
+            .setMessage(R.string.text_editor_unsaved_share_message)
+            .setPositiveButton(R.string.save) { _, _ -> pendingAfterSave = action; save() }
+            .setNeutralButton(R.string.text_editor_use_disk_version) { _, _ -> action() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private enum class ExportKind { PDF, IMAGE, SCREENSHOT }
+
+    private fun exportAndShare(kind: ExportKind) {
+        val text = binding.textEdit.text.toString()
+        val width = binding.scrollView.width
+        val viewportHeight = binding.scrollView.height
+        val name = argsFile.fileName.toString()
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    when (kind) {
+                        ExportKind.PDF -> listOf(MarkdownExport.writePdf(requireContext(), name, text))
+                        ExportKind.IMAGE -> MarkdownExport.writeImages(requireContext(), name, text, width)
+                        ExportKind.SCREENSHOT -> MarkdownExport.writeImages(requireContext(), name, text, width, viewportHeight)
+                    }
+                }
+            }.onSuccess { uris ->
+                val mime = if (kind == ExportKind.PDF) MimeType.PDF else MimeType.IMAGE_ANY
+                requireContext().startActivitySafe(
+                    uris.createSendStreamIntent(List(uris.size) { mime }).withChooser(getString(R.string.share))
+                )
+            }.onFailure { showToast(it.toString()) }
+        }
+    }
+
+    private fun shareCalendarEvent() {
+        val intent = Intent(Intent.ACTION_INSERT)
+            .setData(CalendarContract.Events.CONTENT_URI)
+            .putExtra(CalendarContract.Events.TITLE, argsFile.fileName.toString())
+            .putExtra(CalendarContract.Events.DESCRIPTION, binding.textEdit.text.toString())
+        requireContext().startActivitySafe(intent)
+    }
+
+    private fun showDocumentInfo() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val info = withContext(Dispatchers.IO) {
+                val attributes = runCatching { argsFile.readAttributes(BasicFileAttributes::class.java) }.getOrNull()
+                val text = binding.textEdit.text.toString()
+                listOf(
+                    getString(R.string.text_editor_info_path, argsFile.toString()),
+                    getString(R.string.text_editor_info_encoding, viewModel.encoding.value.displayName()),
+                    getString(R.string.text_editor_info_size, attributes?.size() ?: 0L),
+                    getString(R.string.text_editor_info_modified, attributes?.lastModifiedTime()?.toString() ?: "—"),
+                    getString(R.string.text_editor_info_lines, text.lineSequence().count()),
+                    getString(R.string.text_editor_info_words, Regex("\\S+").findAll(text).count()),
+                    getString(R.string.text_editor_info_characters, text.length),
+                ).joinToString("\n")
+            }
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(argsFile.fileName.toString())
+                .setMessage(info)
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
     }
 

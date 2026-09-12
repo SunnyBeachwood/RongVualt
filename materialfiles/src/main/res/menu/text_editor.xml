@@ -20,33 +20,70 @@
 
     <item
         android:id="@+id/action_undo"
+        android:icon="@drawable/text_undo_24dp"
         android:orderInCategory="110"
         android:title="@string/undo"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_redo"
+        android:icon="@drawable/text_redo_24dp"
         android:orderInCategory="120"
         android:title="@string/redo"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_preview"
+        android:icon="@drawable/text_preview_24dp"
         android:orderInCategory="130"
         android:title="@string/markdown_preview"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_edit"
+        android:icon="@drawable/text_edit_24dp"
         android:orderInCategory="140"
         android:title="@string/edit"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 
     <item
         android:id="@+id/action_search"
+        android:icon="@drawable/search_icon_control_normal_24dp"
         android:orderInCategory="150"
         android:title="@string/search"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_editor_settings"
+        android:title="@string/text_editor_file_settings"
+        app:showAsAction="never">
+        <menu>
+            <item android:id="@+id/action_wrap_words" android:checkable="true" android:title="@string/text_editor_wrap_words" />
+            <item android:id="@+id/action_line_numbers" android:checkable="true" android:title="@string/text_editor_line_numbers" />
+            <item android:id="@+id/action_syntax_highlighting" android:checkable="true" android:title="@string/text_editor_syntax_highlighting" />
+            <item android:id="@+id/action_auto_format" android:checkable="true" android:title="@string/text_editor_auto_format" />
+            <item android:id="@+id/action_font_size" android:title="@string/text_editor_font_size" />
+        </menu>
+    </item>
+
+    <item
+        android:id="@+id/action_editor_share"
+        android:title="@string/share"
+        app:showAsAction="never">
+        <menu>
+            <item android:id="@+id/action_share_path" android:title="@string/text_editor_share_path" />
+            <item android:id="@+id/action_share_text" android:title="@string/text_editor_share_text" />
+            <item android:id="@+id/action_share_file" android:title="@string/text_editor_share_file" />
+            <item android:id="@+id/action_share_html" android:title="@string/text_editor_share_html" />
+            <item android:id="@+id/action_share_html_source" android:title="@string/text_editor_share_html_source" />
+            <item android:id="@+id/action_share_pdf" android:title="@string/text_editor_share_pdf" />
+            <item android:id="@+id/action_share_image" android:title="@string/text_editor_share_image" />
+            <item android:id="@+id/action_share_screenshot" android:title="@string/text_editor_share_screenshot" />
+            <item android:id="@+id/action_share_calendar" android:title="@string/text_editor_share_calendar" />
+        </menu>
+    </item>
+
+    <item android:id="@+id/action_editor_info" android:title="@string/text_editor_info" app:showAsAction="never" />
 
     <item
         android:id="@+id/action_reload"

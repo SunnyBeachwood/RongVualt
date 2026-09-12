@@ -5,7 +5,7 @@
             <LinearLayout android:orientation="vertical" android:padding="@dimen/rv_card_padding" android:layout_width="match_parent" android:layout_height="wrap_content">
                 <TextView android:id="@+id/container_name" android:textAppearance="@style/TextAppearance.Material3.HeadlineSmall" android:layout_width="match_parent" android:layout_height="wrap_content" />
                 <com.google.android.material.textfield.TextInputLayout android:id="@+id/password_layout" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_password" app:endIconMode="password_toggle">
-                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/password" android:inputType="textPassword" android:importantForAutofill="noExcludeDescendants" android:layout_width="match_parent" android:layout_height="wrap_content" />
+                    <com.google.android.material.textfield.TextInputEditText android:id="@+id/password" android:inputType="textPassword" android:importantForAutofill="noExcludeDescendants" android:imeOptions="flagNoExtractUi|flagNoPersonalizedLearning" android:saveEnabled="false" android:layout_width="match_parent" android:layout_height="wrap_content" />
                 </com.google.android.material.textfield.TextInputLayout>
                 <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_pim">
                 <com.google.android.material.textfield.TextInputEditText android:id="@+id/pim" android:inputType="number" android:layout_width="match_parent" android:layout_height="wrap_content" />
@@ -26,7 +26,7 @@
         <CheckBox android:id="@+id/protect_hidden_volume" android:text="@string/vc_protect_hidden_volume" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <LinearLayout android:id="@+id/hidden_protection_credentials" android:visibility="gone" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content">
         <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_hidden_password" app:endIconMode="password_toggle">
-            <com.google.android.material.textfield.TextInputEditText android:id="@+id/hidden_password" android:inputType="textPassword" android:importantForAutofill="noExcludeDescendants" android:layout_width="match_parent" android:layout_height="wrap_content" />
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/hidden_password" android:inputType="textPassword" android:importantForAutofill="noExcludeDescendants" android:imeOptions="flagNoExtractUi|flagNoPersonalizedLearning" android:saveEnabled="false" android:layout_width="match_parent" android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
             <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_hidden_pim">
                 <com.google.android.material.textfield.TextInputEditText android:id="@+id/hidden_pim" android:inputType="number" android:importantForAutofill="no" android:layout_width="match_parent" android:layout_height="wrap_content" />
