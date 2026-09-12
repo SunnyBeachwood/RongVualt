@@ -75,6 +75,7 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.clipboardManager
 import me.zhanghai.android.files.compat.checkSelfPermissionCompat
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 import me.zhanghai.android.files.file.FileItem
 import me.zhanghai.android.files.file.JavaFile
 import me.zhanghai.android.files.file.asFileSize
@@ -904,6 +905,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
         inflater.inflate(R.menu.file_list, menu)
+        menu.forceShowIconsCompat()
         // Keep the title/subtitle area visually close to the reference file
         // manager: search and sorting are available from the overflow menu.
         menu.findItem(R.id.action_search).setShowAsAction(
@@ -987,6 +989,8 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         val canAdd = currentSevenZArchiveRoot(pane) != null && archiveEditCapabilities[pane] == true
         menu.findItem(R.id.action_archive_add)?.isVisible = canAdd
         menu.findItem(R.id.action_archive_add_folder)?.isVisible = canAdd
+        menu.findItem(R.id.action_exit_file_manager)?.isVisible =
+            (activity as? FileListActivity)?.canExitToHome == true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
@@ -1099,6 +1103,10 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             }
             R.id.action_archive_add_folder -> {
                 chooseArchiveAdditionFolder(pane)
+                true
+            }
+            R.id.action_exit_file_manager -> {
+                (activity as? FileListActivity)?.exitToApplicationHome()
                 true
             }
             android.R.id.home -> {
@@ -1399,7 +1407,7 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 navigateUp(pane)
             }
             up.isEnabled = currentPath?.let(::parentPath) != null
-            addDockButton(R.drawable.add_icon_white_24dp, R.string.file_list_action_new) {
+            addDockButton(R.drawable.add_icon_control_normal_24dp, R.string.file_list_action_new) {
                 showNewActionPanel(pane)
             }
             paneSwitchButton = addDockButton(
@@ -1537,6 +1545,11 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             iconPadding = 2.dp()
             insetTop = 0
             insetBottom = 0
+            // The dock is one flat surface. Avoid individual raised button
+            // rectangles under dynamic and dark palettes.
+            stateListAnimator = null
+            elevation = 0f
+            translationZ = 0f
             setPadding(2.dp(), 2.dp(), 2.dp(), 2.dp())
             setOnClickListener { action() }
             setTextColor(MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant))
@@ -1860,12 +1873,16 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             columnCount = 2
             useDefaultMargins = false
         }
-        actions.forEach { action ->
+        actions.forEachIndexed { index, action ->
+            val isFullWidthLastItem = actions.size % 2 == 1 && index == actions.lastIndex
+            val column = if (isFullWidthLastItem) 0 else index % 2
+            val span = if (isFullWidthLastItem) 2 else 1
             val button = MaterialButton(requireContext()).apply {
                 layoutParams = android.widget.GridLayout.LayoutParams().apply {
                     width = 0
                     height = 56.dp()
-                    columnSpec = android.widget.GridLayout.spec(android.widget.GridLayout.UNDEFINED, 1f)
+                    rowSpec = android.widget.GridLayout.spec(index / 2)
+                    columnSpec = android.widget.GridLayout.spec(column, span, 1f)
                 }
                 minWidth = 0
                 minimumWidth = 0
@@ -1873,6 +1890,11 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
                 insetBottom = 0
                 cornerRadius = 0
                 gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                maxLines = 2
+                isAllCaps = false
+                iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
+                iconPadding = 12.dp()
+                setPadding(16.dp(), 0, 12.dp(), 0)
                 setText(action.title)
                 backgroundTintList = android.content.res.ColorStateList.valueOf(
                     MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface)
@@ -2226,12 +2248,72 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
     }
 
     private fun extractFiles(pane: PaneId, files: FileItemSet, containingDirectory: Boolean) {
+        // A top-level archive has not been opened yet, so there are no entry
+        // attributes from which to read its encrypted flag. Always offer the
+        // optional passphrase here; choosing "without password" preserves the
+        // direct path for ordinary archives.
+        if (files.isNotEmpty() && files.all { it.isArchiveFile }) {
+            showDirectArchiveExtractionPasswordDialog(files) { password ->
+                startDirectArchiveExtraction(pane, files, containingDirectory, password)
+            }
+            return
+        }
+        startDirectArchiveExtraction(pane, files, containingDirectory, null)
+    }
+
+    private fun startDirectArchiveExtraction(
+        pane: PaneId,
+        files: FileItemSet,
+        containingDirectory: Boolean,
+        password: CharArray?,
+    ) {
         FileJobService.extractZipXtract(
             makePathListForJob(files), model(pane).currentPath,
             createContainingDirectory = containingDirectory,
             context = requireContext(),
+            password = password,
         )
         model(pane).selectFiles(files, false)
+    }
+
+    private fun showDirectArchiveExtractionPasswordDialog(
+        files: FileItemSet,
+        onPassword: (CharArray?) -> Unit,
+    ) {
+        val passwordBinding = ArchivePasswordDialogBinding.inflate(requireContext().layoutInflater)
+        passwordBinding.passwordEdit.configureSecurePasswordInput()
+        val archiveName = files.first().name
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.file_list_extract_password_title)
+            .setMessage(getString(R.string.file_list_extract_password_message_format, archiveName))
+            .setView(passwordBinding.root)
+            .setNegativeButton(android.R.string.cancel) { _, _ ->
+                passwordBinding.passwordEdit.text?.clear()
+            }
+            .setNeutralButton(R.string.file_list_extract_without_password) { _, _ ->
+                passwordBinding.passwordEdit.text?.clear()
+                onPassword(null)
+            }
+            .setPositiveButton(android.R.string.ok, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+            dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                .setOnClickListener {
+                    val value = passwordBinding.passwordEdit.text?.toString().orEmpty()
+                    if (value.isEmpty()) {
+                        passwordBinding.passwordLayout.error =
+                            getString(R.string.file_action_archive_password_error_empty)
+                        return@setOnClickListener
+                    }
+                    passwordBinding.passwordEdit.text?.clear()
+                    dialog.dismiss()
+                    onPassword(value.toCharArray())
+                }
+            passwordBinding.passwordEdit.requestFocus()
+        }
+        dialog.setCanceledOnTouchOutside(false)
+        dialog.show()
     }
 
     private fun extractArchiveEntries(

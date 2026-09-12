@@ -53,18 +53,20 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
         binding!!.fileSystem.adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item,
             listOf(VolumeFileSystem.EXFAT, VolumeFileSystem.FAT).map(VolumeFileSystem::name))
         binding!!.let { screen ->
+            screen.cipher.onItemSelectedListener = descriptionListener { renderOptionDescriptions(screen) }
             screen.kdf.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                 override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                    renderKdfParameters(screen)
+                    renderOptionDescriptions(screen)
                 }
 
                 override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             }
+            screen.fileSystem.onItemSelectedListener = descriptionListener { renderOptionDescriptions(screen) }
             screen.pim.doAfterTextChanged {
                 if (parsePim(it?.toString()) != null) screen.pim.error = null
-                renderKdfParameters(screen)
+                renderOptionDescriptions(screen)
             }
-            renderKdfParameters(screen)
+            renderOptionDescriptions(screen)
             keyfiles.bind(screen.keyfileList, screen.selectKeyfiles, screen.selectKeyfileDirectory, screen.generateKeyfile) {
                 message -> screen.createStatus.text = message
             }
@@ -186,11 +188,24 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
 
     private val app: VeraCryptApplication get() = requireActivity().application as VeraCryptApplication
 
-    private fun renderKdfParameters(screen: FragmentCreateHiddenVolumeBinding) {
+    private fun renderOptionDescriptions(screen: FragmentCreateHiddenVolumeBinding) {
+        screen.cipherDescription.text = creatableCipherHints
+            .getOrElse(screen.cipher.selectedItemPosition) { creatableCipherHints.first() }
+            .description(requireContext())
         val kdf = creatableKdfHints.getOrNull(screen.kdf.selectedItemPosition) ?: KdfHint.PBKDF2_HMAC_SHA512
         val pim = parsePim(screen.pim.text?.toString())
-        screen.kdfParameters.text = pim?.let { kdf.parametersDescription(requireContext(), it) }.orEmpty()
-        screen.kdfParameters.isVisible = kdf == KdfHint.ARGON2ID && pim != null
+        screen.kdfParameters.text = listOfNotNull(
+            kdf.description(requireContext()),
+            pim?.let { kdf.parametersDescription(requireContext(), it) },
+        ).joinToString("\n")
+        val fileSystem = listOf(VolumeFileSystem.EXFAT, VolumeFileSystem.FAT)
+            .getOrElse(screen.fileSystem.selectedItemPosition) { VolumeFileSystem.EXFAT }
+        screen.fileSystemDescription.text = fileSystem.description(requireContext())
+    }
+
+    private fun descriptionListener(render: () -> Unit) = object : AdapterView.OnItemSelectedListener {
+        override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = render()
+        override fun onNothingSelected(parent: AdapterView<*>?) = Unit
     }
 
     private fun renderProgress(

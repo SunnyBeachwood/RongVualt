@@ -15,6 +15,7 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 import android.view.MenuItem
 import android.view.SubMenu
 import android.view.View
@@ -222,6 +223,7 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         super.onCreateOptionsMenu(menu, inflater)
         menuBinding = MenuBinding.inflate(menu, inflater)
+        menu.forceShowIconsCompat()
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -431,6 +433,10 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
                 contentDescription = getString(label)
                 ViewCompat.setTooltipText(this, getString(label))
                 isAllCaps = false
+                setOnLongClickListener {
+                    showToast(getString(label))
+                    true
+                }
                 minWidth = requireContext().dpToDimensionPixelSize(48)
                 minimumHeight = 0
                 iconGravity = MaterialButton.ICON_GRAVITY_TEXT_START
@@ -527,6 +533,12 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
         binding.textEdit.setTextSize(TypedValue.COMPLEX_UNIT_SP, editorFontSizeSp.toFloat())
         binding.markdownText.setTextSize(TypedValue.COMPLEX_UNIT_SP, editorFontSizeSp.toFloat())
         binding.lineNumbers.setTextSize(TypedValue.COMPLEX_UNIT_SP, editorFontSizeSp.toFloat())
+        binding.lineNumbers.typeface = binding.textEdit.typeface
+        binding.lineNumbers.includeFontPadding = binding.textEdit.includeFontPadding
+        binding.lineNumbers.setLineSpacing(
+            binding.textEdit.lineSpacingExtra,
+            binding.textEdit.lineSpacingMultiplier,
+        )
         binding.lineNumbers.visibility = if (lineNumbersEnabled && !isPreviewVisible) View.VISIBLE else View.GONE
         val horizontalPadding = requireContext().dpToDimensionPixelSize(16)
         binding.textEdit.setPadding(
@@ -553,7 +565,10 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
                     if (visualLine > 0) append('\n')
                     val start = layout.getLineStart(visualLine)
                     val startsSourceLine = start == 0 || text.getOrNull(start - 1) == '\n'
-                    if (startsSourceLine) append(sourceLine++)
+                    // A wrapped visual row must keep its source number visible
+                    // instead of producing an apparently missing gutter label.
+                    append(sourceLine)
+                    if (startsSourceLine) sourceLine++
                 }
             }
         }

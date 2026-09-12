@@ -63,6 +63,7 @@ import me.zhanghai.android.files.app.application
 import me.zhanghai.android.files.app.clipboardManager
 import me.zhanghai.android.files.compat.checkSelfPermissionCompat
 import me.zhanghai.android.files.compat.setGroupDividerEnabledCompat
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 import me.zhanghai.android.files.databinding.FileListFragmentAppBarIncludeBinding
 import me.zhanghai.android.files.databinding.FileListFragmentBinding
 import me.zhanghai.android.files.databinding.FileListFragmentBottomBarIncludeBinding
@@ -433,6 +434,7 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         super.onCreateOptionsMenu(menu, inflater)
 
         menuBinding = MenuBinding.inflate(menu, inflater)
+        menu.forceShowIconsCompat()
         menuBinding.viewSortItem.subMenu!!.setGroupDividerEnabledCompat(true)
         setUpSearchView()
     }
@@ -492,6 +494,8 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
         menu.findItem(R.id.action_layout_mode)?.isVisible = false
         menu.findItem(R.id.action_set_secondary_start)?.isVisible = false
         menu.findItem(R.id.action_selection_more)?.isVisible = false
+        menu.findItem(R.id.action_exit_file_manager)?.isVisible =
+            (activity as? FileListActivity)?.canExitToHome == true
 
         updateViewSortMenuItems()
         updateSelectAllMenuItem()
@@ -604,6 +608,10 @@ class FileListFragment : Fragment(), BreadcrumbLayout.Listener, FileListAdapter.
             }
             R.id.action_create_shortcut -> {
                 createShortcut()
+                true
+            }
+            R.id.action_exit_file_manager -> {
+                (activity as? FileListActivity)?.exitToApplicationHome()
                 true
             }
             else -> super.onOptionsItemSelected(item)

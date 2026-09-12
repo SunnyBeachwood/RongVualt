@@ -101,6 +101,9 @@
     <string name="file_action_archive_password_title">需要密码</string>
     <string name="file_action_archive_password_message_format">“%1$s”受密码保护。</string>
     <string name="file_action_archive_password_error_empty">密码不能为空</string>
+    <string name="file_list_extract_password_title">压缩包密码</string>
+    <string name="file_list_extract_password_message_format">请输入“%1$s”的密码，或选择不使用密码继续。</string>
+    <string name="file_list_extract_without_password">不使用密码</string>
 
     <plurals name="file_job_archive_scan_notification_title_format">
         <item quantity="other">正在准备压缩 %1$,d 个文件（%2$s）</item>
@@ -705,9 +708,17 @@
     <string name="ftp_server_writable_title">允许写入</string>
 
     <string name="settings_title">设置</string>
+    <string name="file_list_action_exit_file_manager">退出文件管理器</string>
     <string name="settings_interface_title">界面</string>
     <string name="settings_locale_title">语言</string>
     <string name="settings_theme_color_title">主题色</string>
+    <string name="settings_appearance_mode_title">视觉风格</string>
+    <string-array name="settings_appearance_mode_entries">
+        <item>标准风格</item>
+        <item>质感设计 3</item>
+        <item>动态壁纸配色</item>
+        <item>黑色夜间模式</item>
+    </string-array>
     <string name="settings_theme_color_summary">应用中最常见的颜色</string>
     <string name="settings_theme_color_source_title">配色来源</string>
     <string-array name="settings_theme_color_source_entries">

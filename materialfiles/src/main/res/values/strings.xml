@@ -105,6 +105,9 @@
     <string name="file_action_archive_password_title">Password required</string>
     <string name="file_action_archive_password_message_format">“%1$s” is password-protected.</string>
     <string name="file_action_archive_password_error_empty">Password cannot be empty</string>
+    <string name="file_list_extract_password_title">Archive password</string>
+    <string name="file_list_extract_password_message_format">Enter a password for “%1$s”, or continue without one.</string>
+    <string name="file_list_extract_without_password">Without password</string>
 
     <plurals name="file_job_archive_scan_notification_title_format">
         <item quantity="one">Preparing to compress %1$,d file (%2$s)</item>
@@ -853,9 +856,17 @@
     <string name="ftp_server_notification_text_no_local_inet_address" translatable="false">@string/ftp_server_url_summary_no_local_inet_address</string>
 
     <string name="settings_title">Settings</string>
+    <string name="file_list_action_exit_file_manager">Exit file manager</string>
     <string name="settings_interface_title">Interface</string>
     <string name="settings_locale_title">Language</string>
     <string name="settings_theme_color_title">Theme color</string>
+    <string name="settings_appearance_mode_title">Visual style</string>
+    <string-array name="settings_appearance_mode_entries">
+        <item>Standard</item>
+        <item>Material 3</item>
+        <item>Wallpaper colors</item>
+        <item>Black night mode</item>
+    </string-array>
     <string name="settings_theme_color_summary">Color that appears most frequently in the app</string>
     <string name="settings_theme_color_source_title">Color source</string>
     <string-array name="settings_theme_color_source_entries">

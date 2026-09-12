@@ -43,6 +43,15 @@
     <string name="pref_key_locale">key_locale</string>
     <string name="pref_key_theme_color">key_theme_color</string>
     <string name="pref_default_value_theme_color">0</string>
+    <string name="pref_key_appearance_mode">key_appearance_mode</string>
+    <!-- AppearanceMode.DYNAMIC -->
+    <string name="pref_default_value_appearance_mode">2</string>
+    <string-array name="pref_entry_values_appearance_mode">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+    </string-array>
     <string name="pref_key_theme_color_source">key_theme_color_source</string>
     <!-- ThemeColorSource.DYNAMIC -->
     <string name="pref_default_value_theme_color_source">0</string>

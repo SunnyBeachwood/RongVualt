@@ -5,6 +5,7 @@ import com.sovworks.eds.android.R
 import org.eds.veracrypt.domain.CipherHint
 import org.eds.veracrypt.domain.KdfHint
 import org.eds.veracrypt.domain.MAX_PIM_VALUE
+import org.eds.veracrypt.domain.VolumeFileSystem
 
 /** Central capability lists used by every crypto-related screen. */
 internal val openCipherHints: List<CipherHint> =
@@ -49,6 +50,28 @@ internal fun KdfHint.label(context: Context): String = context.getString(
         KdfHint.PBKDF2_HMAC_STREEBOG -> R.string.vc_kdf_pbkdf2_streebog
         KdfHint.ARGON2ID -> R.string.vc_kdf_argon2id
     },
+)
+
+internal fun CipherHint.description(context: Context): String = when (this) {
+    CipherHint.AES -> context.getString(R.string.vc_cipher_description_aes)
+    CipherHint.SERPENT -> context.getString(R.string.vc_cipher_description_serpent)
+    CipherHint.TWOFISH -> context.getString(R.string.vc_cipher_description_twofish)
+    CipherHint.CAMELLIA -> context.getString(R.string.vc_cipher_description_camellia)
+    else -> context.getString(R.string.vc_cipher_description_cascade, label(context))
+}
+
+internal fun KdfHint.description(context: Context): String = when (this) {
+    KdfHint.ARGON2ID -> context.getString(R.string.vc_kdf_description_argon2id)
+    KdfHint.AUTO -> context.getString(R.string.vc_kdf_description_auto)
+    else -> context.getString(R.string.vc_kdf_description_pbkdf2, label(context))
+}
+
+internal fun VolumeFileSystem.description(context: Context): String = context.getString(
+    when (this) {
+        VolumeFileSystem.EXFAT -> R.string.vc_filesystem_description_exfat
+        VolumeFileSystem.FAT -> R.string.vc_filesystem_description_fat
+        VolumeFileSystem.NTFS -> R.string.vc_filesystem_description_ntfs
+    }
 )
 
 internal fun parsePim(raw: String?): Int? {

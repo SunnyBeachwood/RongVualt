@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import androidx.annotation.AttrRes
 import androidx.annotation.StyleRes
 import androidx.appcompat.widget.PopupMenu
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 import androidx.core.view.isVisible
 import java8.nio.file.Path
 import me.zhanghai.android.files.R
@@ -160,7 +161,10 @@ class BreadcrumbLayout : HorizontalScrollView {
         for (index in itemsLayout.childCount..<data.paths.size) {
             val binding = BreadcrumbItemBinding.inflate(context.layoutInflater, itemsLayout, false)
             val menu = PopupMenu(popupContext, binding.root)
-                .apply { inflate(R.menu.file_list_breadcrumb) }
+                .apply {
+                    inflate(R.menu.file_list_breadcrumb)
+                    forceShowIconsCompat()
+                }
             binding.root.setOnLongClickListener {
                 menu.show()
                 true

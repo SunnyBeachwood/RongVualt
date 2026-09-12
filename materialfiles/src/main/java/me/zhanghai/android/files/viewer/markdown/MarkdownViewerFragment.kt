@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
@@ -98,6 +99,7 @@ class MarkdownViewerFragment : Fragment() {
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.markdown_viewer, menu)
+        menu.forceShowIconsCompat()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {

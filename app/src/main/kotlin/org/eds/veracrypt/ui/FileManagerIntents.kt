@@ -21,6 +21,7 @@ object FileManagerIntents {
         // user enabled all-files access and produces a useful fallback otherwise.
         val sharedStorage = Paths.get(Environment.getExternalStorageDirectory().absolutePath)
         return FileListActivity.createViewIntent(sharedStorage)
+            .putExtra(FileListActivity.EXTRA_SHOW_EXIT_TO_HOME, true)
             .putExtra(EXTRA_LAUNCH_MODE, FileManagerLaunchMode.BROWSE.name)
     }
 
@@ -29,6 +30,7 @@ object FileManagerIntents {
             "Unlocked-volume browser requires a live EDS tree URI"
         }
         return FileListActivity.createViewIntent(treeUri.createDocumentTreeRootPath())
+            .putExtra(FileListActivity.EXTRA_SHOW_EXIT_TO_HOME, true)
             .putExtra(EXTRA_LAUNCH_MODE, FileManagerLaunchMode.OPEN_UNLOCKED_VOLUME.name)
     }
 

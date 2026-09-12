@@ -29,6 +29,7 @@ import org.eds.veracrypt.documents.FileTransferManager
 import org.eds.veracrypt.documents.UnlockedVolumeService
 import me.zhanghai.android.files.ftpserver.FtpServerService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 
 class ContainerCatalogActivity : AppCompatActivity() {
     private lateinit var binding: ActivityContainerCatalogBinding
@@ -71,6 +72,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
         menuInflater.inflate(R.menu.main_menu, menu)
+        menu.forceShowIconsCompat()
         menu.findItem(R.id.menu_clear_catalog_on_exit)?.isChecked = app.catalog.clearOnExitEnabled()
         return true
     }

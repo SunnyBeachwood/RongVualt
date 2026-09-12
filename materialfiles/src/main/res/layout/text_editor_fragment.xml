@@ -80,6 +80,7 @@
                     android:paddingTop="16dp"
                     android:paddingEnd="6dp"
                     android:textColor="?colorOnSurfaceVariant"
+                    android:textAppearance="?textAppearanceListItemSecondary"
                     android:visibility="gone" />
 
                 <me.zhanghai.android.fastscroll.FastScrollNestedScrollView

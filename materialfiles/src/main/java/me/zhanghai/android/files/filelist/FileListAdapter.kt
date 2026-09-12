@@ -16,6 +16,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -330,7 +331,10 @@ class FileListAdapter(
                 }
             }
             popupMenu = PopupMenu(itemLayout.context, itemLayout)
-                .apply { inflate(R.menu.file_item) }
+                .apply {
+                    inflate(R.menu.file_item)
+                    forceShowIconsCompat()
+                }
         }
     }
 

@@ -25,6 +25,9 @@ abstract class AppActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Resolve the app-local night policy before looking up the custom
+        // theme, so a night-mode recreation reads values-night resources.
+        delegate
         CustomThemeHelper.apply(this)
 
         super.onCreate(savedInstanceState)

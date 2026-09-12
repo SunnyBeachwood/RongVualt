@@ -74,33 +74,19 @@ object CustomThemeHelper {
         // producing `...Material3.Material3` when the setting is enabled and
         // map that base back to the legacy family when an existing user has
         // explicitly disabled Material 3.
-        val customThemeBaseName = if (Settings.MATERIAL_DESIGN_3.valueCompat) {
-            val material3Base = if (baseThemeName.contains(material3ThemeName)) baseThemeName
+        val legacyBaseName = if (baseThemeName.contains(material3ThemeName)) {
+            baseThemeName.replaceFirst(material3ThemeName, defaultThemeName)
+        } else baseThemeName
+        val material3BaseName = if (baseThemeName.contains(material3ThemeName)) baseThemeName
             else baseThemeName.replaceFirst(defaultThemeName, material3ThemeName)
-            // Material 3's DynamicColors parent otherwise ignores the app's
-            // selected accent and leaves all surfaces tied to the system seed.
-            // Keep the existing shared black overlay, while normal themes use
-            // the matching low-saturation surface overlay below.
-            if (Settings.BLACK_NIGHT_MODE.valueCompat ||
-                Settings.THEME_COLOR_SOURCE.valueCompat == ThemeColorSource.DYNAMIC) {
-                material3Base
-            } else {
-                val themeColorName =
-                    resources.getResourceEntryName(Settings.THEME_COLOR.valueCompat.resourceId)
-                "$material3Base.$themeColorName"
-            }
-        } else {
-            val legacyBaseName = if (baseThemeName.contains(material3ThemeName)) {
-                baseThemeName.replaceFirst(material3ThemeName, defaultThemeName)
-            } else {
-                baseThemeName
-            }
-            val themeColorName =
-                resources.getResourceEntryName(Settings.THEME_COLOR.valueCompat.resourceId)
-            "$legacyBaseName.$themeColorName"
+        val themeColorName =
+            resources.getResourceEntryName(Settings.THEME_COLOR.valueCompat.resourceId)
+        val customThemeName = when (Settings.APPEARANCE_MODE.valueCompat) {
+            AppearanceMode.STANDARD -> "$legacyBaseName.$themeColorName"
+            AppearanceMode.MATERIAL3 -> "$material3BaseName.$themeColorName"
+            AppearanceMode.DYNAMIC -> "$legacyBaseName.Dynamic"
+            AppearanceMode.BLACK -> "$legacyBaseName.$themeColorName.Black"
         }
-        val customThemeName = customThemeBaseName +
-            if (Settings.BLACK_NIGHT_MODE.valueCompat) ".Black" else ""
         return resources.getIdentifier(customThemeName, null, null)
     }
 

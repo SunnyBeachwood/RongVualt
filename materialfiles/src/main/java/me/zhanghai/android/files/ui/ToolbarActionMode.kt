@@ -13,6 +13,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.MenuRes
 import androidx.annotation.StringRes
 import androidx.appcompat.widget.Toolbar
+import me.zhanghai.android.files.compat.forceShowIconsCompat
 
 abstract class ToolbarActionMode(
     private val bar: ViewGroup,
@@ -84,6 +85,7 @@ abstract class ToolbarActionMode(
         toolbar.menu.clear()
         if (menuRes != 0) {
             toolbar.inflateMenu(menuRes)
+            toolbar.menu.forceShowIconsCompat()
         }
     }
 

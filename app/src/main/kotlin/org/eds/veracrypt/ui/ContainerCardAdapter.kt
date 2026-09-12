@@ -59,9 +59,14 @@ internal class ContainerCardAdapter(
         private fun showMore(item: ContainerCardUiModel) {
             PopupMenu(binding.root.context, binding.moreActions).apply {
                 if (item.canShowDetails) menu.add(0, MENU_DETAILS, 0, R.string.rv_container_details)
+                    .setIcon(R.drawable.ic_menu_info)
                 if (item.canCreateHiddenVolume) menu.add(0, MENU_CREATE_HIDDEN, 1, R.string.vc_create_hidden_volume)
+                    .setIcon(R.drawable.ic_create_container)
                 if (item.canChangeCredentials) menu.add(0, MENU_CHANGE_CREDENTIALS, 2, R.string.vc_change_credentials)
+                    .setIcon(R.drawable.ic_menu_clean)
                 menu.add(0, MENU_REMOVE, 3, R.string.vc_remove_container)
+                    .setIcon(R.drawable.ic_menu_delete)
+                setForceShowIcon(true)
                 setOnMenuItemClickListener { menu ->
                     when (menu.itemId) {
                         MENU_DETAILS -> onDetails(item)

@@ -69,9 +69,22 @@ class FileListActivity : AppActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
+    val canExitToHome: Boolean
+        get() = intent.getBooleanExtra(EXTRA_SHOW_EXIT_TO_HOME, false)
+
+    fun exitToApplicationHome() {
+        packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            startActivity(this)
+        }
+        finish()
+    }
+
     companion object {
         const val EXTRA_EXTERNAL_CREATE_ARCHIVE =
             "me.zhanghai.android.files.filelist.extra.EXTERNAL_CREATE_ARCHIVE"
+        const val EXTRA_SHOW_EXIT_TO_HOME =
+            "me.zhanghai.android.files.filelist.extra.SHOW_EXIT_TO_HOME"
 
         fun createViewIntent(path: Path): Intent =
             FileListActivity::class.createIntent()

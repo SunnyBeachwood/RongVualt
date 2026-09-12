@@ -24,6 +24,7 @@ import me.zhanghai.android.files.storage.PrimaryStorageVolume
 import me.zhanghai.android.files.storage.Storage
 import me.zhanghai.android.files.theme.custom.ThemeColor
 import me.zhanghai.android.files.theme.custom.ThemeColorSource
+import me.zhanghai.android.files.theme.custom.AppearanceMode
 import me.zhanghai.android.files.theme.night.NightMode
 import java.io.File
 
@@ -128,6 +129,8 @@ object Settings {
             R.string.pref_key_theme_color, R.string.pref_default_value_theme_color,
             ThemeColor::class.java
         )
+
+    val APPEARANCE_MODE: SettingLiveData<AppearanceMode> = AppearanceModeSettingLiveData()
 
     val THEME_COLOR_SOURCE: SettingLiveData<ThemeColorSource> =
         EnumSettingLiveData(

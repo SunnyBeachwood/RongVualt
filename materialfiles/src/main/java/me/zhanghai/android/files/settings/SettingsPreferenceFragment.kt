@@ -11,6 +11,7 @@ import me.zhanghai.android.files.R
 import me.zhanghai.android.files.theme.custom.CustomThemeHelper
 import me.zhanghai.android.files.theme.custom.ThemeColor
 import me.zhanghai.android.files.theme.custom.ThemeColorSource
+import me.zhanghai.android.files.theme.custom.AppearanceMode
 import me.zhanghai.android.files.theme.night.NightMode
 import me.zhanghai.android.files.theme.night.NightModeHelper
 import me.zhanghai.android.files.ui.PreferenceFragmentCompat
@@ -64,38 +65,26 @@ class SettingsPreferenceFragment : PreferenceFragmentCompat() {
         //Settings.NIGHT_MODE.observe(viewLifecycleOwner) { NightModeHelper.sync() }
         //Settings.BLACK_NIGHT_MODE.observe(viewLifecycleOwner) { CustomThemeHelper.sync() }
         Settings.THEME_COLOR.observe(viewLifecycleOwner, this::onThemeColorChanged)
-        Settings.THEME_COLOR_SOURCE.observe(viewLifecycleOwner, this::onThemeColorSourceChanged)
-        Settings.MATERIAL_DESIGN_3.observe(viewLifecycleOwner, this::onMaterialDesign3Changed)
+        Settings.APPEARANCE_MODE.observe(viewLifecycleOwner, this::onAppearanceModeChanged)
         Settings.NIGHT_MODE.observe(viewLifecycleOwner, this::onNightModeChanged)
-        Settings.BLACK_NIGHT_MODE.observe(viewLifecycleOwner, this::onBlackNightModeChanged)
     }
 
     private fun onThemeColorChanged(themeColor: ThemeColor) {
         CustomThemeHelper.sync()
     }
 
-    private fun onThemeColorSourceChanged(themeColorSource: ThemeColorSource) {
-        updateThemeColorPreferenceVisibility()
-        CustomThemeHelper.sync()
-    }
-
-    private fun onMaterialDesign3Changed(isMaterialDesign3: Boolean) {
+    private fun onAppearanceModeChanged(appearanceMode: AppearanceMode) {
         updateThemeColorPreferenceVisibility()
         CustomThemeHelper.sync()
     }
 
     private fun updateThemeColorPreferenceVisibility() {
         if (!this::themeColorPreference.isInitialized) return
-        themeColorPreference.isVisible = !Settings.MATERIAL_DESIGN_3.valueCompat ||
-            Settings.THEME_COLOR_SOURCE.valueCompat == ThemeColorSource.MANUAL
+        themeColorPreference.isVisible = Settings.APPEARANCE_MODE.valueCompat != AppearanceMode.DYNAMIC
     }
 
     private fun onNightModeChanged(nightMode: NightMode) {
         NightModeHelper.sync()
-    }
-
-    private fun onBlackNightModeChanged(blackNightMode: Boolean) {
-        CustomThemeHelper.sync()
     }
 
     override fun onResume() {

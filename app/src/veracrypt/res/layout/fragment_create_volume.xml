@@ -14,21 +14,27 @@
         <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="@string/vc_pim">
             <com.google.android.material.textfield.TextInputEditText android:id="@+id/pim" android:inputType="number" android:importantForAutofill="no" android:layout_width="match_parent" android:layout_height="wrap_content" />
         </com.google.android.material.textfield.TextInputLayout>
+        <TextView android:text="@string/vc_cipher" android:textAppearance="@style/TextAppearance.Material3.TitleMedium" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <Spinner android:id="@+id/cipher" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <TextView android:id="@+id/cipher_description" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <TextView android:text="@string/vc_kdf" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <Spinner android:id="@+id/kdf" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <TextView android:id="@+id/kdf_parameters" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <TextView android:id="@+id/kdf_parameters" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <TextView android:text="@string/vc_file_system" android:textAppearance="@style/TextAppearance.Material3.TitleMedium" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <Spinner android:id="@+id/file_system" android:layout_width="match_parent" android:layout_height="wrap_content" />
+        <TextView android:id="@+id/file_system_description" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <TextView android:text="@string/vc_keyfiles" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content">
-            <Button android:id="@+id/select_keyfiles" android:text="@string/vc_select_keyfiles" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <Button android:id="@+id/select_keyfile_directory" android:text="@string/vc_select_keyfile_directory" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <Button android:id="@+id/generate_keyfile" android:text="@string/vc_generate_keyfile" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-        </LinearLayout>
+        <GridLayout android:columnCount="2" android:layout_width="match_parent" android:layout_height="wrap_content">
+            <Button android:id="@+id/select_keyfiles" android:text="@string/vc_select_keyfiles" android:maxLines="2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" />
+            <Button android:id="@+id/select_keyfile_directory" android:text="@string/vc_select_keyfile_directory" android:maxLines="2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" />
+            <Button android:id="@+id/generate_keyfile" android:text="@string/vc_generate_keyfile" android:maxLines="2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnSpan="2" android:layout_columnWeight="1" />
+        </GridLayout>
         <LinearLayout android:id="@+id/keyfile_list" android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <ProgressBar android:id="@+id/create_progress" style="?android:attr/progressBarStyleHorizontal" android:visibility="gone" android:layout_width="match_parent" android:layout_height="wrap_content" />
         <TextView android:id="@+id/create_status" android:layout_width="match_parent" android:layout_height="wrap_content" />
-        <Button android:id="@+id/cancel_create" android:visibility="gone" android:text="@string/vc_cancel_creation" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-        <Button android:id="@+id/create_volume" android:text="@string/vc_create_volume" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        <GridLayout android:columnCount="2" android:layout_width="match_parent" android:layout_height="wrap_content">
+            <Button android:id="@+id/cancel_create" android:visibility="gone" android:text="@string/vc_cancel_creation" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" />
+            <Button android:id="@+id/create_volume" android:text="@string/vc_create_volume" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_columnWeight="1" />
+        </GridLayout>
     </LinearLayout>
 </ScrollView>
