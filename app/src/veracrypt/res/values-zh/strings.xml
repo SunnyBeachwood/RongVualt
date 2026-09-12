@@ -246,4 +246,5 @@ PIM 范围为 0 到 2147468，且必须与容器匹配。支持选择 6 种 KDF�
     <string name="vc_volume_kind_normal">外层卷</string>
     <string name="vc_volume_kind_hidden">隐藏卷</string>
     <string name="vc_navigation_volume_subtitle">%1$s · %2$s</string>
+    <string name="vc_navigation_volume_subtitle_with_capacity">%1$s · %2$s · %3$s</string>
 </resources>

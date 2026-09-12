@@ -2,6 +2,7 @@ package org.eds.veracrypt.documents
 
 import android.content.Context
 import android.provider.DocumentsContract
+import android.text.format.Formatter
 import me.zhanghai.android.files.coil.clearFilePreviewMemoryCache
 import me.zhanghai.android.files.ftpserver.FtpServerService
 import me.zhanghai.android.files.ftpserver.FtpShareRootStore
@@ -158,21 +159,33 @@ internal object UnlockedVolumeService {
         val context = applicationContext ?: return
         val roots = volumes.volumes.value.mapNotNull { volume ->
             val treeUri = rootTreeUri(volume.session) ?: return@mapNotNull null
+            val state = if (volume.session.isReadOnly) {
+                context.getString(com.sovworks.eds.android.R.string.rv_state_read_only)
+            } else {
+                context.getString(com.sovworks.eds.android.R.string.rv_state_unlocked)
+            }
+            val kind = if (volume.session.volumeKind == org.eds.veracrypt.domain.VolumeKind.HIDDEN) {
+                context.getString(com.sovworks.eds.android.R.string.vc_volume_kind_hidden)
+            } else {
+                context.getString(com.sovworks.eds.android.R.string.vc_volume_kind_normal)
+            }
+            val subtitle = volume.logicalSizeBytes?.let { logicalSize ->
+                context.getString(
+                    com.sovworks.eds.android.R.string.vc_navigation_volume_subtitle_with_capacity,
+                    kind,
+                    Formatter.formatFileSize(context, logicalSize),
+                    state,
+                )
+            } ?: context.getString(
+                com.sovworks.eds.android.R.string.vc_navigation_volume_subtitle, kind, state
+            )
             RuntimeNavigationRoot(
                 id = volume.id.toString(),
                 treeUri = treeUri,
                 path = treeUri.createDocumentTreeRootPath(),
                 title = volume.displayName,
-                subtitle = context.getString(
-                    com.sovworks.eds.android.R.string.vc_navigation_volume_subtitle,
-                    if (volume.session.volumeKind == org.eds.veracrypt.domain.VolumeKind.HIDDEN) {
-                        context.getString(com.sovworks.eds.android.R.string.vc_volume_kind_hidden)
-                    } else context.getString(com.sovworks.eds.android.R.string.vc_volume_kind_normal),
-                    if (volume.session.isReadOnly) {
-                        context.getString(com.sovworks.eds.android.R.string.rv_state_read_only)
-                    } else context.getString(com.sovworks.eds.android.R.string.rv_state_unlocked),
-                ),
-                iconRes = com.sovworks.eds.android.R.drawable.ic_unlocked_container,
+                subtitle = subtitle,
+                iconRes = com.sovworks.eds.android.R.drawable.ic_container_unlocked,
                 isReadOnly = volume.session.isReadOnly,
                 onAccess = volume.session::touch,
             )

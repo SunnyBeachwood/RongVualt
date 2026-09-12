@@ -20,13 +20,20 @@ class UnlockedVolumeManager(
     private val mutableVolumes = MutableStateFlow<List<UnlockedVolume>>(emptyList())
     val volumes: StateFlow<List<UnlockedVolume>> = mutableVolumes.asStateFlow()
 
-    fun add(containerId: UUID, displayName: String, session: VolumeSession): UnlockedVolume {
+    fun add(
+        containerId: UUID,
+        displayName: String,
+        session: VolumeSession,
+        logicalSizeBytes: Long? = null,
+    ): UnlockedVolume {
         require(displayName.isNotBlank()) { "Unlocked volume display name is required" }
         val volume = synchronized(lock) {
             check(entries.values.none { it.containerId == containerId }) {
                 "A container can expose only one unlocked volume at a time"
             }
-            val volume = UnlockedVolume(UUID.randomUUID(), containerId, displayName, session)
+            val volume = UnlockedVolume(
+                UUID.randomUUID(), containerId, displayName, session, logicalSizeBytes
+            )
             entries[volume.id] = volume
             publishLocked()
             volume
@@ -74,10 +81,16 @@ class UnlockedVolumeManager(
     }
 
     /** Atomically puts a dependent hidden session behind the previous root ID. */
-    internal fun replace(detached: UnlockedVolume, hiddenSession: VolumeSession): UnlockedVolume {
+    internal fun replace(
+        detached: UnlockedVolume,
+        hiddenSession: VolumeSession,
+        logicalSizeBytes: Long? = detached.logicalSizeBytes,
+    ): UnlockedVolume {
         val replacement = synchronized(lock) {
             check(entries[detached.id] == null) { "A root already occupies the detached volume ID" }
-            val replacement = UnlockedVolume(detached.id, detached.containerId, detached.displayName, hiddenSession)
+            val replacement = UnlockedVolume(
+                detached.id, detached.containerId, detached.displayName, hiddenSession, logicalSizeBytes
+            )
             entries[replacement.id] = replacement
             publishLocked()
             replacement
@@ -169,4 +182,6 @@ data class UnlockedVolume internal constructor(
     internal val containerId: UUID,
     val displayName: String,
     val session: VolumeSession,
+    /** Logical capacity from the decrypted volume header; never a host-storage measurement. */
+    val logicalSizeBytes: Long?,
 )

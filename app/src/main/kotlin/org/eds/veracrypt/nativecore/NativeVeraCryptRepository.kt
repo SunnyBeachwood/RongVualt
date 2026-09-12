@@ -73,7 +73,9 @@ class NativeVeraCryptRepository(
             val session = opener.open(Uri.parse(entry.uri), options, credentials, entry.id.toString(), combinedProgress)
             try {
                 combinedProgress.onStage(VolumeUnlockStage.REGISTERING_PROVIDER)
-                UnlockedVolumeService.volumes.add(entry.id, entry.displayName, session)
+                UnlockedVolumeService.volumes.add(
+                    entry.id, entry.displayName, session, logicalSizeBytes(session)
+                )
                 UnlockedVolumeService.notifyRootsChanged()
                 session
             } catch (error: Throwable) {
@@ -99,6 +101,13 @@ class NativeVeraCryptRepository(
         override fun isCancellationRequested() = delegate.isCancellationRequested()
     }
 
+    private fun logicalSizeBytes(session: VolumeSession): Long? =
+        (session as? ManagedVolumeSession)?.let { managed ->
+            runCatching { VcCore.volumeInfo(managed.nativeHandle).logicalSize }
+                .getOrNull()
+                ?.takeIf { it > 0L }
+        }
+
     override suspend fun createNormal(
         container: Uri,
         options: VolumeCreateOptions,
@@ -119,7 +128,9 @@ class NativeVeraCryptRepository(
             Uri.parse(entry.uri), options, credentials, entry.id.toString(), nativeProgress(progress),
         )
         try {
-            UnlockedVolumeService.volumes.add(entry.id, entry.displayName, session)
+            UnlockedVolumeService.volumes.add(
+                entry.id, entry.displayName, session, logicalSizeBytes(session)
+            )
             UnlockedVolumeService.notifyRootsChanged()
             session
         } catch (error: Throwable) {
@@ -135,7 +146,9 @@ class NativeVeraCryptRepository(
     ): VolumeSession = UnlockedVolumeService.withForegroundOperation {
         val session = opener.createNormal(Uri.parse(entry.uri), options, credentials, entry.id.toString())
         try {
-            UnlockedVolumeService.volumes.add(entry.id, entry.displayName, session)
+            UnlockedVolumeService.volumes.add(
+                entry.id, entry.displayName, session, logicalSizeBytes(session)
+            )
             UnlockedVolumeService.notifyRootsChanged()
             session
         } catch (error: Throwable) {
@@ -265,7 +278,7 @@ class NativeVeraCryptRepository(
             ?: throw IllegalStateException("The outer volume is not an active catalog session")
         try {
             val hidden = createHiddenInternal(outerSession, options, credentials, NativeCreateProgress.inert())
-            UnlockedVolumeService.volumes.replace(detached, hidden)
+            UnlockedVolumeService.volumes.replace(detached, hidden, logicalSizeBytes(hidden))
             UnlockedVolumeService.notifyRootsChanged()
             hidden
         } catch (error: Throwable) {
@@ -286,7 +299,7 @@ class NativeVeraCryptRepository(
             ?: throw IllegalStateException("The outer volume is not an active catalog session")
         try {
             val hidden = createHiddenInternal(outerSession, options, credentials, nativeProgress(progress))
-            UnlockedVolumeService.volumes.replace(detached, hidden)
+            UnlockedVolumeService.volumes.replace(detached, hidden, logicalSizeBytes(hidden))
             UnlockedVolumeService.notifyRootsChanged()
             hidden
         } catch (error: Throwable) {
