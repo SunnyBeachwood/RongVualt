@@ -37,7 +37,7 @@ import me.zhanghai.android.files.util.fadeInUnsafe
 import me.zhanghai.android.files.util.fadeOutUnsafe
 import me.zhanghai.android.files.util.layoutInflater
 import me.zhanghai.android.files.util.shortAnimTime
-import kotlin.math.max
+import kotlin.math.min
 
 class ImageViewerAdapter(
     private val lifecycleOwner: LifecycleOwner,
@@ -102,6 +102,7 @@ class ImageViewerAdapter(
     ) {
         if (!imageInfo.shouldUseLargeImageView) {
             binding.image.apply {
+                scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
                 isVisible = true
                 load(path to imageInfo.attributes) {
                     size(Size.ORIGINAL)
@@ -116,6 +117,9 @@ class ImageViewerAdapter(
             binding.largeImage.apply {
                 setDoubleTapZoomDuration(300)
                 orientation = SubsamplingScaleImageView.ORIENTATION_USE_EXIF
+                // The first render must show the complete image. Zoom and pan
+                // remain available afterwards through SubsamplingScaleImageView.
+                setMinimumScaleType(SubsamplingScaleImageView.SCALE_TYPE_CENTER_INSIDE)
                 // Otherwise OnImageEventListener.onReady() is never called.
                 isVisible = true
                 alpha = 0f
@@ -167,7 +171,7 @@ class ImageViewerAdapter(
                 || orientation == SubsamplingScaleImageView.ORIENTATION_270
             val imageWidth = if (rotated90Or270) sHeight else sWidth
             val imageHeight = if (rotated90Or270) sWidth else sHeight
-            return max(viewWidth.toFloat() / imageWidth, viewHeight.toFloat() / imageHeight)
+            return min(viewWidth.toFloat() / imageWidth, viewHeight.toFloat() / imageHeight)
         }
 
     private fun showError(binding: ImageViewerItemBinding, throwable: Throwable) {

@@ -38,7 +38,7 @@
             android:layout_height="@dimen/large_icon_size"
             android:layout_gravity="center"
             android:duplicateParentState="true"
-            android:scaleType="centerCrop" />
+            android:scaleType="fitCenter" />
 
         <!--
           ~ Can't use ShapeableImageView stroke support due to
@@ -49,7 +49,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:duplicateParentState="true"
-            android:scaleType="centerCrop"
+            android:scaleType="fitCenter"
             app:shapeAppearance="?shapeAppearanceSmallComponent" />
 
         <View

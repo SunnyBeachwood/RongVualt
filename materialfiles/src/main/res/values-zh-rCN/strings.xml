@@ -717,7 +717,7 @@
         <item>标准风格</item>
         <item>质感设计 3</item>
         <item>动态壁纸配色</item>
-        <item>黑色夜间模式</item>
+        <item>纯黑主题</item>
     </string-array>
     <string name="settings_theme_color_summary">应用中最常见的颜色</string>
     <string name="settings_theme_color_source_title">配色来源</string>
@@ -742,6 +742,12 @@
         <item>省略中间</item>
         <item>省略结尾</item>
         <item>滚动</item>
+    </string-array>
+    <string name="settings_file_name_max_lines_title">文件名显示行数</string>
+    <string-array name="settings_file_name_max_lines_entries">
+        <item>1 行（滚动）</item>
+        <item>2 行</item>
+        <item>3 行</item>
     </string-array>
     <string name="settings_file_list_font_size_title">文件列表字号</string>
     <string name="settings_file_list_font_size_summary">%1$d sp</string>

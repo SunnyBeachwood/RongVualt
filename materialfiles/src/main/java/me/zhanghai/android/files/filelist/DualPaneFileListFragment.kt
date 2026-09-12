@@ -839,10 +839,10 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         if (!this::root.isInitialized) return
         val divider = root.findViewById<View>(R.id.dualPaneDivider)
         if (!isDualPaneVisible()) return
-        divider.layoutParams = divider.layoutParams.apply { width = 1.dp() }
-        divider.setBackgroundColor(
-            MaterialColors.getColor(divider, com.google.android.material.R.attr.colorOutlineVariant)
-        )
+        // Keep a visible separation even when both panes use the same dark surface.  The
+        // drawable supplies a theme-specific soft shadow with a narrow outline at its centre.
+        divider.layoutParams = divider.layoutParams.apply { width = 9.dp() }
+        divider.setBackgroundResource(R.drawable.dual_pane_divider)
         ViewCompat.setElevation(divider, 0f)
     }
 
@@ -857,6 +857,14 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
         listOf(PaneId.LEFT to leftPaneSurface, PaneId.RIGHT to rightPaneSurface).forEach { (pane, view) ->
             val active = dual && shellViewModel.activePane == pane
             val lift = if (active) 4.dp().toFloat() else 0f
+            // A dark surface cannot show a black drop shadow reliably. Pair
+            // the lift with a subtle outline so the active pane remains clear
+            // in every night palette without turning the dock into tiles.
+            view.cardElevation = if (active) 3.dp().toFloat() else 0f
+            view.strokeWidth = if (active) 1.dp() else 0
+            view.setStrokeColor(MaterialColors.getColor(
+                view, com.google.android.material.R.attr.colorOutline
+            ))
             view.animate().cancel()
             if (canAnimate) {
                 view.animate()
@@ -1013,6 +1021,13 @@ class DualPaneFileListFragment : Fragment(), NavigationFragment.Listener,
             R.id.action_set_secondary_start -> {
                 Settings.FILE_LIST_SECONDARY_START_DIRECTORY.putValue(viewModel.currentPath)
                 showToast(R.string.file_list_action_fix_secondary_success)
+                true
+            }
+            // A dual-pane session still supports independent Android document windows.  Opening
+            // one from the overflow menu must go through the same path as the breadcrumb action;
+            // otherwise this menu item is visible but has no handler.
+            R.id.action_new_task -> {
+                openInNewTask(viewModel.currentPath)
                 true
             }
             R.id.action_selection_more -> {

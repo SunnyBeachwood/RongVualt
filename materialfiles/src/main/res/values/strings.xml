@@ -865,7 +865,7 @@
         <item>Standard</item>
         <item>Material 3</item>
         <item>Wallpaper colors</item>
-        <item>Black night mode</item>
+        <item>Pure black theme</item>
     </string-array>
     <string name="settings_theme_color_summary">Color that appears most frequently in the app</string>
     <string name="settings_theme_color_source_title">Color source</string>

@@ -181,8 +181,9 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
             applyEditorPreferences()
         }
         binding.scrollView.setOnScrollChangeListener { _, _, scrollY, _, _ ->
-            binding.lineNumbers.translationY = -scrollY.toFloat()
+            binding.lineNumbers.setEditorScrollY(scrollY)
         }
+        binding.lineNumbers.editor = binding.textEdit
         setPreviewVisible(isPreviewVisible, restoreScroll = false)
         updateTitle()
 
@@ -553,26 +554,7 @@ class TextEditorFragment : Fragment(), ConfirmReloadDialogFragment.Listener,
 
     private fun updateLineNumbers() {
         if (!lineNumbersEnabled || !this::binding.isInitialized) return
-        val text = binding.textEdit.text ?: return
-        val layout = binding.textEdit.layout
-        val labels = if (layout == null || layout.lineCount <= 1 && text.indexOf('\n') >= 0) {
-            // The first call commonly happens before TextView has measured the loaded document.
-            (1..(text.count { it == '\n' } + 1)).joinToString("\n")
-        } else {
-            var sourceLine = 1
-            buildString {
-                for (visualLine in 0 until layout.lineCount.coerceAtLeast(1)) {
-                    if (visualLine > 0) append('\n')
-                    val start = layout.getLineStart(visualLine)
-                    val startsSourceLine = start == 0 || text.getOrNull(start - 1) == '\n'
-                    // A wrapped visual row must keep its source number visible
-                    // instead of producing an apparently missing gutter label.
-                    append(sourceLine)
-                    if (startsSourceLine) sourceLine++
-                }
-            }
-        }
-        if (binding.lineNumbers.text.toString() != labels) binding.lineNumbers.text = labels
+        binding.lineNumbers.refresh()
     }
 
     private fun updateAutoFormatFilter() {

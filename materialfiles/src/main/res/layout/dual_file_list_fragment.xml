@@ -65,9 +65,9 @@
 
             <View
                 android:id="@+id/dualPaneDivider"
-                android:layout_width="1dp"
+                android:layout_width="9dp"
                 android:layout_height="match_parent"
-                android:background="?colorOutlineVariant" />
+                android:background="@drawable/dual_pane_divider" />
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/rightPaneSurface"
