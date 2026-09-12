@@ -260,7 +260,16 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (hasStarted && shouldAuthenticate) showAppLock()
+        // A trusted transition into the embedded file manager normally keeps this
+        // activity unlocked. If the whole app was sent to the background,
+        // however, VeraCryptApplication locks the shared access session. Restore
+        // the lock UI before exposing the catalog again, otherwise a subsequent
+        // FileListActivity immediately finishes because it sees an unauthorized
+        // session.
+        if (hasStarted && (shouldAuthenticate || !AppAccessSession.isAuthorized())) {
+            shouldAuthenticate = true
+            showAppLock()
+        }
         hasStarted = true
     }
 
