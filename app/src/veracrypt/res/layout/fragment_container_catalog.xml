@@ -9,7 +9,7 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardBackgroundColor="@color/rv_primary_container"
+        app:cardBackgroundColor="?attr/colorPrimaryContainer"
         app:cardCornerRadius="@dimen/rv_card_radius"
         app:cardElevation="0dp">
 
@@ -25,7 +25,7 @@
                 android:layout_height="48dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_vault_shield"
-                app:tint="@color/rv_on_primary_container" />
+                app:tint="?attr/colorOnPrimaryContainer" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -39,7 +39,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/rv_home_security_title"
                     android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-                    android:textColor="@color/rv_on_primary_container" />
+                    android:textColor="?attr/colorOnPrimaryContainer" />
 
                 <TextView
                     android:id="@+id/catalog_overview"
@@ -47,7 +47,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                    android:textColor="@color/rv_on_primary_container" />
+                    android:textColor="?attr/colorOnPrimaryContainer" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -103,7 +103,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-            android:textColor="@color/rv_on_surface_variant" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
     <FrameLayout
@@ -133,7 +133,7 @@
                 android:layout_height="64dp"
                 android:contentDescription="@null"
                 android:src="@drawable/ic_empty_vault"
-                app:tint="@color/rv_secondary" />
+                app:tint="?attr/colorSecondary" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -150,7 +150,7 @@
                 android:gravity="center"
                 android:text="@string/rv_empty_catalog_message"
                 android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                android:textColor="@color/rv_on_surface_variant" />
+                android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
     </FrameLayout>
 </LinearLayout>

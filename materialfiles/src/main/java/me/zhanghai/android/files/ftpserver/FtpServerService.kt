@@ -255,11 +255,9 @@ class FtpServerService : Service() {
         val path = root.path
         if (path.isArchivePath) return false
         if (root.runtimeRootId != null) {
-            // Unlocked container DocumentsProvider paths are only valid for
-            // this process and are accepted after the liveness check above.
-            return path.toUri().scheme == "document"
-                && runCatching { path.documentTreeUri.authority?.endsWith(".unlocked") == true }
-                    .getOrDefault(false)
+            // FTP has no transport encryption, so it must never bridge an
+            // unlocked encrypted volume onto a network interface.
+            return false
         }
         return when (path.toUri().scheme) {
             "file" -> true

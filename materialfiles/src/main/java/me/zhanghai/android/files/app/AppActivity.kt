@@ -33,6 +33,15 @@ abstract class AppActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Embedded file-manager screens can expose live unlocked-volume
+        // roots, so they cannot provide an alternate path around app unlock.
+        if (!AppAccessSession.isAuthorized()) {
+            finish()
+        }
+    }
+
     override fun onSupportNavigateUp(): Boolean {
         if (!super.onSupportNavigateUp()) {
             finish()

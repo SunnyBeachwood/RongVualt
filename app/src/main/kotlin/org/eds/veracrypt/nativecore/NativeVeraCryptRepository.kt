@@ -250,6 +250,7 @@ class NativeVeraCryptRepository(
                 },
             )
             result.mountFileSystem()
+            result.enableAutoLock(DEFAULT_AUTO_LOCK_MILLIS)
             outer.registerDependent(result)
             check(result.state.value == org.eds.veracrypt.domain.VolumeSessionState.Open) {
                 "Outer session closed while the hidden session was being registered"
@@ -365,6 +366,10 @@ class NativeVeraCryptRepository(
             !progress.isCancellationRequested()
         },
     )
+
+    private companion object {
+        const val DEFAULT_AUTO_LOCK_MILLIS = 5 * 60 * 1000L
+    }
 
     override suspend fun backupHeader(
         session: VolumeSession,

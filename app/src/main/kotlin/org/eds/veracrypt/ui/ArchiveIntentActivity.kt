@@ -23,6 +23,7 @@ import me.zhanghai.android.files.provider.archive.createArchiveRootPath
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.extraPath
 import me.zhanghai.android.files.util.extraPathList
+import me.zhanghai.android.files.app.AppAccessSession
 
 /**
  * Narrow, exported bridge for archive viewers and share sheets. FileListActivity
@@ -31,6 +32,10 @@ import me.zhanghai.android.files.util.extraPathList
 class ArchiveIntentActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!AppAccessSession.isAuthorized()) {
+            finishWithError()
+            return
+        }
         if (savedInstanceState != null) return
         when (intent.action) {
             Intent.ACTION_VIEW -> openArchive()

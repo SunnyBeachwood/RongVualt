@@ -1656,7 +1656,6 @@ class OpenFileJob(
             R.string.file_open_from_background_text
         ) { file ->
             file.fileProviderUri.createViewIntent(mimeType)
-                .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
                 .apply { extraPath = file }
                 .let {
                     if (withChooser) {
@@ -1678,6 +1677,12 @@ private val FileJob.cacheDirectory: File
             Environment.getExternalStorageState(it) == Environment.MEDIA_MOUNTED
         } ?: service.cacheDir
 
+/** Plaintext staged from an unlocked provider must not enter external cache. */
+private fun Path.isUnlockedVolumePath(): Boolean = runCatching {
+    val uri = toUri()
+    uri.scheme == "document" && uri.authority?.endsWith(".unlocked") == true
+}.getOrDefault(false)
+
 @Throws(IOException::class)
 private fun FileJob.open(
     file: Path,
@@ -1693,7 +1698,12 @@ private fun FileJob.open(
             R.plurals.file_job_copy_scan_notification_title_format
         }
     )
-    val cacheDirectory = Paths.get(cacheDirectory.path, "open_cache")
+    val isUnlockedVolume = file.isUnlockedVolumePath()
+    val cacheRoot = if (isUnlockedVolume) service.cacheDir else cacheDirectory
+    val cacheDirectory = Paths.get(
+        cacheRoot.path,
+        if (isUnlockedVolume) "secure_open_cache" else "open_cache",
+    )
     cacheDirectory.createDirectories()
     val targetFileName = getTargetFileName(file)
     val targetFile = cacheDirectory.resolveForeign(targetFileName)

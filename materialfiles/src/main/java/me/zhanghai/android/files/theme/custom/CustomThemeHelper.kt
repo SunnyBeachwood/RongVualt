@@ -41,14 +41,23 @@ object CustomThemeHelper {
     fun apply(activity: Activity) {
         val baseThemeRes = activity.themeResIdCompat
         activityBaseThemes[activity] = baseThemeRes
-        val customThemeRes = getCustomThemeRes(baseThemeRes, activity)
+        val customThemeRes = resolveTheme(baseThemeRes, activity)
         activity.setThemeCompat(customThemeRes)
     }
+
+    /**
+     * Resolves the same theme resource used by embedded file-manager activities without
+     * registering [context] for the file manager's lifecycle callbacks. Host activities use
+     * this to share the user's palette while retaining their own lifecycle and access controls.
+     */
+    @StyleRes
+    fun resolveTheme(@StyleRes baseThemeRes: Int, context: Context): Int =
+        getCustomThemeRes(baseThemeRes, context)
 
     fun sync() {
         for ((activity, baseThemeRes) in activityBaseThemes) {
             val currentThemeRes = activity.themeResIdCompat
-            val customThemeRes = getCustomThemeRes(baseThemeRes, activity)
+            val customThemeRes = resolveTheme(baseThemeRes, activity)
             if (currentThemeRes != customThemeRes) {
                 // Ignore ".Black" theme changes when not in night mode.
                 if (!NightModeHelper.isInNightMode(activity as AppCompatActivity)

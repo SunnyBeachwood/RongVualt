@@ -43,6 +43,7 @@ class FileJobService : Service() {
         notificationManager = ForegroundNotificationManager(this)
         cleanupStalePrivateArchiveTempStores(cacheDir.resolve("zipxtract"))
         cleanupStalePrivateArchiveTempStores(cacheDir.resolve("zipxtract-ui"))
+        cacheDir.resolve("secure_open_cache").deleteRecursively()
         instance = this
 
         while (pendingJobs.isNotEmpty()) {

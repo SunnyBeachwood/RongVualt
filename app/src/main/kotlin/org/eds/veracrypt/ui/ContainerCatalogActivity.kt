@@ -30,6 +30,7 @@ import org.eds.veracrypt.documents.UnlockedVolumeService
 import me.zhanghai.android.files.ftpserver.FtpServerService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import me.zhanghai.android.files.compat.forceShowIconsCompat
+import me.zhanghai.android.files.app.AppAccessSession
 
 class ContainerCatalogActivity : AppCompatActivity() {
     private lateinit var binding: ActivityContainerCatalogBinding
@@ -39,11 +40,13 @@ class ContainerCatalogActivity : AppCompatActivity() {
     private var shouldAuthenticate = false
     private var authenticating = false
     private var exiting = false
+    private lateinit var homeThemeSignature: HomeThemeHelper.Signature
     /** One transition into a RongVault workflow must not lock its own return. */
     private var trustedNavigationPending = false
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        homeThemeSignature = HomeThemeHelper.apply(this)
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityContainerCatalogBinding.inflate(layoutInflater)
@@ -63,10 +66,24 @@ class ContainerCatalogActivity : AppCompatActivity() {
         }
         ViewCompat.requestApplyInsets(binding.root)
         binding.appUnlock.setOnClickListener { authenticateForAppAccess() }
+        // A task can be recreated while a process-owned unlocked session is
+        // still alive. Always begin behind the biometric boundary.
+        shouldAuthenticate = true
+        binding.appLockOverlay.isVisible = true
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.container_catalog_host, ContainerCatalogFragment())
                 .commit()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Settings are owned by the embedded file manager. It can recreate its own activity
+        // while this task remains alive, so refresh the home task when the user returns here.
+        if (homeThemeSignature != HomeThemeHelper.signature(this)) {
+            recreate()
         }
     }
 
@@ -280,6 +297,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
                     accessGate.cipherForAuthentication(),
                     getString(R.string.vc_app_auth_prompt_title),
                 )
+                AppAccessSession.authorize()
                 shouldAuthenticate = false
                 binding.appLockOverlay.isVisible = false
                 invalidateOptionsMenu()

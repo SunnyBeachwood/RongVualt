@@ -84,6 +84,7 @@ internal class NativeVolumeOpener(
                 },
             )
             session.mountFileSystem()
+            session.enableAutoLock(DEFAULT_AUTO_LOCK_MILLIS)
             ownershipTransferred = true
             session
         } catch (error: Throwable) {
@@ -199,6 +200,7 @@ internal class NativeVolumeOpener(
                 flushFailure?.let { throw it }
                 },
             )
+            session.enableAutoLock(DEFAULT_AUTO_LOCK_MILLIS)
             ownershipTransferred = true
             session
         } catch (error: Throwable) {
@@ -226,5 +228,9 @@ internal class NativeVolumeOpener(
     private fun containerKey(uri: Uri): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(uri.toString().toByteArray(Charsets.UTF_8))
         return digest.joinToString(separator = "") { byte -> "%02x".format(byte.toInt() and 0xff) }
+    }
+
+    private companion object {
+        const val DEFAULT_AUTO_LOCK_MILLIS = 5 * 60 * 1000L
     }
 }
