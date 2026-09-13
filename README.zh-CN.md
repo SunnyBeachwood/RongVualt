@@ -2,6 +2,8 @@
 
 [English](README.MD)
 
+当前版本的更新记录见 [docs/UPDATE_NOTES.md](docs/UPDATE_NOTES.md)。
+
 RongVault 是一款面向 Android 的离线加密容器工具，用于创建、打开和管理
 VeraCrypt 兼容的**非系统文件容器**。它将加密卷作为 Android 文档提供者暴露，
 因此可以在解锁后通过内置文件管理器或系统“文件”应用访问卷内文件，而无需将
@@ -184,3 +186,40 @@ GPL 冲突的额外限制。第三方组件可能具有各自的许可证，分�
 本项目 GPLv3 的完整条款见 [LICENSE](LICENSE)。
 第三方组件的版权和许可证以其各自文件中的声明为准；发布包含 EDS Lite 来源代码的版本时，
 也应随源代码一并保留 EDS Lite 的 GPLv2 许可证文本。
+
+## 引用的外部项目与库
+
+RongVault 是独立应用，使用并适配了以下上游项目和库。版本固定在
+Gradle 构建文件中；下表用于署名和来源追踪，不代表上游项目对 RongVault
+的认可或背书。
+
+| 组件 | 版本 / 来源 | RongVault 中的用途 | 许可证 / 说明 |
+| --- | --- | --- | --- |
+| [EDS Lite](https://github.com/sovworks/edslite) | 2.0.0.237 迁移基线 | 部分 Android 与容器代码 | GPL-2.0-or-later，保留原声明 |
+| [Material Files](https://github.com/zhanghai/MaterialFiles) | 1.7.4 快照 | 内置文件管理器、SAF 导航和设置 | GPL-3.0-or-later，见 [`materialfiles/MATERIAL_FILES_LICENSE`](materialfiles/MATERIAL_FILES_LICENSE) |
+| [ZipXtract](https://github.com/WirelessAlien/ZipXtract) | v7.1.1，提交 `c137bc1e` | 压缩包浏览、提取和创建 | GPL-3.0，见 [`third_party/zipxtract/License`](third_party/zipxtract/License) |
+| [Botan](https://github.com/randombit/botan) | 3.12.0 | VeraCrypt 加密算法、XTS 和 KDF | BSD 2-Clause，见 [`third_party/botan/license.txt`](third_party/botan/license.txt) |
+| [FatFs](https://github.com/pabigot/FatFs) | R0.13b / `ff13b` | FAT 与 exFAT 文件系统 | FatFs 宽松单条件许可证，声明保留在源文件中 |
+| [libarchive](https://github.com/libarchive/libarchive) | 3.x 兼容源码 | 压缩包和文件系统回退路径 | BSD 风格，保留上游声明 |
+| [libsu](https://github.com/topjohnwu/libsu) | 5.2.2 | 可选 Root 服务 | Apache-2.0 |
+| [Apache FtpServer](https://mina.apache.org/ftpserver-project/) / [Apache MINA](https://mina.apache.org/) | 1.2.1 / 2.2.4 | 本机 FTP 服务 | Apache-2.0 |
+
+Android 与 Kotlin 依赖还包括 [AndroidX](https://developer.android.com/jetpack/androidx)、
+[Material Components](https://github.com/material-components/material-components-android)、
+[Kotlin](https://kotlinlang.org/)、[kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines)、
+[Markwon](https://github.com/noties/Markwon)、[Coil](https://github.com/coil-kt/coil)、
+[AndroidSVG](https://github.com/BigBadaboom/androidsvg)、[Subsampling Scale Image View](https://github.com/davemorrissey/subsampling-scale-image-view)、
+[PhotoView](https://github.com/Baseflow/PhotoView)、[SMBJ](https://github.com/hierynomus/smbj)、
+[SSHJ](https://github.com/hierynomus/sshj)、[JCIFS-NG](https://github.com/AgNO3/jcifs-ng)、
+[dav4jvm](https://github.com/bitfireAT/dav4jvm)、[Zip4j](https://github.com/srikanth-lingala/zip4j)、
+[Guava](https://github.com/google/guava)、[Apache Commons Net](https://github.com/apache/commons-net)、
+[Bouncy Castle](https://www.bouncycastle.org/)、[XZ for Java](https://tukaani.org/xz/java.html)、
+[Brotli](https://github.com/google/brotli)、[Zstandard JNI](https://github.com/luben/zstd-jni)、
+[7-Zip-JBinding-4Android](https://github.com/omicronapps/7-Zip-JBinding-4Android) 和
+[SLF4J Android](https://github.com/qos-ch/slf4j-android)。具体 Maven 坐标和版本见
+`app/build.gradle`、`materialfiles/build.gradle` 与 `zipxtract-core/build.gradle`；
+重新分发对应二进制或源码时必须保留各上游许可证。
+
+导入源码的来源记录和许可证文件保存在 [`third_party/`](third_party/) 与
+[`materialfiles/`](materialfiles/) 目录中。项目许可证和组合工程的分发义务见
+[LICENSE](LICENSE)。

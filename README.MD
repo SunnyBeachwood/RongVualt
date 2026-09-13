@@ -2,6 +2,8 @@
 
 [中文说明](README.zh-CN.md)
 
+当前版本的更新记录见 [docs/UPDATE_NOTES.md](docs/UPDATE_NOTES.md)。
+
 RongVault is an offline Android application for creating, opening, and managing
 VeraCrypt-compatible **file containers**. After a container is unlocked, RongVault
 exposes it through Android's document-provider framework so files can be accessed
@@ -225,3 +227,42 @@ license notices in each component before redistribution. Versions containing EDS
 Lite source code must also retain the EDS Lite GPLv2 license text with the source.
 
 See [LICENSE](LICENSE) for the full GPLv3 terms.
+
+## External projects and libraries
+
+RongVault is an independent application assembled from the following upstream
+projects and libraries. Versions are pinned in the Gradle build files; this is
+an attribution and provenance index, not a claim of endorsement by any
+upstream project.
+
+| Component | Version / source | Use in RongVault | License / notice |
+| --- | --- | --- | --- |
+| [EDS Lite](https://github.com/sovworks/edslite) | 2.0.0.237 heritage | Migration baseline and selected Android/container code | GPL-2.0-or-later; retained notices |
+| [Material Files](https://github.com/zhanghai/MaterialFiles) | 1.7.4 snapshot | Embedded file manager, SAF navigation and settings | GPL-3.0-or-later; [`materialfiles/MATERIAL_FILES_LICENSE`](materialfiles/MATERIAL_FILES_LICENSE) |
+| [ZipXtract](https://github.com/WirelessAlien/ZipXtract) | v7.1.1, commit `c137bc1e` | Archive browsing, extraction and creation | GPL-3.0; [`third_party/zipxtract/License`](third_party/zipxtract/License) |
+| [Botan](https://github.com/randombit/botan) | 3.12.0 | Native VeraCrypt ciphers, XTS and KDFs | BSD 2-Clause; [`third_party/botan/license.txt`](third_party/botan/license.txt) |
+| [FatFs](https://github.com/pabigot/FatFs) | R0.13b / `ff13b` | FAT and exFAT filesystem access | FatFs permissive one-condition license; source headers |
+| [libarchive](https://github.com/libarchive/libarchive) | 3.x compatibility sources | Archive and filesystem fallback paths | BSD-style; retain upstream notices |
+| [libsu](https://github.com/topjohnwu/libsu) | 5.2.2 | Optional Root service integration | Apache-2.0 |
+| [Apache FtpServer](https://mina.apache.org/ftpserver-project/) / [Apache MINA](https://mina.apache.org/) | 1.2.1 / 2.2.4 | Local FTP server | Apache-2.0 |
+
+The Android and Kotlin dependency set includes [AndroidX](https://developer.android.com/jetpack/androidx),
+[Material Components](https://github.com/material-components/material-components-android),
+[Kotlin](https://kotlinlang.org/), [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines),
+[Markwon](https://github.com/noties/Markwon), [Coil](https://github.com/coil-kt/coil),
+[AndroidSVG](https://github.com/BigBadaboom/androidsvg), [Subsampling Scale Image View](https://github.com/davemorrissey/subsampling-scale-image-view),
+[PhotoView](https://github.com/Baseflow/PhotoView), [SMBJ](https://github.com/hierynomus/smbj),
+[SSHJ](https://github.com/hierynomus/sshj), [JCIFS-NG](https://github.com/AgNO3/jcifs-ng),
+[dav4jvm](https://github.com/bitfireAT/dav4jvm), [Zip4j](https://github.com/srikanth-lingala/zip4j),
+[Guava](https://github.com/google/guava), [Apache Commons Net](https://github.com/apache/commons-net),
+[Bouncy Castle](https://www.bouncycastle.org/), [XZ for Java](https://tukaani.org/xz/java.html),
+[Brotli](https://github.com/google/brotli), [Zstandard JNI](https://github.com/luben/zstd-jni),
+[7-Zip-JBinding-4Android](https://github.com/omicronapps/7-Zip-JBinding-4Android), and
+[SLF4J Android](https://github.com/qos-ch/slf4j-android). Their exact Maven coordinates
+and versions are recorded in `app/build.gradle`, `materialfiles/build.gradle`, and
+`zipxtract-core/build.gradle`; each upstream license must be retained when
+redistributing the corresponding binary or source.
+
+Imported source provenance and license files are kept under [`third_party/`](third_party/)
+and [`materialfiles/`](materialfiles/). See [LICENSE](LICENSE) for the project
+license and the distribution obligations for combined works.
