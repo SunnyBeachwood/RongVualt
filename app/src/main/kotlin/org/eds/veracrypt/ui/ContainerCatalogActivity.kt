@@ -31,6 +31,8 @@ import me.zhanghai.android.files.ftpserver.FtpServerService
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import me.zhanghai.android.files.compat.forceShowIconsCompat
 import me.zhanghai.android.files.app.AppAccessSession
+import me.zhanghai.android.files.settings.Settings
+import me.zhanghai.android.files.util.valueCompat
 
 class ContainerCatalogActivity : AppCompatActivity() {
     private lateinit var binding: ActivityContainerCatalogBinding
@@ -293,7 +295,9 @@ class ContainerCatalogActivity : AppCompatActivity() {
     override fun onStop() {
         if (trustedNavigationPending) {
             trustedNavigationPending = false
-        } else if (!isChangingConfigurations && !authenticating) {
+        } else if (!isChangingConfigurations && !authenticating
+            && Settings.REQUIRE_APP_AUTHENTICATION_ON_RETURN.valueCompat
+        ) {
             shouldAuthenticate = true
             binding.appLockOverlay.isVisible = true
             invalidateOptionsMenu()

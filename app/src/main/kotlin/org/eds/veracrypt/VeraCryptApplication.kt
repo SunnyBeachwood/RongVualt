@@ -13,6 +13,8 @@ import org.eds.veracrypt.documents.UnlockedVolumeService
 import org.eds.veracrypt.nativecore.NativeVeraCryptRepository
 import me.zhanghai.android.files.ftpserver.FtpServerService
 import me.zhanghai.android.files.app.AppAccessSession
+import me.zhanghai.android.files.settings.Settings
+import me.zhanghai.android.files.util.valueCompat
 
 /** Process owner for catalog records and unlocked native sessions. */
 class VeraCryptApplication : Application() {
@@ -27,7 +29,9 @@ class VeraCryptApplication : Application() {
         UnlockedVolumeService.bind(this)
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
-                AppAccessSession.lock()
+                if (Settings.REQUIRE_APP_AUTHENTICATION_ON_RETURN.valueCompat) {
+                    AppAccessSession.lock()
+                }
                 if (!UnlockedVolumeService.retainVolumesOnBackground()) {
                     UnlockedVolumeService.volumes.close()
                 }

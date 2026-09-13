@@ -68,6 +68,12 @@
 
     <PreferenceCategory android:title="@string/settings_behavior_title">
 
+        <SwitchPreferenceCompat
+            android:key="@string/pref_key_require_app_authentication_on_return"
+            android:title="@string/settings_require_app_authentication_on_return_title"
+            android:summary="@string/settings_require_app_authentication_on_return_summary"
+            android:defaultValue="@bool/pref_default_value_require_app_authentication_on_return" />
+
         <me.zhanghai.android.files.settings.DefaultDirectoryPreference
             android:key="@string/pref_key_file_list_default_directory"
             android:title="@string/settings_default_directory_title"

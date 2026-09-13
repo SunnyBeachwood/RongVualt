@@ -763,6 +763,8 @@
         <item>2</item>
     </string-array>
     <string name="settings_behavior_title">行为</string>
+    <string name="settings_require_app_authentication_on_return_title">离开应用后需要身份验证</string>
+    <string name="settings_require_app_authentication_on_return_summary">从后台返回时要求进行设备身份验证</string>
     <string name="settings_default_directory_title">默认文件夹</string>
     <string name="settings_standard_directories_title">标准文件夹</string>
     <string name="settings_standard_directories_summary_empty">未启用标准文件夹</string>

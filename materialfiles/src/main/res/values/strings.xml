@@ -911,6 +911,8 @@
         <item>2</item>
     </string-array>
     <string name="settings_behavior_title">Behavior</string>
+    <string name="settings_require_app_authentication_on_return_title">Require authentication after leaving app</string>
+    <string name="settings_require_app_authentication_on_return_summary">Ask for device authentication when returning from the background</string>
     <string name="settings_default_directory_title">Default folder</string>
     <string name="settings_storages_title" translatable="false">@string/storage_list_title</string>
     <string name="settings_storages_summary_empty" translatable="false">@string/storage_list_empty</string>
