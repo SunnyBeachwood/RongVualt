@@ -3,6 +3,7 @@
 #include "vc_fatfs_volume.h"
 
 #include <limits>
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 
@@ -98,6 +99,9 @@ void NativeSessionRegistry::Close(std::uint64_t handle) noexcept {
     }
     if (sessions.empty()) return;
     for (const auto& file : files) file->Close();
+    // Hidden children depend on the outer session's descriptor and filesystem.
+    // Tear down the reverse dependency order.
+    std::reverse(sessions.begin(), sessions.end());
     for (const auto& session : sessions) {
         // f_close may write directory metadata after an earlier explicit flush.
         // Sync once more before the encrypted container descriptor is released.

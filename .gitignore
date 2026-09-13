@@ -33,3 +33,6 @@ markdown-preview-test.md
 # Local upstream checkouts; the build uses third_party/dav4jvm-modern instead.
 third_party/dav4jvm/
 third_party/dav4jvm-1.7.4/
+
+web-prototype/
+AGENTS.md

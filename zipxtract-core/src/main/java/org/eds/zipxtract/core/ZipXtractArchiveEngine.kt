@@ -243,7 +243,15 @@ class ZipXtractArchiveEngine(
                 throw ArchiveException("Symbolic links are not extracted: ${header.fileName}")
             }
             val selected = request.entries
-            val total = headers.sumOf { it.uncompressedSize.coerceAtLeast(0L) }
+            if (headers.size.toLong() > request.maxEntries) throw ArchiveException("Archive contains too many entries")
+            var total = 0L
+            headers.forEach { header ->
+                val size = header.uncompressedSize
+                if (size < 0L || size > request.maxEntryBytes || size > request.maxExpandedBytes - total) {
+                    throw ArchiveException("Archive expansion exceeds the configured limit")
+                }
+                total += size
+            }
             var completed = 0L
             var completedEntries = 0L
             for (header in headers) {
@@ -283,7 +291,8 @@ class ZipXtractArchiveEngine(
                                 request.cancellation,
                                 completed,
                                 total,
-                            ) { bytes ->
+                                request.maxExpandedBytes,
+                                ) { bytes ->
                                 completed = bytes
                                 listener?.onProgress(ArchiveProgress(completed, total, completedEntries, headers.size.toLong()))
                             }
@@ -358,6 +367,10 @@ class ZipXtractArchiveEngine(
                     request.cancellation.throwIfCancelled()
                     val count = input.read(buffer)
                     if (count < 0) break
+                    if (count.toLong() > request.maxEntryBytes - completed ||
+                        count.toLong() > request.maxExpandedBytes - completed) {
+                        throw ArchiveException("Archive expansion exceeds the configured limit")
+                    }
                     output.write(buffer, 0, count)
                     completed += count
                     listener?.onProgress(
@@ -422,17 +435,20 @@ class ZipXtractArchiveEngine(
         listener: ArchiveProgressListener?,
     ) {
         openTarInput(source).use { input ->
-            val entries = listTar(source)
-            entries.firstOrNull { it.isSymbolicLink }?.let { entry ->
-                throw ArchiveException("Symbolic links are not extracted: ${entry.name}")
-            }
-            val total = entries.sumOf { it.size.coerceAtLeast(0L) }
+            // TAR is streamed once. Its expanded total is intentionally
+            // reported as unknown; each entry and the running quota are still
+            // enforced while bytes are written.
+            val total = 0L
             var completed = 0L
             var index = 0L
             var entry = input.nextTarEntry
             while (entry != null) {
                 request.cancellation.throwIfCancelled()
+                if (index >= request.maxEntries) throw ArchiveException("Archive contains too many entries")
                 val path = ArchivePathPolicy.normalizeEntryName(entry.name)
+                if (entry.size < 0L || entry.size > request.maxEntryBytes) {
+                    throw ArchiveException("Archive entry exceeds the configured limit: $path")
+                }
                 if (entry.isSymbolicLink || entry.isLink) {
                     throw ArchiveException("Symbolic links are not extracted: $path")
                 }
@@ -466,9 +482,12 @@ class ZipXtractArchiveEngine(
                             }
                         }
                         target.openOutputStream(request.overwrite || target.exists()).use { output ->
-                            completed = copyWithProgress(input, output, request.cancellation, completed, total) { bytes ->
+                            completed = copyWithProgress(
+                                input, output, request.cancellation, completed, total,
+                                request.maxExpandedBytes,
+                            ) { bytes ->
                                 completed = bytes
-                                listener?.onProgress(ArchiveProgress(completed, total, index, entries.size.toLong()))
+                                listener?.onProgress(ArchiveProgress(completed, total, index, 0L))
                             }
                         }
                     }
@@ -476,7 +495,7 @@ class ZipXtractArchiveEngine(
                     input.skip(entry.size)
                 }
                 index++
-                listener?.onProgress(ArchiveProgress(completed, total, index, entries.size.toLong()))
+                listener?.onProgress(ArchiveProgress(completed, total, index, 0L))
                 entry = input.nextTarEntry
             }
         }
@@ -711,6 +730,7 @@ class ZipXtractArchiveEngine(
         cancellation: CancellationToken,
         initial: Long,
         total: Long,
+        maxExpandedBytes: Long = Long.MAX_VALUE,
         onProgress: (Long) -> Unit,
     ): Long {
         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
@@ -719,6 +739,9 @@ class ZipXtractArchiveEngine(
             cancellation.throwIfCancelled()
             val count = input.read(buffer)
             if (count < 0) break
+            if (count.toLong() > maxExpandedBytes - completed) {
+                throw ArchiveException("Archive expansion exceeds the configured limit")
+            }
             output.write(buffer, 0, count)
             completed += count
             onProgress(completed.coerceAtMost(total.coerceAtLeast(completed)))
@@ -1134,9 +1157,10 @@ private class SevenZipUpdateCallback(
     private val listener: ArchiveProgressListener?,
 ) : IOutCreateCallback<net.sf.sevenzipjbinding.IOutItemAllFormats>, Closeable {
     private val keptCount = input.numberOfItems - removedIndexes.size
-    private val streams = mutableListOf<InputStreamSequentialInStream>()
+    private var currentStream: InputStreamSequentialInStream? = null
 
     override fun setOperationResult(operationResultOk: Boolean) {
+        closeCurrentStream()
         if (!operationResultOk) throw SevenZipException("7-Zip update failed")
     }
 
@@ -1166,16 +1190,21 @@ private class SevenZipUpdateCallback(
     }
 
     override fun getStream(index: Int): ISequentialInStream? {
+        closeCurrentStream()
         if (index < keptCount) return null
         val source = request.additions[index - keptCount]
         if (source.isDirectory) return null
         val input = source.openInputStream ?: throw SevenZipException("Missing source stream")
-        return InputStreamSequentialInStream(input()).also { streams += it }
+        return InputStreamSequentialInStream(input()).also { currentStream = it }
     }
 
     override fun close() {
-        streams.forEach { runCatching { it.close() } }
-        streams.clear()
+        closeCurrentStream()
+    }
+
+    private fun closeCurrentStream() {
+        currentStream?.let { runCatching { it.close() } }
+        currentStream = null
     }
 }
 

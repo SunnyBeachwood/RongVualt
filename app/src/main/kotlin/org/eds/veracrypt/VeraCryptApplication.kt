@@ -28,7 +28,9 @@ class VeraCryptApplication : Application() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStop(owner: LifecycleOwner) {
                 AppAccessSession.lock()
-                UnlockedVolumeService.volumes.close()
+                if (!UnlockedVolumeService.retainVolumesOnBackground()) {
+                    UnlockedVolumeService.volumes.close()
+                }
             }
         })
     }

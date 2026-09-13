@@ -43,6 +43,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
     private lateinit var homeThemeSignature: HomeThemeHelper.Signature
     /** One transition into a RongVault workflow must not lock its own return. */
     private var trustedNavigationPending = false
+    private var navigationLeaseHeld = false
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -260,6 +261,10 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (navigationLeaseHeld) {
+            UnlockedVolumeService.endNavigationLease()
+            navigationLeaseHeld = false
+        }
         // A trusted transition into the embedded file manager normally keeps this
         // activity unlocked. If the whole app was sent to the background,
         // however, VeraCryptApplication locks the shared access session. Restore
@@ -312,7 +317,7 @@ class ContainerCatalogActivity : AppCompatActivity() {
                 invalidateOptionsMenu()
             } catch (_: CancellationException) {
                 binding.appLockStatus.setText(R.string.vc_app_auth_failed)
-            } catch (_: Throwable) {
+            } catch (_: Exception) {
                 binding.appLockStatus.setText(R.string.vc_app_auth_failed)
             } finally {
                 authenticating = false
@@ -323,11 +328,15 @@ class ContainerCatalogActivity : AppCompatActivity() {
 
     /** Starts an app-owned browser or document workflow without relocking on return. */
     internal fun startTrustedActivity(intent: Intent) {
+        UnlockedVolumeService.beginNavigationLease()
+        navigationLeaseHeld = true
         trustedNavigationPending = true
         try {
             startActivity(intent)
-        } catch (error: Throwable) {
+        } catch (error: Exception) {
             trustedNavigationPending = false
+            navigationLeaseHeld = false
+            UnlockedVolumeService.endNavigationLease()
             throw error
         }
     }

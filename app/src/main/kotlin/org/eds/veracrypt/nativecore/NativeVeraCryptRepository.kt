@@ -2,6 +2,7 @@ package org.eds.veracrypt.nativecore
 
 import android.content.Context
 import android.net.Uri
+import android.system.Os
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -248,13 +249,14 @@ class NativeVeraCryptRepository(
                     outerSession.close()
                 }
                 },
+                sourceUri = outer.sourceUri,
             )
             result.mountFileSystem()
-            result.enableAutoLock(DEFAULT_AUTO_LOCK_MILLIS)
             outer.registerDependent(result)
             check(result.state.value == org.eds.veracrypt.domain.VolumeSessionState.Open) {
                 "Outer session closed while the hidden session was being registered"
             }
+            result.enableAutoLock(DEFAULT_AUTO_LOCK_MILLIS)
             result
         } catch (error: Throwable) {
             if (hiddenHandle != 0L) VcCore.nativeClose(hiddenHandle)
@@ -324,11 +326,12 @@ class NativeVeraCryptRepository(
         // Only replacement credentials and their keyfiles cross JNI.
         // Remove the provider root while headers are being rewritten. This
         // closes all proxy descriptors and prevents concurrent filesystem I/O.
-        val detached = UnlockedVolumeService.volumes.detach(session)
         val expander = KeyfileSourceExpander(context)
-        val expanded = newCredentials.keyfiles.takeIf { it.isNotEmpty() }?.let(expander::expand).orEmpty()
         val keyfiles = mutableListOf<SeekableContainer>()
+        var detached: org.eds.veracrypt.session.UnlockedVolume? = null
         try {
+            detached = UnlockedVolumeService.volumes.detach(session)
+            val expanded = newCredentials.keyfiles.takeIf { it.isNotEmpty() }?.let(expander::expand).orEmpty()
             expanded.forEach { keyfile ->
                 keyfiles += SeekableContainer.open(
                     resolver,
@@ -394,6 +397,9 @@ class NativeVeraCryptRepository(
                 target = if (nativeSession.volumeKind == org.eds.veracrypt.domain.VolumeKind.HIDDEN) org.eds.veracrypt.domain.VolumeOpenTarget.HIDDEN else org.eds.veracrypt.domain.VolumeOpenTarget.NORMAL,
                 accessMode = org.eds.veracrypt.domain.VolumeAccessMode.READ_WRITE,
             )
+            check(nativeSession.sourceUri == null || !sameContainer(nativeSession.sourceUri, destination)) {
+                "Header backup destination must be different from the source container"
+            }
             SeekableContainer.open(resolver, destination, org.eds.veracrypt.domain.VolumeAccessMode.READ_WRITE).use { target ->
                 NativeRequestCodec.encodeOpen(options, credentials, expanded.size, 0).use { request ->
                     request.useForJni { bytes ->
@@ -419,10 +425,15 @@ class NativeVeraCryptRepository(
         credentials: VolumeCredentials,
     ) = UnlockedVolumeService.withForegroundOperation {
         withContext(Dispatchers.IO) {
-        val target = SeekableContainer.open(resolver, container, org.eds.veracrypt.domain.VolumeAccessMode.READ_WRITE)
-        val backup = SeekableContainer.open(resolver, source, org.eds.veracrypt.domain.VolumeAccessMode.READ_ONLY)
+        var target: SeekableContainer? = null
+        var backup: SeekableContainer? = null
         val keyfiles = mutableListOf<SeekableContainer>()
         try {
+            target = SeekableContainer.open(resolver, container, org.eds.veracrypt.domain.VolumeAccessMode.READ_WRITE)
+            backup = SeekableContainer.open(resolver, source, org.eds.veracrypt.domain.VolumeAccessMode.READ_ONLY)
+            check(!sameContainer(container, source)) {
+                "Header restore source must be different from the target container"
+            }
             val expander = KeyfileSourceExpander(context)
             val expanded = credentials.keyfiles.takeIf { it.isNotEmpty() }
                 ?.let(expander::expand)
@@ -441,7 +452,7 @@ class NativeVeraCryptRepository(
             NativeRequestCodec.encodeOpen(restoreOptions, credentials, expanded.size, 0).use { request ->
                 request.useForJni { bytes ->
                     try {
-                        VcCore.nativeRestoreHeader(target.fd, backup.fd, bytes, keyfiles.map { it.fd }.toIntArray())
+                        VcCore.nativeRestoreHeader(checkNotNull(target).fd, checkNotNull(backup).fd, bytes, keyfiles.map { it.fd }.toIntArray())
                     } catch (failure: VcCoreFailure) {
                         throw failure.asVolumeError()
                     }
@@ -449,11 +460,25 @@ class NativeVeraCryptRepository(
             }
         } finally {
             keyfiles.forEach(SeekableContainer::close)
-            backup.close()
-            target.close()
+            backup?.close()
+            target?.close()
             credentials.close()
             options.hiddenVolumeProtection?.close()
         }
         }
+    }
+
+    private fun sameContainer(first: Uri, second: Uri): Boolean {
+        if (org.eds.veracrypt.catalog.UriIdentity.same(first, second)) return true
+        val source = runCatching { resolver.openFileDescriptor(first, "r") }.getOrNull() ?: return false
+        val target = runCatching { resolver.openFileDescriptor(second, "r") }.getOrNull()
+            ?: return source.use { false }
+        return source.use { sourcePfd -> target.use { targetPfd ->
+            runCatching {
+                val sourceStat = Os.fstat(sourcePfd.fileDescriptor)
+                val targetStat = Os.fstat(targetPfd.fileDescriptor)
+                sourceStat.st_dev == targetStat.st_dev && sourceStat.st_ino == targetStat.st_ino
+            }.getOrDefault(false)
+        } }
     }
 }

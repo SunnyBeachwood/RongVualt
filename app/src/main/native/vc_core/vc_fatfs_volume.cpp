@@ -188,7 +188,7 @@ std::unique_ptr<FatFsFile> FatFsVolume::OpenFile(
     if (writable && !this->writable()) throw CoreException(CoreError::kReadOnlySource);
     BYTE mode = writable ? static_cast<BYTE>(FA_READ | FA_WRITE) : FA_READ;
     if (truncate) mode = static_cast<BYTE>(mode | FA_CREATE_ALWAYS);
-    else if (create) mode = static_cast<BYTE>(mode | FA_OPEN_ALWAYS);
+    else if (create) mode = static_cast<BYTE>(mode | FA_CREATE_NEW);
     else mode = static_cast<BYTE>(mode | FA_OPEN_EXISTING);
     FIL file {};
     ThrowFatFsFailureWithDevice(f_open(&file, ToFatFsPath(relative_path).c_str(), mode));
@@ -316,11 +316,20 @@ FatFsTailFreeRange FatFsVolume::FindTailFreeRange() {
             directory_cluster = next;
         }
         const std::uint64_t required_bitmap_bytes = (static_cast<std::uint64_t>(last_cluster - 1) + 7) / 8;
-        if (bitmap_cluster < 2 || bitmap_cluster > last_cluster || bitmap_size < required_bitmap_bytes) {
+        const std::uint64_t max_bitmap_bytes =
+                required_bitmap_bytes > std::numeric_limits<std::uint64_t>::max() - cluster_bytes + 1
+                ? std::numeric_limits<std::uint64_t>::max()
+                : required_bitmap_bytes + cluster_bytes - 1;
+        if (bitmap_cluster < 2 || bitmap_cluster > last_cluster ||
+            bitmap_size < required_bitmap_bytes || bitmap_size > max_bitmap_bytes) {
+            throw CoreException(CoreError::kCorruptHeader);
+        }
+        const std::uint64_t bitmap_cluster_count = (bitmap_size + cluster_bytes - 1) / cluster_bytes;
+        if (bitmap_cluster_count == 0 || bitmap_cluster_count > last_cluster) {
             throw CoreException(CoreError::kCorruptHeader);
         }
         std::vector<std::uint32_t> bitmap_clusters;
-        bitmap_clusters.reserve(static_cast<std::size_t>((bitmap_size + cluster_bytes - 1) / cluster_bytes));
+        bitmap_clusters.reserve(static_cast<std::size_t>(bitmap_cluster_count));
         for (std::uint32_t cluster = bitmap_cluster; bitmap_clusters.size() * cluster_bytes < bitmap_size;) {
             if (cluster < 2 || cluster > last_cluster || bitmap_clusters.size() > last_cluster) {
                 throw CoreException(CoreError::kCorruptHeader);

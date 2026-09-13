@@ -106,7 +106,14 @@ class CredentialVault(context: Context) {
     fun has(recordId: String): Boolean = readRecord(recordId) != null
 
     fun clearAll() {
-        preferences.edit().clear().commit()
+        check(preferences.edit().clear().commit()) { "Could not clear saved credentials" }
+        runCatching {
+            KeyStore.getInstance(ANDROID_KEY_STORE).apply {
+                load(null)
+                if (containsAlias(V2_KEY_ALIAS)) deleteEntry(V2_KEY_ALIAS)
+                if (containsAlias(LEGACY_KEY_ALIAS)) deleteEntry(LEGACY_KEY_ALIAS)
+            }
+        }
     }
 
     private fun readRecord(recordId: String): StoredRecord? {

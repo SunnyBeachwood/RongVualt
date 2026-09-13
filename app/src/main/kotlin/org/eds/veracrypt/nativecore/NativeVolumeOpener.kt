@@ -82,6 +82,7 @@ internal class NativeVolumeOpener(
                 }
                 flushFailure?.let { throw it }
                 },
+                sourceUri = containerUri,
             )
             session.mountFileSystem()
             session.enableAutoLock(DEFAULT_AUTO_LOCK_MILLIS)
@@ -199,6 +200,7 @@ internal class NativeVolumeOpener(
                 }
                 flushFailure?.let { throw it }
                 },
+                sourceUri = containerUri,
             )
             session.enableAutoLock(DEFAULT_AUTO_LOCK_MILLIS)
             ownershipTransferred = true

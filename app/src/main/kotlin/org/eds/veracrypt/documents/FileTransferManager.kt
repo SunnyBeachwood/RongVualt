@@ -32,6 +32,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.eds.veracrypt.nativecore.NativeFileSystemAccess
 import org.eds.veracrypt.nativecore.VcCore
 
@@ -41,13 +43,14 @@ internal object FileTransferManager {
     private const val BUFFER_SIZE = 256 * 1024
     private const val PARALLEL_CHUNK_BYTES = 1024 * 1024
     private const val MAX_PARALLEL_CHUNKS = 8
+    private const val MAX_SOURCE_COUNT = 256
     private const val UPDATE_INTERVAL_MILLIS = 200L
     private var appContext: Context? = null
     private val scope = CoroutineScope(Dispatchers.IO)
     private val mutableState = MutableStateFlow<TransferState>(TransferState.Idle)
     val state: StateFlow<TransferState> = mutableState.asStateFlow()
     private var job: Job? = null
-    private var currentProgress: TransferProgress? = null
+    @Volatile private var currentProgress: TransferProgress? = null
     private val cancelRequested = AtomicBoolean(false)
     private const val CLEANUP_PREFS = "rongvault_transfer_cleanup"
     private const val CLEANUP_URIS = "output_uris"
@@ -55,13 +58,22 @@ internal object FileTransferManager {
 
     fun bind(context: Context) {
         appContext = context.applicationContext
-        if (job?.isActive != true) cleanupInterruptedOutputs(context.applicationContext)
+        if (job?.isActive != true) scope.launch { cleanupInterruptedOutputs(context.applicationContext) }
     }
 
     @Synchronized
     fun start(request: TransferRequest): Boolean {
         if (job?.isActive == true) return false
         val context = appContext ?: return false
+        if (request.sourceUris.isEmpty() || request.sourceUris.size > MAX_SOURCE_COUNT) return false
+        if (request.targetDirectoryUri.authority == (context.packageName + ".unlocked") &&
+            UnlockedVolumeService.resolveTreeUri(request.targetDirectoryUri, request.volumeId) == null) return false
+        if (request.sourceUris.any { source ->
+                source.authority == (context.packageName + ".unlocked") &&
+                    runCatching {
+                        UnlockedVolumeService.documentIds.volumeId(DocumentsContract.getDocumentId(source))
+                    }.getOrNull() != request.volumeId
+            }) return false
         cancelRequested.set(false)
         currentProgress = null
         publish(context, TransferState.Preparing(request))
@@ -89,11 +101,8 @@ internal object FileTransferManager {
             is TransferState.Preparing -> current.request
             is TransferState.Running -> current.request
             is TransferState.Cancelling -> current.request
-            is TransferState.Completed -> current.request
-            is TransferState.PartialSuccess -> current.request
-            is TransferState.Failed -> current.request
             is TransferState.Idle -> null
-            is TransferState.Cancelled -> current.request
+            else -> null
         } ?: return
         appContext?.let { publish(it, TransferState.Cancelling(request, progress)) }
         active.cancel(CancellationException("Transfer cancelled by user"))
@@ -125,23 +134,30 @@ internal object FileTransferManager {
     private suspend fun runTransfer(context: Context, request: TransferRequest) {
         val resolver = context.contentResolver
         val failures = mutableListOf<String>()
-        var completedBytes = 0L
+        val completedBytes = AtomicLong(0L)
         var successCount = 0
         var latest: TransferProgress? = null
         val progressLock = Any()
+        var lastProgressPublishAt = 0L
         val reservedTargetNames = mutableSetOf<String>()
         try {
             val sources = request.sourceUris.map { source -> querySource(resolver, source) }
             val totalBytes = sources.map { it.size }.takeIf { sizes -> sizes.none { it == null || it < 0L } }?.sumSaturated()
             val calculator = TransferProgressCalculator()
+            val targetNames = queryTargetNames(resolver, request.targetDirectoryUri).toMutableSet()
+            val chunkPermits = Semaphore(MAX_PARALLEL_CHUNKS)
             val plans = sources.mapIndexedNotNull { index, source ->
                 if (source.isDirectory) {
                     failures += "${source.name}: directories are not supported"
                     null
+                } else if (!isSafeTransferName(source.name)) {
+                    failures += "${source.name}: invalid file name"
+                    null
                 } else {
                     currentCoroutineContext().ensureActive()
-                    val targetName = nextTargetName(resolver, request.targetDirectoryUri, source.name, reservedTargetNames)
+                    val targetName = nextTargetName(source.name, targetNames + reservedTargetNames)
                     reservedTargetNames += targetName
+                    targetNames += targetName
                     PlannedFile(index, source, targetName)
                 }
             }
@@ -152,24 +168,28 @@ internal object FileTransferManager {
                         scheduler.withPermit {
                             transferOneFile(
                                 context, request, resolver, plan, sources.size, totalBytes,
-                                calculator, progressLock,
-                                onProgress = { progress, bytes ->
+                                calculator, progressLock, completedBytes, chunkPermits,
+                                onProgress = { progress, _ ->
+                                    var shouldPublish = false
                                     val adjusted = synchronized(progressLock) {
-                                        completedBytes = (completedBytes + bytes).coerceAtMost(Long.MAX_VALUE)
                                         progress.copy(
-                                            completedBytes = completedBytes,
+                                            completedBytes = completedBytes.get(),
                                             totalBytes = totalBytes,
                                             percent = totalBytes?.takeIf { it > 0L }?.let {
-                                                val bounded = completedBytes.coerceIn(0L, it)
+                                                val bounded = completedBytes.get().coerceIn(0L, it)
                                                 (bounded / it * 100L + (bounded % it) * 100L / it).toInt().coerceIn(0, 100)
                                             },
                                             failures = failures.toList(),
                                         ).also {
                                             latest = it
                                             currentProgress = it
+                                            val now = System.currentTimeMillis()
+                                            shouldPublish = lastProgressPublishAt == 0L ||
+                                                now - lastProgressPublishAt >= UPDATE_INTERVAL_MILLIS
+                                            if (shouldPublish) lastProgressPublishAt = now
                                         }
                                     }
-                                    publish(context, TransferState.Running(request, adjusted))
+                                    if (shouldPublish) publish(context, TransferState.Running(request, adjusted))
                                 },
                             )
                         }
@@ -186,13 +206,13 @@ internal object FileTransferManager {
                 sources.size,
                 0L,
                 null,
-                completedBytes,
+                completedBytes.get(),
                 totalBytes,
                 failures.toList(),
             )).copy(
                 currentFileIndex = sources.size,
                 totalFileCount = sources.size,
-                completedBytes = completedBytes,
+                completedBytes = completedBytes.get(),
                 totalBytes = totalBytes,
                 failures = failures.toList(),
             )
@@ -221,11 +241,13 @@ internal object FileTransferManager {
         totalBytes: Long?,
         calculator: TransferProgressCalculator,
         progressLock: Any,
+        completedBytes: AtomicLong,
+        chunkPermits: Semaphore,
         onProgress: suspend (TransferProgress, Long) -> Unit,
     ): FileResult {
         val source = plan.source
         val internalTarget = request.targetDirectoryUri.authority == (context.packageName + ".unlocked")
-        val outputName = if (internalTarget) "." + plan.targetName + ".rongvault-partial" else plan.targetName
+        val outputName = if (internalTarget) ".rongvault-${UUID.randomUUID()}.partial" else plan.targetName
         var output: Uri? = null
         var fileBytes = 0L
         return try {
@@ -239,7 +261,7 @@ internal object FileTransferManager {
                     if (directory != null && isSeekableSource(resolver, source.uri)) {
                         return transferNativeTarget(
                             context, request, resolver, plan, directory, fileCount, totalBytes,
-                            calculator, progressLock, onProgress,
+                            calculator, progressLock, completedBytes, chunkPermits, onProgress,
                         )
                     }
                     if (directory == null) throw TransferFatalException("Unlocked target is no longer available")
@@ -256,10 +278,11 @@ internal object FileTransferManager {
             journalOutput(context, output)
             val reportBytes: suspend (Long) -> Unit = { delta ->
                 val progress = synchronized(progressLock) {
-                    fileBytes += delta
+                    fileBytes = saturatedAdd(fileBytes, delta)
+                    val totalCompleted = completedBytes.updateAndGet { saturatedAdd(it, delta) }
                     calculator.update(
                         request.direction, source.name, plan.index + 1, fileCount,
-                        fileBytes, source.size, 0L, totalBytes, emptyList(),
+                        fileBytes, source.size, totalCompleted, totalBytes, emptyList(),
                     )
                 }
                 onProgress(progress, delta)
@@ -271,7 +294,7 @@ internal object FileTransferManager {
             }
             when (backend) {
                 TransferBackend.SeekablePfd -> {
-                    if (!copySeekable(context, resolver, source.uri, output, source.size, reportBytes)) {
+                    if (!copySeekable(context, resolver, source.uri, output, source.size, reportBytes, chunkPermits)) {
                         copyStreaming(resolver, source, output, outputName, reportBytes)
                     }
                 }
@@ -308,17 +331,20 @@ internal object FileTransferManager {
         totalBytes: Long?,
         calculator: TransferProgressCalculator,
         progressLock: Any,
+        completedBytes: AtomicLong,
+        chunkPermits: Semaphore,
         onProgress: suspend (TransferProgress, Long) -> Unit,
     ): FileResult {
         val source = plan.source
         val base = directory.relativePath
-        val partialPath = if (base.isEmpty()) ".${plan.targetName}.rongvault-partial" else "$base/.${plan.targetName}.rongvault-partial"
+        val partialName = ".rongvault-${UUID.randomUUID()}.partial"
+        val partialPath = if (base.isEmpty()) partialName else "$base/$partialName"
         val finalPath = if (base.isEmpty()) plan.targetName else "$base/${plan.targetName}"
         val access = directory.volume.session as? NativeFileSystemAccess
             ?: return FileResult(false, "${source.name}: native filesystem access unavailable")
         var fileBytes = 0L
         return try {
-            val file = access.openFile(partialPath, writable = true, create = true, truncate = true)
+            val file = access.openFile(partialPath, writable = true, create = true, truncate = false)
             file.use { nativeFile ->
                 val preallocated = source.size?.let { size ->
                     runCatching { nativeFile.preallocate(size) }.onFailure {
@@ -327,12 +353,13 @@ internal object FileTransferManager {
                 } ?: false
                 val report: suspend (Long) -> Unit = { delta ->
                     val progress = synchronized(progressLock) {
-                        fileBytes += delta
-                        calculator.update(request.direction, source.name, plan.index + 1, fileCount, fileBytes, source.size, 0L, totalBytes, emptyList())
+                        fileBytes = saturatedAdd(fileBytes, delta)
+                        val totalCompleted = completedBytes.updateAndGet { saturatedAdd(it, delta) }
+                        calculator.update(request.direction, source.name, plan.index + 1, fileCount, fileBytes, source.size, totalCompleted, totalBytes, emptyList())
                     }
                     onProgress(progress, delta)
                 }
-                if (!copySourceToNative(context, resolver, source, nativeFile, report, parallel = preallocated)) {
+                if (!copySourceToNative(context, resolver, source, nativeFile, report, parallel = preallocated, chunkPermits = chunkPermits)) {
                     throw SourceTransferException("Unable to read ${source.name}")
                 }
                 nativeFile.flush()
@@ -356,6 +383,7 @@ internal object FileTransferManager {
         target: org.eds.veracrypt.nativecore.NativeOpenFile,
         onBytes: suspend (Long) -> Unit,
         parallel: Boolean,
+        chunkPermits: Semaphore,
     ): Boolean = coroutineScope {
         if (!parallel) return@coroutineScope copyNativeStream(resolver, source, target, onBytes)
         if (source.size == null || source.size < 0L) {
@@ -394,32 +422,35 @@ internal object FileTransferManager {
                         while (true) {
                             val offset = nextOffset.getAndAdd(PARALLEL_CHUNK_BYTES.toLong())
                             if (offset >= source.size) break
-                            currentCoroutineContext().ensureActive()
-                            val length = minOf(PARALLEL_CHUNK_BYTES.toLong(), source.size - offset).toInt()
-                            val buffer = ByteArray(length)
-                            try {
-                            var read = 0
-                            var emptyReads = 0
-                            while (read < length) {
-                                val count = channel.read(ByteBuffer.wrap(buffer, read, length - read), offset + read)
-                                if (count < 0) throw SourceTransferException("Source ended before its reported size")
-                                if (count == 0) {
-                                    if (++emptyReads > 16) throw SourceTransferException("Source made no progress")
-                                    continue
+                            chunkPermits.withPermit {
+                                currentCoroutineContext().ensureActive()
+                                val length = minOf(PARALLEL_CHUNK_BYTES.toLong(), source.size - offset).toInt()
+                                val buffer = ByteArray(length)
+                                try {
+                                    var read = 0
+                                    var emptyReads = 0
+                                    while (read < length) {
+                                        val count = channel.read(ByteBuffer.wrap(buffer, read, length - read), offset + read)
+                                        if (count < 0) throw SourceTransferException("Source ended before its reported size")
+                                        if (count == 0) {
+                                            if (++emptyReads > 16) throw SourceTransferException("Source made no progress")
+                                            continue
+                                        }
+                                        emptyReads = 0
+                                        read += count
+                                    }
+                                    if (target.write(offset, buffer) != length) throw TransferFatalException("Unable to write native transfer chunk")
+                                    onBytes(length.toLong())
+                                } finally {
+                                    buffer.fill(0)
                                 }
-                                emptyReads = 0
-                                read += count
-                                }
-                                if (target.write(offset, buffer) != length) throw TransferFatalException("Unable to write native transfer chunk")
-                                onBytes(length.toLong())
-                            } finally {
-                                buffer.fill(0)
                             }
                         }
                     }
                 }
                 jobs.awaitAll()
                 stream.close()
+                if (source.size != null && nextOffset.get().coerceAtMost(source.size) != source.size) return@coroutineScope false
                 true
             } catch (error: Throwable) {
                 runCatching { descriptor.close() }
@@ -449,6 +480,7 @@ internal object FileTransferManager {
                     offset += read
                     onBytes(read.toLong())
                 }
+                if (source.size != null && offset != source.size) return false
                 return true
             } finally {
                 buffer.fill(0)
@@ -497,11 +529,12 @@ internal object FileTransferManager {
         targetUri: Uri,
         expectedSize: Long?,
         onBytes: suspend (Long) -> Unit,
+        chunkPermits: Semaphore,
     ): Boolean = coroutineScope {
         if (expectedSize == null || expectedSize < 0L) return@coroutineScope false
         val input = resolver.openFileDescriptor(sourceUri, "r") ?: return@coroutineScope false
         val output = try {
-            resolver.openFileDescriptor(targetUri, "rw") ?: run {
+            resolver.openFileDescriptor(targetUri, "rwt") ?: run {
                 input.close()
                 return@coroutineScope false
             }
@@ -529,37 +562,39 @@ internal object FileTransferManager {
                     while (true) {
                         val offset = nextOffset.getAndAdd(PARALLEL_CHUNK_BYTES.toLong())
                         if (offset >= expectedSize) break
-                        currentCoroutineContext().ensureActive()
-                        val length = minOf(PARALLEL_CHUNK_BYTES.toLong(), expectedSize - offset).toInt()
-                        val bytes = ByteArray(length)
-                        try {
-                            var readTotal = 0
-                            var emptyReads = 0
-                            while (readTotal < length) {
-                                val read = inputChannel.read(
-                                    ByteBuffer.wrap(bytes, readTotal, length - readTotal),
-                                    offset + readTotal,
-                                )
-                                if (read < 0) throw SourceTransferException("Source ended before its reported size")
-                                if (read == 0) {
-                                    if (++emptyReads > 16) throw SourceTransferException("Source made no progress")
-                                    continue
+                        chunkPermits.withPermit {
+                            currentCoroutineContext().ensureActive()
+                            val length = minOf(PARALLEL_CHUNK_BYTES.toLong(), expectedSize - offset).toInt()
+                            val bytes = ByteArray(length)
+                            try {
+                                var readTotal = 0
+                                var emptyReads = 0
+                                while (readTotal < length) {
+                                    val read = inputChannel.read(
+                                        ByteBuffer.wrap(bytes, readTotal, length - readTotal),
+                                        offset + readTotal,
+                                    )
+                                    if (read < 0) throw SourceTransferException("Source ended before its reported size")
+                                    if (read == 0) {
+                                        if (++emptyReads > 16) throw SourceTransferException("Source made no progress")
+                                        continue
+                                    }
+                                    emptyReads = 0
+                                    readTotal += read
                                 }
-                                emptyReads = 0
-                                readTotal += read
+                                var written = 0
+                                while (written < length) {
+                                    val count = outputChannel.write(
+                                        ByteBuffer.wrap(bytes, written, length - written),
+                                        offset + written,
+                                    )
+                                    if (count <= 0) throw TransferFatalException("Unable to write transfer chunk")
+                                    written += count
+                                }
+                                onBytes(length.toLong())
+                            } finally {
+                                bytes.fill(0)
                             }
-                            var written = 0
-                            while (written < length) {
-                                val count = outputChannel.write(
-                                    ByteBuffer.wrap(bytes, written, length - written),
-                                    offset + written,
-                                )
-                                if (count <= 0) throw TransferFatalException("Unable to write transfer chunk")
-                                written += count
-                            }
-                            onBytes(length.toLong())
-                        } finally {
-                            bytes.fill(0)
                         }
                     }
                 }
@@ -603,6 +638,7 @@ internal object FileTransferManager {
         input.use { inputStream ->
             output.use { outputStream ->
                 val buffer = ByteArray(BUFFER_SIZE)
+                var copiedBytes = 0L
                 try {
                     while (true) {
                         currentCoroutineContext().ensureActive()
@@ -610,7 +646,11 @@ internal object FileTransferManager {
                         if (read < 0) break
                         if (read == 0) continue
                         outputStream.write(buffer, 0, read)
+                        copiedBytes = saturatedAdd(copiedBytes, read.toLong())
                         onBytes(read.toLong())
+                    }
+                    if (source.size != null && copiedBytes != source.size) {
+                        throw SourceTransferException("Source ended before its reported size")
                     }
                     outputStream.flush()
                     (outputStream as? FileOutputStream)?.fd?.sync()
@@ -647,21 +687,36 @@ internal object FileTransferManager {
         Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
     }.coerceIn(1, MAX_PARALLEL_CHUNKS)
 
-    private fun nextTargetName(
-        resolver: ContentResolver,
-        directory: Uri,
-        original: String,
-        reserved: Set<String>,
-    ): String {
-        val existing = reserved.toMutableSet()
-        runCatching {
-            val children = DocumentsContract.buildChildDocumentsUriUsingTree(directory, DocumentsContract.getDocumentId(directory))
-            resolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { cursor ->
-                while (cursor.moveToNext()) cursor.string(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?.let(existing::add)
-            }
-        }
-        return allocateTransferName(original, existing)
+    private fun queryTargetNames(resolver: ContentResolver, directory: Uri): Set<String> {
+        val documentId = runCatching { DocumentsContract.getTreeDocumentId(directory) }
+            .getOrElse { DocumentsContract.getDocumentId(directory) }
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(directory, documentId)
+        val names = mutableSetOf<String>()
+        resolver.query(children, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { cursor ->
+            while (cursor.moveToNext()) cursor.string(DocumentsContract.Document.COLUMN_DISPLAY_NAME)?.let(names::add)
+        } ?: throw TransferFatalException("Unable to enumerate transfer target directory")
+        return names
     }
+
+    private fun nextTargetName(original: String, existing: Set<String>): String {
+        if (existing.none { it.equals(original, ignoreCase = true) }) return original
+        val dot = original.lastIndexOf('.')
+        val stem = if (dot > 0) original.substring(0, dot) else original
+        val extension = if (dot > 0) original.substring(dot) else ""
+        var index = 1
+        while (true) {
+            val candidate = "$stem ($index)$extension"
+            if (existing.none { it.equals(candidate, ignoreCase = true) }) return candidate
+            index++
+        }
+    }
+
+    private fun isSafeTransferName(name: String): Boolean =
+        name.isNotEmpty() && name != "." && name != ".." && name.length <= 255 &&
+            name.all { it != '/' && it != '\\' && it != '\u0000' && !it.isISOControl() }
+
+    private fun saturatedAdd(left: Long, right: Long): Long =
+        if (right > 0L && left > Long.MAX_VALUE - right) Long.MAX_VALUE else left + right
 
     /** DocumentsContract.createDocument expects a document URI, while the
      * picker returns a tree URI. Keep the tree URI for child enumeration but
@@ -671,9 +726,8 @@ internal object FileTransferManager {
         DocumentsContract.buildDocumentUri(uri.authority!!, treeId)
     }.getOrDefault(uri)
 
-    private fun deleteQuietly(resolver: ContentResolver, uri: Uri?) {
-        if (uri != null) runCatching { DocumentsContract.deleteDocument(resolver, uri) }
-    }
+    private fun deleteQuietly(resolver: ContentResolver, uri: Uri?): Boolean =
+        uri != null && runCatching { DocumentsContract.deleteDocument(resolver, uri) }.getOrDefault(false)
 
     private fun journalOutput(context: Context, uri: Uri?) {
         if (uri == null) return
@@ -681,7 +735,7 @@ internal object FileTransferManager {
             val prefs = context.getSharedPreferences(CLEANUP_PREFS, Context.MODE_PRIVATE)
             val values = prefs.getStringSet(CLEANUP_URIS, emptySet()).orEmpty().toMutableSet()
             values += uri.toString()
-            prefs.edit().putStringSet(CLEANUP_URIS, values).apply()
+            check(prefs.edit().putStringSet(CLEANUP_URIS, values).commit())
         }
     }
 
@@ -690,15 +744,18 @@ internal object FileTransferManager {
         synchronized(cleanupLock) {
             val prefs = context.getSharedPreferences(CLEANUP_PREFS, Context.MODE_PRIVATE)
             val values = prefs.getStringSet(CLEANUP_URIS, emptySet()).orEmpty().toMutableSet()
-            if (values.remove(uri.toString())) prefs.edit().putStringSet(CLEANUP_URIS, values).apply()
+            if (values.remove(uri.toString())) check(prefs.edit().putStringSet(CLEANUP_URIS, values).commit())
         }
     }
 
-    private fun cleanupInterruptedOutputs(context: Context) {
-        val prefs = context.getSharedPreferences(CLEANUP_PREFS, Context.MODE_PRIVATE)
-        val values = prefs.getStringSet(CLEANUP_URIS, emptySet()).orEmpty()
-        values.forEach { value -> deleteQuietly(context.contentResolver, Uri.parse(value)) }
-        if (values.isNotEmpty()) prefs.edit().remove(CLEANUP_URIS).apply()
+    private suspend fun cleanupInterruptedOutputs(context: Context) = withContext(Dispatchers.IO) {
+        synchronized(cleanupLock) {
+            val prefs = context.getSharedPreferences(CLEANUP_PREFS, Context.MODE_PRIVATE)
+            val values = prefs.getStringSet(CLEANUP_URIS, emptySet()).orEmpty()
+            val remaining = values.filterNot { value -> deleteQuietly(context.contentResolver, Uri.parse(value)) }.toSet()
+            if (remaining.isEmpty()) prefs.edit().remove(CLEANUP_URIS).commit()
+            else prefs.edit().putStringSet(CLEANUP_URIS, remaining).commit()
+        }
     }
 
     private data class SourceInfo(val uri: Uri, val name: String, val size: Long?, val mimeType: String?, val isDirectory: Boolean)

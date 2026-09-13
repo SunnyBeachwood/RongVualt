@@ -31,6 +31,7 @@ namespace {
 constexpr std::uint64_t kHeaderGroupBytes = 131072;
 constexpr std::uint64_t kHiddenHeaderOffset = 65536;
 constexpr std::uint64_t kMinimumCreatedDataBytes = 1024 * 1024;
+constexpr std::uint64_t kMaximumCreatedDataBytes = 2ULL * 1024ULL * 1024ULL * 1024ULL * 1024ULL;
 constexpr std::size_t kCipherKeyBytes = 32;
 constexpr std::size_t kXtsKeyBytesPerCipher = 64;
 constexpr std::size_t kSectorBytes = 512;
@@ -757,6 +758,7 @@ std::shared_ptr<NativeVolumeSession> CreateNormalVeraCryptVolume(
         throw CoreException(CoreError::kUnsupportedAlgorithm);
     }
     if (request.container_size < kHeaderGroupBytes * 2 + kMinimumCreatedDataBytes ||
+        request.container_size > kMaximumCreatedDataBytes ||
         (request.container_size % request.sector_size) != 0) {
         throw std::invalid_argument("Container size cannot hold aligned VeraCrypt headers and a filesystem");
     }
@@ -1327,6 +1329,7 @@ std::shared_ptr<NativeVolumeSession> NativeVolumeSession::CreateHiddenVolume(
         throw CoreException(CoreError::kUnsupportedAlgorithm);
     }
     if (request.container_size < kMinimumCreatedDataBytes ||
+        request.container_size > kMaximumCreatedDataBytes ||
         request.container_size % request.sector_size != 0 || request.container_size % kSectorBytes != 0) {
         throw std::invalid_argument("Hidden volume size is not a supported aligned filesystem size");
     }
@@ -1454,6 +1457,10 @@ void NativeVolumeSession::FinalizeCreatedHeaders(const SecureBytes& processed_pa
 void NativeVolumeSession::BackupHeader(
         int output_fd, const OpenRequest& options, const std::vector<FdRandomAccess>& keyfiles) {
     std::lock_guard<std::mutex> lock(mutex_);
+    if (output_fd < 0) throw std::invalid_argument("Header backup destination descriptor is invalid");
+    if (container_.SameFile(output_fd)) {
+        throw std::invalid_argument("Header backup destination must differ from the source container");
+    }
     if (options.protect_hidden_volume || !options.writable) {
         throw std::invalid_argument("Header backup requires a writable non-protection credential request");
     }

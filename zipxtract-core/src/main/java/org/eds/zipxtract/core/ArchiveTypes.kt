@@ -137,7 +137,16 @@ data class ExtractRequest(
     val overwrite: Boolean = false,
     val onConflict: ((target: ArchiveTarget, entry: ArchiveEntry) -> ArchiveConflictAction)? = null,
     val cancellation: CancellationToken = CancellationToken(),
-)
+    val maxExpandedBytes: Long = 8L * 1024L * 1024L * 1024L,
+    val maxEntryBytes: Long = 4L * 1024L * 1024L * 1024L,
+    val maxEntries: Long = 100_000L,
+) {
+    init {
+        require(maxExpandedBytes >= 0L && maxEntryBytes >= 0L && maxEntries >= 0L) {
+            "Archive extraction limits must not be negative"
+        }
+    }
+}
 
 enum class ArchiveConflictAction {
     REPLACE,

@@ -17,12 +17,14 @@ class ContainerCatalog(context: Context) {
     private val appContext = context.applicationContext
     private val preferences = appContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
     private val credentialVault = CredentialVault(appContext)
+    private var catalogCorrupt = false
 
     init {
         // Recognition hints must not survive in the catalog: every manual
         // open starts from AUTO for both cipher and KDF.
         if (!preferences.getBoolean(OPEN_HINTS_MIGRATED, false)) {
-            writeEntries(readEntries())
+            val entries = readEntries()
+            if (!catalogCorrupt) writeEntries(entries)
             preferences.edit().putBoolean(OPEN_HINTS_MIGRATED, true).apply()
         }
     }
@@ -39,7 +41,7 @@ class ContainerCatalog(context: Context) {
         // URI identity is stable for both persisted SAF documents and our
         // private local-file bridge. Do not create two unlock records for the
         // same container file.
-        readEntries().firstOrNull { it.uri == uri.toString() }?.let { return it }
+        readEntries().firstOrNull { UriIdentity.same(Uri.parse(it.uri), uri) }?.let { return it }
         val entry = ContainerCatalogEntry(UUID.randomUUID(), uri.toString(), normalizedName)
         writeEntries(readEntries() + entry)
         return entry
@@ -47,16 +49,26 @@ class ContainerCatalog(context: Context) {
 
     @Synchronized
     fun remove(id: UUID) {
-        writeEntries(readEntries().filterNot { it.id == id })
+        val entries = readEntries()
+        val removed = entries.firstOrNull { it.id == id }
+        val remaining = entries.filterNot { it.id == id }
+        writeEntries(remaining)
         credentialVault.remove(SavedUnlockCredential.recordId(id))
+        if (removed != null && remaining.none { UriIdentity.same(Uri.parse(it.uri), Uri.parse(removed.uri)) }) {
+            releaseGrant(Uri.parse(removed.uri))
+        }
     }
 
     /** Removes every saved catalog record and its associated saved credential. */
     @Synchronized
     fun clear() {
-        val ids = readEntries().map { it.id }
+        val entries = readEntries()
+        val ids = entries.map { it.id }
         writeEntries(emptyList())
         ids.forEach { credentialVault.remove(SavedUnlockCredential.recordId(it)) }
+        entries.map { Uri.parse(it.uri) }
+            .distinctBy { it.toString() }
+            .forEach(::releaseGrant)
     }
 
     @Synchronized
@@ -73,27 +85,48 @@ class ContainerCatalog(context: Context) {
     fun find(id: UUID): ContainerCatalogEntry? = readEntries().firstOrNull { it.id == id }
 
     @Synchronized
-    fun findByUri(uri: Uri): ContainerCatalogEntry? = readEntries().firstOrNull { it.uri == uri.toString() }
+    fun findByUri(uri: Uri): ContainerCatalogEntry? = readEntries().firstOrNull { UriIdentity.same(Uri.parse(it.uri), uri) }
 
     private fun readEntries(): List<ContainerCatalogEntry> {
         val serialized = preferences.getString(ENTRIES_V2, null)
             ?: preferences.getString(ENTRIES_V1, null)
             ?: return emptyList()
-        return try {
-            val array = JSONArray(serialized)
-            buildList {
-                for (index in 0 until array.length()) {
+        val array = try {
+            JSONArray(serialized)
+        } catch (error: Exception) {
+            catalogCorrupt = true
+            return emptyList()
+        }
+        return buildList {
+            for (index in 0 until array.length()) {
+                try {
                     val item = array.getJSONObject(index)
                     val id = UUID.fromString(item.getString("id"))
                     val uri = item.getString("uri")
                     val name = item.getString("name")
                     if (Uri.parse(uri).scheme == "content" && name.isNotBlank() && name.length <= MAX_DISPLAY_NAME_LENGTH) {
                         add(ContainerCatalogEntry(id = id, uri = uri, displayName = name))
+                    } else {
+                        catalogCorrupt = true
                     }
+                } catch (_: Exception) {
+                    catalogCorrupt = true
                 }
             }
-        } catch (_: Exception) {
-            emptyList()
+        }
+    }
+
+    private fun releaseGrant(uri: Uri) {
+        if (uri.scheme != "content") return
+        runCatching {
+            appContext.contentResolver.releasePersistableUriPermission(
+                uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+        }
+        runCatching {
+            appContext.contentResolver.releasePersistableUriPermission(
+                uri, android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+            )
         }
     }
 

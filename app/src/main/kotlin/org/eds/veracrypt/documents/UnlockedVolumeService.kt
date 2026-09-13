@@ -32,6 +32,7 @@ internal object UnlockedVolumeService {
     private var foregroundOperationCount = 0
     private var nextForegroundOperationId = 1L
     private val unlockOperations = mutableMapOf<Long, VolumeUnlockStage>()
+    private var navigationLeaseCount = 0
     private val foregroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     val documentIds = OpaqueDocumentIdRegistry<UnlockedDocumentNode>()
     val volumes = UnlockedVolumeManager { volume ->
@@ -120,6 +121,17 @@ internal object UnlockedVolumeService {
     internal fun requiresForegroundService(): Boolean = foregroundSnapshot().let {
         it.volumeCount > 0 || it.operationCount > 0
     }
+
+    /** Keeps live roots usable while an app-owned picker/browser is on top. */
+    internal fun beginNavigationLease() = synchronized(this) { navigationLeaseCount++ }
+
+    internal fun endNavigationLease() = synchronized(this) {
+        if (navigationLeaseCount > 0) navigationLeaseCount--
+    }
+
+    internal fun retainVolumesOnBackground(): Boolean = synchronized(this) {
+        foregroundOperationCount > 0 || unlockOperations.isNotEmpty() || navigationLeaseCount > 0
+    } || FileTransferManager.hasActiveTransfer()
 
     internal fun foregroundSnapshot(): ForegroundSnapshot = synchronized(this) {
         ForegroundSnapshot(

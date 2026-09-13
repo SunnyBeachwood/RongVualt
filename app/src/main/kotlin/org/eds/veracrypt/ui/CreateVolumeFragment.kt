@@ -12,6 +12,7 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import com.sovworks.eds.android.databinding.FragmentCreateVolumeBinding
 import org.eds.veracrypt.VeraCryptApplication
 import org.eds.veracrypt.documents.UnlockedVolumeService
@@ -21,6 +22,7 @@ import org.eds.veracrypt.domain.VolumeCreateOptions
 import org.eds.veracrypt.domain.VolumeCredentials
 import org.eds.veracrypt.domain.VolumeFileSystem
 import org.eds.veracrypt.domain.VolumeKind
+import org.eds.veracrypt.domain.MAX_CREATED_VOLUME_SIZE_BYTES
 
 /** Full-format normal-volume creation from a SAF-created file container. */
 class CreateVolumeFragment : SensitiveFragment() {
@@ -85,7 +87,7 @@ class CreateVolumeFragment : SensitiveFragment() {
     private fun create(entry: org.eds.veracrypt.catalog.ContainerCatalogEntry) {
         val screen = binding ?: return
         val sizeMiB = screen.sizeMib.text?.toString()?.toLongOrNull()
-        if (sizeMiB == null || sizeMiB <= 0 || sizeMiB > Long.MAX_VALUE / MIB) {
+        if (sizeMiB == null || sizeMiB <= 0 || sizeMiB > MAX_CREATED_VOLUME_SIZE_BYTES / MIB) {
             screen.createStatus.text = getString(com.sovworks.eds.android.R.string.vc_invalid_size)
             return
         }
@@ -133,6 +135,7 @@ class CreateVolumeFragment : SensitiveFragment() {
             }
         }
         creationProgress = progress
+        var sessionCreated = false
         screen.cancelCreate.setOnClickListener {
             progress.cancel()
             it.isEnabled = false
@@ -141,6 +144,7 @@ class CreateVolumeFragment : SensitiveFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val session = app.repository.createNormal(entry, options, credentials, progress.reporter)
+                sessionCreated = true
                 screen.createStatus.text = getString(com.sovworks.eds.android.R.string.vc_volume_unlocked)
                 UnlockedVolumeService.rootUri(session)?.let { rootUri ->
                     (requireActivity() as ContainerCatalogActivity).startTrustedActivity(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -148,9 +152,13 @@ class CreateVolumeFragment : SensitiveFragment() {
                         putExtra(DocumentsContract.EXTRA_INITIAL_URI, rootUri)
                     })
                 }
-            } catch (error: Throwable) {
+            } catch (error: CancellationException) {
+                if (!sessionCreated) app.catalog.remove(entry.id)
+                screen.createStatus.text = error.message ?: getString(com.sovworks.eds.android.R.string.vc_create_failed)
+                screen.createVolume.isEnabled = true
+            } catch (error: Exception) {
                 credentials.close()
-                app.catalog.remove(entry.id)
+                if (!sessionCreated) app.catalog.remove(entry.id)
                 screen.createStatus.text = error.message ?: getString(com.sovworks.eds.android.R.string.vc_create_failed)
                 screen.createVolume.isEnabled = true
             } finally {

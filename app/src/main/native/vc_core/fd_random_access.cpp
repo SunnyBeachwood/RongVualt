@@ -92,6 +92,17 @@ std::uint64_t FdRandomAccess::size() const {
     return size_;
 }
 
+bool FdRandomAccess::SameFile(int fd) const {
+    if (fd < 0) throw std::invalid_argument("Descriptor is invalid");
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (fd_ < 0) throw std::runtime_error("Container descriptor is closed");
+    struct stat current {};
+    struct stat other {};
+    if (fstat(fd_, &current) != 0) ThrowErrno("stat container descriptor");
+    if (fstat(fd, &other) != 0) ThrowErrno("stat destination descriptor");
+    return current.st_dev == other.st_dev && current.st_ino == other.st_ino;
+}
+
 void FdRandomAccess::ReadAt(std::uint64_t offset, std::uint8_t* destination, std::size_t length) const {
     if (length != 0 && destination == nullptr) throw std::invalid_argument("Read destination is null");
     std::lock_guard<std::mutex> lock(mutex_);

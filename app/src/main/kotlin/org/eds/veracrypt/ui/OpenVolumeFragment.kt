@@ -36,6 +36,7 @@ import org.eds.veracrypt.nativecore.volumeInfo
 import org.eds.veracrypt.session.ManagedVolumeSession
 import javax.crypto.Cipher
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlin.coroutines.resume
 
 /** Credential screen. Manual passwords always detect outer and hidden headers automatically. */
@@ -168,12 +169,19 @@ class OpenVolumeFragment : SensitiveFragment() {
                 return
             }
             val cancellation = checkNotNull(unlockCancellation)
+            val lastProgressAt = AtomicLong(0L)
             val session = app.repository.open(entry, options, credentials, object : VolumeUnlockProgress {
                 override fun onStage(stage: VolumeUnlockStage) {
                     activity?.runOnUiThread { if (binding === screen) renderUnlockStage(screen, stage) }
                 }
                 override fun onProbe(completed: Int, total: Int) {
-                    activity?.runOnUiThread { if (binding === screen) renderUnlockProgress(screen, completed, total) }
+                    val now = android.os.SystemClock.uptimeMillis()
+                    val previous = lastProgressAt.get()
+                    if (now - previous >= 200L || (total > 0 && completed >= total)) {
+                        if (lastProgressAt.compareAndSet(previous, now)) {
+                            activity?.runOnUiThread { if (binding === screen) renderUnlockProgress(screen, completed, total) }
+                        }
+                    }
                 }
                 override fun isCancellationRequested() = cancellation.get()
             })
@@ -182,7 +190,9 @@ class OpenVolumeFragment : SensitiveFragment() {
                 saveAfterSuccessfulUnlock(entry, session, pendingSave, screen)
             }
             if (!showProviderRoot(session)) screen.openStatus.setText(R.string.vc_open_browser_failed)
-        } catch (error: Throwable) {
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
             if (error is VolumeError.Cancelled) {
                 screen.openStatus.setText(R.string.vc_unlock_cancelled)
                 screen.password.requestFocus()
@@ -231,7 +241,7 @@ class OpenVolumeFragment : SensitiveFragment() {
             screen.biometricUnlock.isVisible = true
         } catch (_: CancellationException) {
             screen.openStatus.setText(R.string.vc_biometric_save_skipped)
-        } catch (_: Throwable) {
+        } catch (_: Exception) {
             screen.openStatus.setText(R.string.vc_biometric_save_skipped)
         }
     }
@@ -247,7 +257,7 @@ class OpenVolumeFragment : SensitiveFragment() {
             } catch (_: CancellationException) {
                 screen.openStatus.setText(R.string.vc_biometric_cancelled)
                 screen.biometricUnlock.isEnabled = true
-            } catch (_: Throwable) {
+            } catch (_: Exception) {
                 screen.openStatus.setText(R.string.vc_biometric_unavailable)
                 screen.biometricUnlock.isEnabled = true
             }

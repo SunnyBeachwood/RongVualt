@@ -101,13 +101,18 @@ class ContainerCatalogFragment : Fragment() {
             showMessage(it)
             return
         }
-        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        val readFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+        val readWriteFlags = readFlags or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         try {
             // The embedded FileProvider is app-private and remains readable
             // without a persisted external grant. SAF documents still need
             // their normal persisted permission for catalog restoration.
             if (uri.authority != "${requireContext().packageName}.materialfiles.files") {
-                requireContext().contentResolver.takePersistableUriPermission(uri, flags)
+                runCatching {
+                    requireContext().contentResolver.takePersistableUriPermission(uri, readWriteFlags)
+                }.getOrElse {
+                    requireContext().contentResolver.takePersistableUriPermission(uri, readFlags)
+                }
             }
             val entry = app.catalog.add(uri, displayName(uri))
             reloadCatalog()
@@ -157,6 +162,10 @@ class ContainerCatalogFragment : Fragment() {
             .setMessage(R.string.vc_remove_container_warning)
             .setNegativeButton(android.R.string.cancel, null)
             .setPositiveButton(R.string.vc_remove_confirm) { _, _ ->
+                if (UnlockedVolumeService.volumes.findForContainer(entry.id) != null) {
+                    showMessage(getString(R.string.vc_volume_already_unlocked))
+                    return@setPositiveButton
+                }
                 app.catalog.remove(entry.id)
                 reloadCatalog()
             }

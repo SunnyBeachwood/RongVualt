@@ -923,6 +923,9 @@ Java_org_eds_veracrypt_nativecore_VcCore_nativeRestoreHeader(
         for (const jint descriptor : descriptors) keyfiles.push_back(vc_core::FdRandomAccess::Open(descriptor, false));
         auto container = vc_core::FdRandomAccess::Open(container_fd, true);
         const auto backup = vc_core::FdRandomAccess::Open(input_fd, false);
+        if (container.SameFile(input_fd)) {
+            throw std::invalid_argument("Header restore source must differ from the target container");
+        }
         vc_core::RestoreVeraCryptHeader(container, backup, parsed, keyfiles);
     } catch (const std::bad_alloc&) {
         ThrowCoreFailure(env, 5, "Insufficient memory for VeraCrypt operation");

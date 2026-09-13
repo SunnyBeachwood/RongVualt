@@ -11,6 +11,7 @@ import java8.nio.file.Paths
 import me.zhanghai.android.files.file.MimeType
 import me.zhanghai.android.files.filelist.FileListActivity
 import me.zhanghai.android.files.provider.document.documentUri
+import me.zhanghai.android.files.provider.document.createDocumentTreeRootPath
 import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.extraPath
@@ -20,12 +21,17 @@ class MaterialFilesContainerPickerActivity : AppCompatActivity() {
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         if (state != null) return
+        val initialPath = intent.getStringExtra(EXTRA_TREE_URI)?.let { raw ->
+            runCatching { Uri.parse(raw) }.getOrNull()
+                ?.takeIf { UnlockedVolumeService.isTreeUriOwnedByUnlockedVolume(this, it) }
+                ?.let { it.createDocumentTreeRootPath() }
+        }
         // Use Android's per-user external-storage path instead of a filesystem
         // root or a hard-coded /storage/emulated/0. This resolves to /sdcard for
         // the primary user and to the matching emulated root in work profiles,
         // private spaces and cloned-app users.
         @Suppress("DEPRECATION")
-        val root = Paths.get(Environment.getExternalStorageDirectory().absolutePath)
+        val root = initialPath ?: Paths.get(Environment.getExternalStorageDirectory().absolutePath)
         val picker = FileListActivity::class.createIntent()
             .setAction(Intent.ACTION_OPEN_DOCUMENT)
             .setType(MimeType.ANY.value)

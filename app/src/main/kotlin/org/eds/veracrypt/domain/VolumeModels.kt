@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** VeraCrypt's non-boot PIM upper bound (15000 + PIM * 1000 fits signed 32-bit). */
 const val MAX_PIM_VALUE: Int = 2_147_468
+/** FatFs uses a 32-bit sector count; keep new volumes within its 512-byte limit. */
+const val MAX_CREATED_VOLUME_SIZE_BYTES: Long = 2L * 1024L * 1024L * 1024L * 1024L
 
 /** Credentials are request-scoped and must be cleared by the caller after use. */
 class SecretPassword(chars: CharArray) : Closeable {
@@ -161,6 +163,7 @@ data class VolumeCreateOptions(
 ) {
     init {
         require(sizeBytes > 0) { "Volume size must be positive" }
+        require(sizeBytes <= MAX_CREATED_VOLUME_SIZE_BYTES) { "Volume size exceeds the supported maximum" }
         require(pim in 0..MAX_PIM_VALUE) { "PIM must be between 0 and $MAX_PIM_VALUE" }
         require(cipher.isCreatable && cipher.isOpenable) { "This VeraCrypt cipher cannot be used for new volumes" }
         require(kdf != KdfHint.AUTO) { "A concrete KDF is required when creating a volume" }

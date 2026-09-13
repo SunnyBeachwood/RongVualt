@@ -1,5 +1,6 @@
 package org.eds.veracrypt.session
 
+import android.net.Uri
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -42,6 +43,8 @@ internal class ManagedVolumeSession(
     initialFileSystem: VolumeFileSystem? = null,
     override val canModifyContainer: Boolean = accessMode == VolumeAccessMode.READ_WRITE,
     private val onClose: () -> Unit,
+    /** Original SAF identity, retained only for destructive-operation checks. */
+    internal val sourceUri: Uri? = null,
 ) : VolumeSession, NativeFileSystemAccess, BeforeCloseAwareSession {
     override val id: UUID = UUID.randomUUID()
 

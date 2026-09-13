@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import com.sovworks.eds.android.R
 import com.sovworks.eds.android.databinding.FragmentCreateHiddenVolumeBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import org.eds.veracrypt.VeraCryptApplication
 import org.eds.veracrypt.catalog.ContainerCatalogEntry
 import org.eds.veracrypt.documents.UnlockedVolumeService
@@ -23,6 +24,7 @@ import org.eds.veracrypt.domain.VolumeCreateOptions
 import org.eds.veracrypt.domain.VolumeCredentials
 import org.eds.veracrypt.domain.VolumeFileSystem
 import org.eds.veracrypt.domain.VolumeKind
+import org.eds.veracrypt.domain.MAX_CREATED_VOLUME_SIZE_BYTES
 
 /** Two-stage hidden-volume creation from a mounted writable outer volume. */
 class CreateHiddenVolumeFragment : SensitiveFragment() {
@@ -107,7 +109,7 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
     private fun createHidden() {
         val screen = binding ?: return
         val sizeMiB = screen.sizeMib.text?.toString()?.toLongOrNull()
-        if (sizeMiB == null || sizeMiB <= 0 || sizeMiB > capacityBytes / MIB) {
+        if (sizeMiB == null || sizeMiB <= 0 || sizeMiB > minOf(capacityBytes, MAX_CREATED_VOLUME_SIZE_BYTES) / MIB) {
             screen.createStatus.text = getString(R.string.vc_invalid_size)
             return
         }
@@ -173,7 +175,10 @@ class CreateHiddenVolumeFragment : SensitiveFragment() {
                         putExtra(DocumentsContract.EXTRA_INITIAL_URI, rootUri)
                     })
                 }
-            } catch (error: Throwable) {
+            } catch (error: CancellationException) {
+                screen.createStatus.text = error.message ?: getString(R.string.vc_create_failed)
+                screen.createVolume.isEnabled = true
+            } catch (error: Exception) {
                 screen.createStatus.text = error.message ?: getString(R.string.vc_create_failed)
                 screen.createVolume.isEnabled = true
             } finally {

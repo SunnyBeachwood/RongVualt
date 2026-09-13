@@ -34,6 +34,7 @@ public:
 
     std::uint64_t size() const;
     bool writable() const noexcept { return writable_; }
+    bool SameFile(int fd) const;
     void ReadAt(std::uint64_t offset, std::uint8_t* destination, std::size_t length) const;
     void WriteAt(std::uint64_t offset, const std::uint8_t* source, std::size_t length);
     void Resize(std::uint64_t length);

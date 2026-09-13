@@ -19,8 +19,11 @@ import android.system.OsConstants
 import android.webkit.MimeTypeMap
 import java.io.Closeable
 import java.io.FileNotFoundException
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.Locale
 import org.eds.veracrypt.nativecore.NativeFileEntry
 import org.eds.veracrypt.nativecore.NativeFileSystemAccess
 import org.eds.veracrypt.nativecore.NativeOpenFile
@@ -124,7 +127,7 @@ class UnlockedDocumentsProvider : DocumentsProvider() {
             if (mimeType == Document.MIME_TYPE_DIR) {
                 access.createDirectory(path)
             } else {
-                access.openFile(path, writable = true, create = true).close()
+                access.openFile(path, writable = true, create = true).use { }
             }
             val child = UnlockedVolumeService.node(parent.volume, path, access.stat(path))
             notifyChildrenChanged(parent)
@@ -189,6 +192,11 @@ class UnlockedDocumentsProvider : DocumentsProvider() {
         if (parentPath(node.relativePath) != sourceParent.relativePath) {
             throw FileNotFoundException("Source parent does not own document")
         }
+        val nodePath = node.relativePath.lowercase(Locale.ROOT)
+        val targetPath = targetParent.relativePath.lowercase(Locale.ROOT)
+        if (targetPath == nodePath || targetPath.startsWith("$nodePath/")) {
+            throw FileNotFoundException("A directory cannot be moved inside itself")
+        }
         val destination = childPath(targetParent.relativePath, node.entry?.name ?: node.relativePath.substringAfterLast('/'))
         try {
             val access = access(node)
@@ -208,10 +216,20 @@ class UnlockedDocumentsProvider : DocumentsProvider() {
         mode: String,
         signal: CancellationSignal?,
     ): ParcelFileDescriptor {
+        signal?.throwIfCanceled()
         val node = resolve(documentId)
         if (isDirectory(node)) throw FileNotFoundException("Cannot open a directory")
-        val writable = mode.contains('w')
-        val truncate = mode == "w" || mode.contains('t')
+        val flags = try {
+            ParcelFileDescriptor.parseMode(mode)
+        } catch (error: IllegalArgumentException) {
+            throw FileNotFoundException("Unsupported document access mode").apply { initCause(error) }
+        }
+        val writable = when (mode) {
+            "r" -> false
+            "w", "wt", "rw", "rwt" -> true
+            else -> throw FileNotFoundException("Append document access modes are not supported")
+        }
+        val truncate = mode == "w" || mode == "wt" || mode == "rwt"
         if (writable && node.volume.session.isReadOnly) throw FileNotFoundException("Volume is read-only")
         val file = try {
             access(node).openFile(
@@ -242,12 +260,7 @@ class UnlockedDocumentsProvider : DocumentsProvider() {
                 null
             },
         )
-        val flags = try {
-            ParcelFileDescriptor.parseMode(mode)
-        } catch (error: IllegalArgumentException) {
-            file.close()
-            throw FileNotFoundException("Unsupported document access mode").apply { initCause(error) }
-        }
+        signal?.throwIfCanceled()
         return try {
             if (!UnlockedVolumeService.registerProxyFile(node.volume.id, callback)) {
                 callback.close()
@@ -309,8 +322,10 @@ class UnlockedDocumentsProvider : DocumentsProvider() {
     private fun isDirectory(node: UnlockedDocumentNode): Boolean = node.relativePath.isEmpty() || node.entry?.isDirectory == true
 
     private fun childPath(parent: String, name: String): String {
-        require(name.isNotEmpty() && name != "." && name != "..") { "Invalid document name" }
-        require('/' !in name && '\\' !in name && '\u0000' !in name) { "Invalid document name" }
+        require(name.isNotEmpty() && name != "." && name != ".." && name.length <= 255) { "Invalid document name" }
+        require('/' !in name && '\\' !in name && '\u0000' !in name && name.none(Char::isISOControl)) {
+            "Invalid document name"
+        }
         return if (parent.isEmpty()) name else "$parent/$name"
     }
 
@@ -402,39 +417,44 @@ class UnlockedDocumentsProvider : DocumentsProvider() {
         initialSizeBytes: Long,
         private val onCommitted: (() -> Unit)?,
     ) : ProxyFileDescriptorCallback(), Closeable {
+        private val callbackLock = ReentrantLock()
         private var cachedSizeBytes = initialSizeBytes
         private var closed = false
 
-        override fun onGetSize(): Long = try {
-            touchSession()
-            cachedSizeBytes
-        } catch (error: Throwable) {
-            throw errno("stat", error)
-        }
-
-        override fun onRead(offset: Long, size: Int, data: ByteArray): Int = try {
-            touchSession()
-            file.read(offset, data, length = size)
-        } catch (error: Throwable) {
-            throw errno("read", error)
-        }
-
-        override fun onWrite(offset: Long, size: Int, data: ByteArray): Int = try {
-            touchSession()
-            file.write(offset, data, length = size).also { written ->
-                if (offset < 0L || written < 0 || written.toLong() > Long.MAX_VALUE - offset) {
-                    throw IllegalArgumentException("Proxy write range overflow")
-                }
-                // The native write has completed successfully before the
-                // cached length is advanced; failed writes never alter it.
-                cachedSizeBytes = maxOf(cachedSizeBytes, offset + written)
+        override fun onGetSize(): Long = callbackLock.withLock {
+            try {
+                touchSession()
+                access.stat(relativePath).sizeBytes.also { cachedSizeBytes = it }
+            } catch (error: Throwable) {
+                throw errno("stat", error)
             }
-        } catch (error: Throwable) {
-            if (error is VolumeError.HiddenVolumeRisk) UnlockedVolumeService.notifyRootsChanged()
-            throw errno("write", error)
         }
 
-        override fun onFsync() {
+        override fun onRead(offset: Long, size: Int, data: ByteArray): Int = callbackLock.withLock {
+            try {
+                touchSession()
+                file.read(offset, data, length = size)
+            } catch (error: Throwable) {
+                throw errno("read", error)
+            }
+        }
+
+        override fun onWrite(offset: Long, size: Int, data: ByteArray): Int = callbackLock.withLock {
+            try {
+                touchSession()
+                file.write(offset, data, length = size).also { written ->
+                    if (offset < 0L || written < 0 || written.toLong() > Long.MAX_VALUE - offset) {
+                        throw IllegalArgumentException("Proxy write range overflow")
+                    }
+                    cachedSizeBytes = maxOf(cachedSizeBytes, offset + written)
+                }
+            } catch (error: Throwable) {
+                if (error is VolumeError.HiddenVolumeRisk) UnlockedVolumeService.notifyRootsChanged()
+                throw errno("write", error)
+            }
+        }
+
+        override fun onFsync() = callbackLock.withLock {
             try {
                 touchSession()
                 file.flush()
@@ -445,22 +465,19 @@ class UnlockedDocumentsProvider : DocumentsProvider() {
 
         override fun onRelease() = close()
 
-        @Synchronized
         override fun close() {
-            if (closed) return
-            closed = true
-            try {
-                // A proxy-FD client can close immediately after its last
-                // write without issuing an explicit fsync. Commit FAT/exFAT
-                // metadata before retiring the native handle.
-                file.flush()
-            } catch (_: Throwable) {
-                // Closure must still release the proxy registration. A prior
-                // callback has already delivered any write/flush error.
-            } finally {
-                file.close()
-                UnlockedVolumeService.unregisterProxyFile(volumeId, this)
-                onCommitted?.let { runCatching(it) }
+            callbackLock.withLock {
+                if (closed) return
+                closed = true
+                try {
+                    file.flush()
+                } catch (_: Throwable) {
+                    // Closure must still release the proxy registration.
+                } finally {
+                    file.close()
+                    UnlockedVolumeService.unregisterProxyFile(volumeId, this)
+                    onCommitted?.let { runCatching(it) }
+                }
             }
         }
 
