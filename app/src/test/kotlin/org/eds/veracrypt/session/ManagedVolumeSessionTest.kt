@@ -21,7 +21,8 @@ class ManagedVolumeSessionTest {
             VolumeKind.NORMAL,
             TestScope(StandardTestDispatcher()),
             initialFileSystem = VolumeFileSystem.NTFS,
-        ) {}
+            onClose = {},
+        )
 
         assertReadOnlyRejected { session.openFile("entry", writable = true) }
         assertReadOnlyRejected { session.openFile("entry", writable = false, create = true) }
@@ -36,7 +37,9 @@ class ManagedVolumeSessionTest {
         val dispatcher = StandardTestDispatcher()
         val scope = TestScope(dispatcher)
         var closeCount = 0
-        val session = ManagedVolumeSession(1L, VolumeAccessMode.READ_ONLY, VolumeKind.NORMAL, scope) { closeCount++ }
+        val session = ManagedVolumeSession(
+            1L, VolumeAccessMode.READ_ONLY, VolumeKind.NORMAL, scope, onClose = { closeCount++ }
+        )
 
         session.enableAutoLock(5_000)
         scope.advanceTimeBy(5_000)
@@ -59,9 +62,8 @@ class ManagedVolumeSessionTest {
             VolumeAccessMode.READ_ONLY,
             VolumeKind.NORMAL,
             scope,
-        ) {
-            nativeClosed = true
-        }
+            onClose = { nativeClosed = true },
+        )
         session.setBeforeCloseListener {
             listenerSawOpenNativeState = !nativeClosed
         }
@@ -78,8 +80,12 @@ class ManagedVolumeSessionTest {
         val scope = TestScope(dispatcher)
         var outerCloseCount = 0
         var hiddenCloseCount = 0
-        val outer = ManagedVolumeSession(1L, VolumeAccessMode.READ_WRITE, VolumeKind.NORMAL, scope) { outerCloseCount++ }
-        val hidden = ManagedVolumeSession(2L, VolumeAccessMode.READ_WRITE, VolumeKind.HIDDEN, scope) { hiddenCloseCount++ }
+        val outer = ManagedVolumeSession(
+            1L, VolumeAccessMode.READ_WRITE, VolumeKind.NORMAL, scope, onClose = { outerCloseCount++ }
+        )
+        val hidden = ManagedVolumeSession(
+            2L, VolumeAccessMode.READ_WRITE, VolumeKind.HIDDEN, scope, onClose = { hiddenCloseCount++ }
+        )
 
         outer.registerDependent(hidden)
         outer.close()

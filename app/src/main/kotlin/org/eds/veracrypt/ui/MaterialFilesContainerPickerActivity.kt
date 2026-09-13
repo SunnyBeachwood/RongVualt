@@ -15,6 +15,7 @@ import me.zhanghai.android.files.provider.document.createDocumentTreeRootPath
 import me.zhanghai.android.files.file.fileProviderUri
 import me.zhanghai.android.files.util.createIntent
 import me.zhanghai.android.files.util.extraPath
+import org.eds.veracrypt.documents.UnlockedVolumeService
 
 /** Private bridge between Material Files' Path result and EDS' URI catalog. */
 class MaterialFilesContainerPickerActivity : AppCompatActivity() {
