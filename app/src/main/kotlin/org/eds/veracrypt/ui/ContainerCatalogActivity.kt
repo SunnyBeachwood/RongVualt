@@ -44,11 +44,13 @@ class ContainerCatalogActivity : AppCompatActivity() {
     /** One transition into a RongVault workflow must not lock its own return. */
     private var trustedNavigationPending = false
     private var navigationLeaseHeld = false
+    private var fileManagerContinuation: Intent? = null
     private val notificationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         homeThemeSignature = HomeThemeHelper.apply(this)
         super.onCreate(savedInstanceState)
+        receiveFileManagerContinuation(intent)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         binding = ActivityContainerCatalogBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -85,6 +87,16 @@ class ContainerCatalogActivity : AppCompatActivity() {
         // while this task remains alive, so refresh the home task when the user returns here.
         if (homeThemeSignature != HomeThemeHelper.signature(this)) {
             recreate()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        receiveFileManagerContinuation(intent)
+        if (fileManagerContinuation != null) {
+            shouldAuthenticate = true
+            showAppLock()
         }
     }
 
@@ -315,6 +327,10 @@ class ContainerCatalogActivity : AppCompatActivity() {
                 shouldAuthenticate = false
                 binding.appLockOverlay.isVisible = false
                 invalidateOptionsMenu()
+                fileManagerContinuation?.let { continuation ->
+                    fileManagerContinuation = null
+                    startTrustedActivity(continuation)
+                }
             } catch (_: CancellationException) {
                 binding.appLockStatus.setText(R.string.vc_app_auth_failed)
             } catch (_: Exception) {
@@ -324,6 +340,12 @@ class ContainerCatalogActivity : AppCompatActivity() {
                 binding.appUnlock.isEnabled = true
             }
         }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun receiveFileManagerContinuation(intent: Intent) {
+        intent.getParcelableExtra<Intent>(AppAccessSession.EXTRA_RESUME_ACTIVITY_INTENT)
+            ?.let { fileManagerContinuation = it }
     }
 
     /** Starts an app-owned browser or document workflow without relocking on return. */

@@ -38,6 +38,7 @@ abstract class AppActivity : AppCompatActivity() {
         // Embedded file-manager screens can expose live unlocked-volume
         // roots, so they cannot provide an alternate path around app unlock.
         if (!AppAccessSession.isAuthorized()) {
+            AppAccessSession.requestAuthorization(this, intent)
             finish()
         }
     }
